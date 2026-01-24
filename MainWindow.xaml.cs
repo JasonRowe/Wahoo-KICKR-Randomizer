@@ -13,12 +13,9 @@ namespace BikeFitnessApp
 {
     public partial class MainWindow : Window
     {
-        // Standard Fitness Machine Service UUID
-        private static readonly Guid FTMS_SERVICE_UUID = new Guid("00001826-0000-1000-8000-00805f9b34fb");
-        // Standard Indoor Bike Service UUID
-        private static readonly Guid INDOOR_BIKE_SERVICE_UUID = new Guid("00001826-0000-1000-8000-00805f9b34fb");
+        private static readonly Guid FTMS_SERVICE_UUID = new Guid("A026EE01-0A7D-4AB3-97FA-F1500F9FEB8B");
         // Fitness Machine Control Point UUID
-        private static readonly Guid FTMS_CONTROL_POINT_UUID = new Guid("00002AD9-0000-1000-8000-00805f9b34fb");
+        private static readonly Guid FTMS_CONTROL_POINT_UUID = new Guid("A026E005-0A7D-4AB3-97FA-F1500F9FEB8B");
 
         private BluetoothLEAdvertisementWatcher _watcher;
         private BluetoothLEDevice _device;
@@ -35,7 +32,7 @@ namespace BikeFitnessApp
 
             // Setup Timer for random changes
             _workoutTimer = new DispatcherTimer();
-            _workoutTimer.Interval = TimeSpan.FromSeconds(30);
+            _workoutTimer.Interval = TimeSpan.FromSeconds(30); 
             _workoutTimer.Tick += WorkoutTimer_Tick;
         }
 
@@ -52,7 +49,7 @@ namespace BikeFitnessApp
         private void Watcher_Received(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementReceivedEventArgs args)
         {
             // Filter for devices that look like a KICKR
-            if (!string.IsNullOrEmpty(args.Advertisement.LocalName) &&
+            if (!string.IsNullOrEmpty(args.Advertisement.LocalName) && 
                 (args.Advertisement.LocalName.ToUpper().Contains("KICKR") || args.Advertisement.LocalName.ToUpper().Contains("WAHOO")))
             {
                 Dispatcher.Invoke(() =>
@@ -77,23 +74,34 @@ namespace BikeFitnessApp
             try
             {
                 _device = await BluetoothLEDevice.FromBluetoothAddressAsync(selectedDevice.Address);
-
+                
                 if (_device == null)
                 {
                     TxtStatus.Text = "Status: Failed to connect.";
                     return;
                 }
 
-                var service = await GetFitnessMachineService(_device);
-
-                if (service == null)
+                // Find the Fitness Machine Service
+                var servicesResult = await _device.GetGattServicesForUuidAsync(FTMS_SERVICE_UUID);
+                if (servicesResult.Status != GattCommunicationStatus.Success || servicesResult.Services.Count == 0)
                 {
-                    TxtStatus.Text = "Status: FTMS service not found.";
+                    var allServicesResult = await _device.GetGattServicesAsync();
+                    if (allServicesResult.Status == GattCommunicationStatus.Success)
+                    {
+                        var allServices = allServicesResult.Services.Select(s => s.Uuid).ToList();
+                        var serviceList = string.Join("\n", allServices);
+                        TxtStatus.Text = $"FTMS service not found. Found services:\n{serviceList}";
+                    }
+                    else
+                    {
+                        TxtStatus.Text = "Status: FTMS Service not found and could not get all services.";
+                    }
                     return;
                 }
 
+                var service = servicesResult.Services[0];
                 var characteristicsResult = await service.GetCharacteristicsForUuidAsync(FTMS_CONTROL_POINT_UUID);
-
+                
                 if (characteristicsResult.Status != GattCommunicationStatus.Success || characteristicsResult.Characteristics.Count == 0)
                 {
                     TxtStatus.Text = "Status: Control Point not found.";
@@ -101,9 +109,9 @@ namespace BikeFitnessApp
                 }
 
                 _controlPoint = characteristicsResult.Characteristics[0];
-
+                
                 // Request Control (Op Code 0x00) to take ownership of the trainer
-                await SendCommand(new byte[] { 0x00 });
+                await SendCommand(0x00, (byte?)null);
 
                 TxtStatus.Text = $"Status: Connected to {selectedDevice.Name}";
                 BtnStart.IsEnabled = true;
@@ -114,29 +122,12 @@ namespace BikeFitnessApp
             }
         }
 
-        private async Task<GattDeviceService> GetFitnessMachineService(BluetoothLEDevice device)
-        {
-            var servicesResult = await device.GetGattServicesForUuidAsync(FTMS_SERVICE_UUID);
-            if (servicesResult.Status == GattCommunicationStatus.Success && servicesResult.Services.Count > 0)
-            {
-                return servicesResult.Services[0];
-            }
-
-            var indoorBikeServicesResult = await device.GetGattServicesForUuidAsync(INDOOR_BIKE_SERVICE_UUID);
-            if (indoorBikeServicesResult.Status == GattCommunicationStatus.Success && indoorBikeServicesResult.Services.Count > 0)
-            {
-                return indoorBikeServicesResult.Services[0];
-            }
-
-            return null;
-        }
-
         private async void BtnStart_Click(object sender, RoutedEventArgs e)
         {
             _workoutTimer.Start();
             BtnStart.IsEnabled = false;
             BtnStop.IsEnabled = true;
-            await SendCommand(new byte[] { 0x04, 0 }); // Set initial resistance to 0
+            await SendCommand(0x04, (byte)0); // Set initial resistance to 0
             WorkoutTimer_Tick(null, null); // Trigger immediately
             TxtStatus.Text = "Status: Workout Started";
         }
@@ -156,17 +147,47 @@ namespace BikeFitnessApp
             int resistance = _logic.CalculateResistance(SliderMin.Value, SliderMax.Value);
             TxtCurrentResistance.Text = $"Current Resistance: {resistance}%";
 
-            await SendCommand(new byte[] { 0x30, (byte)resistance });
+            // FTMS Op Code 0x04 is "Set Target Resistance Level"
+            await SendCommand(0x04, (byte)resistance);
         }
 
 
 
-        private async Task SendCommand(byte[] command)
+        private async Task SendCommand(byte opCode, byte? parameter = null)
         {
+            byte[] bytes;
+            if (parameter.HasValue)
+            {
+                bytes = _logic.CreateCommandBytes(opCode, parameter.Value);
+            }
+            else
+            {
+                bytes = _logic.CreateCommandBytes(opCode);
+            }
+
             var writer = new DataWriter();
-            writer.WriteBytes(command);
+            writer.WriteBytes(bytes);
             await _controlPoint.WriteValueAsync(writer.DetachBuffer());
         }
+
+        private async Task SendCommand(byte opCode, ushort? parameter = null)
+        {
+            byte[] bytes;
+            if (parameter.HasValue)
+            {
+                bytes = _logic.CreateCommandBytes(opCode, parameter.Value);
+            }
+            else
+            {
+                bytes = _logic.CreateCommandBytes(opCode);
+            }
+
+            var writer = new DataWriter();
+            writer.WriteBytes(bytes);
+            await _controlPoint.WriteValueAsync(writer.DetachBuffer());
+        }
+
+
     }
 
     public class DeviceDisplay
