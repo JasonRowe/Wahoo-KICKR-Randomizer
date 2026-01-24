@@ -145,7 +145,7 @@ namespace BikeFitnessApp
             if (_controlPoint == null) return;
 
             int resistance = _logic.CalculateResistance(SliderMin.Value, SliderMax.Value);
-            TxtCurrentResistance.Text = $"Current Resistance: {resistance}%";
+            TxtCurrentResistance.Text = $"Min: {(int)SliderMin.Value}% Max: {(int)SliderMax.Value}% Current: {resistance}%";
 
             // FTMS Op Code 0x04 is "Set Target Resistance Level"
             await SendCommand(0x04, (byte)resistance);
