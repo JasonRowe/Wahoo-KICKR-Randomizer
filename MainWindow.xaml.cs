@@ -13,7 +13,7 @@ namespace BikeFitnessApp
 {
     public partial class MainWindow : Window
     {
-        private static readonly Guid FTMS_SERVICE_UUID = new Guid("A026EE01-0A7D-4AB3-97FA-F1500F9FEB8B");
+        private static readonly Guid FTMS_SERVICE_UUID = new Guid("A026EE07-0A7D-4AB3-97FA-F1500F9FEB8B");
         // Fitness Machine Control Point UUID
         private static readonly Guid FTMS_CONTROL_POINT_UUID = new Guid("A026E005-0A7D-4AB3-97FA-F1500F9FEB8B");
 
