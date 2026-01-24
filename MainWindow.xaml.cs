@@ -186,6 +186,11 @@ namespace BikeFitnessApp
             writer.WriteBytes(bytes);
             await _controlPoint.WriteValueAsync(writer.DetachBuffer());
         }
-
-
     }
+
+    public class DeviceDisplay
+    {
+        public string Name { get; set; }
+        public ulong Address { get; set; }
+    }
+}
