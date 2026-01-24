@@ -17,9 +17,9 @@ namespace BikeFitnessApp
         // Fitness Machine Control Point UUID
         private static readonly Guid FTMS_CONTROL_POINT_UUID = new Guid("a026e005-0a7d-4ab3-97fa-f1500f9feb8b");
 
-        private BluetoothLEAdvertisementWatcher _watcher;
-        private BluetoothLEDevice _device;
-        private GattCharacteristic _controlPoint;
+        private BluetoothLEAdvertisementWatcher? _watcher;
+        private BluetoothLEDevice? _device;
+        private GattCharacteristic? _controlPoint;
         private DispatcherTimer _workoutTimer;
         private KickrLogic _logic = new KickrLogic();
 
@@ -68,7 +68,11 @@ namespace BikeFitnessApp
             var selectedDevice = ListDevices.SelectedItem as DeviceDisplay;
             if (selectedDevice == null) return;
 
-            _watcher.Stop();
+            if(_watcher != null)
+            {
+                _watcher.Stop();
+            }
+            
             TxtStatus.Text = "Status: Connecting...";
 
             try
@@ -119,36 +123,53 @@ namespace BikeFitnessApp
             catch (Exception ex)
             {
                 TxtStatus.Text = $"Error: {ex.Message}";
+                Logger.Log($"Connection error: {ex}");
             }
         }
 
         private async void BtnStart_Click(object sender, RoutedEventArgs e)
         {
+            Logger.Log("Start button clicked.");
             _workoutTimer.Start();
             BtnStart.IsEnabled = false;
             BtnStop.IsEnabled = true;
             await SendCommand(0x04, (byte)0); // Set initial resistance to 0
-            WorkoutTimer_Tick(null, null); // Trigger immediately
+            WorkoutTimer_Tick(this, EventArgs.Empty); // Trigger immediately
             TxtStatus.Text = "Status: Workout Started";
         }
 
         private void BtnStop_Click(object sender, RoutedEventArgs e)
         {
+            Logger.Log("Stop button clicked.");
             _workoutTimer.Stop();
             BtnStart.IsEnabled = true;
             BtnStop.IsEnabled = false;
             TxtStatus.Text = "Status: Workout Stopped";
         }
 
-        private async void WorkoutTimer_Tick(object sender, EventArgs e)
+        private async void WorkoutTimer_Tick(object? sender, EventArgs e)
         {
-            if (_controlPoint == null) return;
+            if (_controlPoint == null)
+            {
+                Logger.Log("WorkoutTimer_Tick called but _controlPoint is null.");
+                return;
+            }
 
-            int resistance = _logic.CalculateResistance(SliderMin.Value, SliderMax.Value);
-            TxtCurrentResistance.Text = $"Min: {(int)SliderMin.Value}% Max: {(int)SliderMax.Value}% Current: {resistance}%";
+            try
+            {
+                int resistance = _logic.CalculateResistance(SliderMin.Value, SliderMax.Value);
+                Logger.Log($"Calculated resistance: {resistance}");
+                TxtCurrentResistance.Text = $"Min: {(int)SliderMin.Value}% Max: {(int)SliderMax.Value}% Current: {resistance}%";
 
-            // FTMS Op Code 0x04 is "Set Target Resistance Level"
-            await SendCommand(0x04, (byte)resistance);
+                // FTMS Op Code 0x04 is "Set Target Resistance Level"
+                await SendCommand(0x04, (byte)resistance);
+                Logger.Log("Successfully sent resistance command.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Exception in WorkoutTimer_Tick: {ex}");
+                TxtStatus.Text = $"Error: {ex.Message}";
+            }
         }
 
 
@@ -167,7 +188,11 @@ namespace BikeFitnessApp
 
             var writer = new DataWriter();
             writer.WriteBytes(bytes);
-            await _controlPoint.WriteValueAsync(writer.DetachBuffer());
+
+            if (_controlPoint != null)
+            {
+                await _controlPoint.WriteValueAsync(writer.DetachBuffer());
+            }
         }
 
         private async Task SendCommand(byte opCode, ushort? parameter = null)
@@ -182,15 +207,20 @@ namespace BikeFitnessApp
                 bytes = _logic.CreateCommandBytes(opCode);
             }
 
+            Logger.Log($"Sending command: OpCode={opCode}, Param={parameter}, Bytes=[{string.Join(", ", bytes)}]");
             var writer = new DataWriter();
             writer.WriteBytes(bytes);
-            await _controlPoint.WriteValueAsync(writer.DetachBuffer());
+
+            if (_controlPoint != null)
+            {
+                await _controlPoint.WriteValueAsync(writer.DetachBuffer());
+            }
         }
     }
 
     public class DeviceDisplay
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = "";
         public ulong Address { get; set; }
     }
 }
