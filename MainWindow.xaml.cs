@@ -13,9 +13,9 @@ namespace BikeFitnessApp
 {
     public partial class MainWindow : Window
     {
-        private static readonly Guid FTMS_SERVICE_UUID = new Guid("A026EE07-0A7D-4AB3-97FA-F1500F9FEB8B");
+        private static readonly Guid FTMS_SERVICE_UUID = new Guid("00001818-0000-1000-8000-00805f9b34fb");
         // Fitness Machine Control Point UUID
-        private static readonly Guid FTMS_CONTROL_POINT_UUID = new Guid("A026E005-0A7D-4AB3-97FA-F1500F9FEB8B");
+        private static readonly Guid FTMS_CONTROL_POINT_UUID = new Guid("a026e005-0a7d-4ab3-97fa-f1500f9feb8b");
 
         private BluetoothLEAdvertisementWatcher _watcher;
         private BluetoothLEDevice _device;
@@ -71,9 +71,6 @@ namespace BikeFitnessApp
             _watcher.Stop();
             TxtStatus.Text = "Status: Connecting...";
 
-            var log = new System.Text.StringBuilder();
-            log.AppendLine($"Connecting to {selectedDevice.Name} ({selectedDevice.Address})");
-
             try
             {
                 _device = await BluetoothLEDevice.FromBluetoothAddressAsync(selectedDevice.Address);
@@ -84,72 +81,45 @@ namespace BikeFitnessApp
                     return;
                 }
 
-                log.AppendLine("Device connected. Fetching all services...");
-                var allServicesResult = await _device.GetGattServicesAsync(BluetoothCacheMode.Uncached);
-                if (allServicesResult.Status != GattCommunicationStatus.Success)
-                {
-                    log.AppendLine("Failed to get services.");
-                    TxtStatus.Text = log.ToString();
-                    return;
-                }
-
-                log.AppendLine("Found Services:");
-                foreach (var service in allServicesResult.Services)
-                {
-                    log.AppendLine($"  Service: {service.Uuid}");
-                    var characteristicsResult = await service.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
-                    if (characteristicsResult.Status == GattCommunicationStatus.Success)
-                    {
-                        foreach (var charac in characteristicsResult.Characteristics)
-                        {
-                            log.AppendLine($"    Characteristic: {charac.Uuid} ({charac.CharacteristicProperties})");
-                        }
-                    }
-                }
-
-                TxtStatus.Text = log.ToString();
-
                 // Find the Fitness Machine Service
                 var servicesResult = await _device.GetGattServicesForUuidAsync(FTMS_SERVICE_UUID);
                 if (servicesResult.Status != GattCommunicationStatus.Success || servicesResult.Services.Count == 0)
                 {
-                    log.AppendLine($"FTMS service with UUID {FTMS_SERVICE_UUID} not found.");
-                    TxtStatus.Text = log.ToString();
+                    var allServicesResult = await _device.GetGattServicesAsync();
+                    if (allServicesResult.Status == GattCommunicationStatus.Success)
+                    {
+                        var allServices = allServicesResult.Services.Select(s => s.Uuid).ToList();
+                        var serviceList = string.Join("\n", allServices);
+                        TxtStatus.Text = $"FTMS service not found. Found services:\n{serviceList}";
+                    }
+                    else
+                    {
+                        TxtStatus.Text = "Status: FTMS Service not found and could not get all services.";
+                    }
                     return;
                 }
 
-                var serviceToUse = servicesResult.Services[0];
-                log.AppendLine($"Using service: {serviceToUse.Uuid}");
-
-                var characteristicsResultFinal = await serviceToUse.GetCharacteristicsForUuidAsync(FTMS_CONTROL_POINT_UUID);
+                var service = servicesResult.Services[0];
+                var characteristicsResult = await service.GetCharacteristicsForUuidAsync(FTMS_CONTROL_POINT_UUID);
                 
-                if (characteristicsResultFinal.Status != GattCommunicationStatus.Success || characteristicsResultFinal.Characteristics.Count == 0)
+                if (characteristicsResult.Status != GattCommunicationStatus.Success || characteristicsResult.Characteristics.Count == 0)
                 {
-                    log.AppendLine($"Control Point with UUID {FTMS_CONTROL_POINT_UUID} not found.");
-                    TxtStatus.Text = log.ToString();
+                    TxtStatus.Text = "Status: Control Point not found.";
                     return;
                 }
 
-                _controlPoint = characteristicsResultFinal.Characteristics[0];
-                log.AppendLine("Control Point found!");
+                _controlPoint = characteristicsResult.Characteristics[0];
                 
                 // Request Control (Op Code 0x00) to take ownership of the trainer
                 await SendCommand(0x00, (byte?)null);
 
-                log.AppendLine($"Connected to {selectedDevice.Name}");
-                TxtStatus.Text = log.ToString();
+                TxtStatus.Text = $"Status: Connected to {selectedDevice.Name}";
                 BtnStart.IsEnabled = true;
             }
             catch (Exception ex)
             {
-                log.AppendLine($"Error: {ex.Message}");
-                TxtStatus.Text = log.ToString();
+                TxtStatus.Text = $"Error: {ex.Message}";
             }
-        }
-
-        private void BtnCopy_Click(object sender, RoutedEventArgs e)
-        {
-            Clipboard.SetText(TxtStatus.Text);
         }
 
         private async void BtnStart_Click(object sender, RoutedEventArgs e)
@@ -219,10 +189,3 @@ namespace BikeFitnessApp
 
 
     }
-
-    public class DeviceDisplay
-    {
-        public string Name { get; set; }
-        public ulong Address { get; set; }
-    }
-}

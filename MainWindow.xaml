@@ -12,10 +12,7 @@
                     <Button x:Name="BtnScan" Content="Scan for KICKR SNAP" Click="BtnScan_Click" Height="30" Margin="0,0,0,10"/>
                     <ListBox x:Name="ListDevices" Height="100" Margin="0,0,0,10" DisplayMemberPath="Name"/>
                     <Button x:Name="BtnConnect" Content="Connect to Selected" Click="BtnConnect_Click" Height="30" IsEnabled="False"/>
-                    <ScrollViewer Height="50" VerticalScrollBarVisibility="Auto">
-                        <TextBlock x:Name="TxtStatus" Text="Status: Disconnected" Foreground="Gray" Margin="0,5,0,0" TextWrapping="Wrap"/>
-                    </ScrollViewer>
-                    <Button x:Name="BtnCopy" Content="Copy Log" Click="BtnCopy_Click" Height="30" Margin="0,5,0,0"/>
+                    <TextBlock x:Name="TxtStatus" Text="Status: Disconnected" Foreground="Gray" Margin="0,5,0,0"/>
                 </StackPanel>
             </GroupBox>
 
