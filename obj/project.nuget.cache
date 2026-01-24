@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "TaAoHG3wS3I=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Jason\\Documents\\BikeFitnessApp\\BikeFitnessApp.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Jason\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.56\\microsoft.windows.sdk.net.ref.10.0.19041.56.nupkg.sha512"
+  ],
+  "logs": []
+}
