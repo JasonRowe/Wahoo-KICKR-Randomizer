@@ -43,7 +43,7 @@ namespace BikeFitnessApp
             _watcher.ScanningMode = BluetoothLEScanningMode.Active;
             _watcher.Received += Watcher_Received;
             _watcher.Start();
-            TxtStatus.Text = "Status: Scanning for KICKR...";
+            TxtStatus.Text = "Status: Scanning for trainers...";
         }
 
         private void Watcher_Received(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementReceivedEventArgs args)

@@ -13,5 +13,20 @@ namespace BikeFitnessApp
     /// </summary>
     public partial class App : Application
     {
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            AppDomain.CurrentDomain.UnhandledException += (s, ex) =>
+            {
+                Logger.Log($"CRITICAL UNHANDLED EXCEPTION: {ex.ExceptionObject}");
+            };
+
+            DispatcherUnhandledException += (s, ex) =>
+            {
+                Logger.Log($"DISPATCHER UNHANDLED EXCEPTION: {ex.Exception}");
+                ex.Handled = false;
+            };
+
+            base.OnStartup(e);
+        }
     }
 }

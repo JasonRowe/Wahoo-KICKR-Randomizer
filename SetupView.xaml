@@ -6,7 +6,7 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1200"
-             TextElement.Foreground="{StaticResource MaterialDesignBody}"
+             TextElement.Foreground="{DynamicResource MaterialDesignBody}"
              TextElement.FontWeight="Regular"
              TextElement.FontSize="14"
              TextOptions.TextFormattingMode="Ideal"
@@ -25,16 +25,16 @@
 
                 <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,8">
                     <materialDesign:PackIcon Kind="Bike" Width="48" Height="48" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
-                    <TextBlock Text="Wahoo KICKR Setup" Style="{StaticResource MaterialDesignHeadline4TextBlock}" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Smart Trainer Setup" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" Margin="0,8,0,0" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,24">
-                    <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" Value="0" IsIndeterminate="True" Width="20" Height="20" Margin="0,0,12,0" />
-                    <TextBlock Text="Searching for your KICKR SNAP..." Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                    <ProgressBar Style="{DynamicResource MaterialDesignCircularProgressBar}" Value="0" IsIndeterminate="True" Width="20" Height="20" Margin="0,0,12,0" />
+                    <TextBlock Text="Searching for your fitness machine..." Style="{DynamicResource MaterialDesignSubtitle1TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
                 </StackPanel>
                     
                 <ListBox x:Name="ListDevices" Grid.Row="2" Margin="0,0,0,24" 
-                         Style="{StaticResource MaterialDesignNavigationPrimaryListBox}"
+                         Style="{DynamicResource MaterialDesignNavigationPrimaryListBox}"
                          DisplayMemberPath="Name">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignNavigationPrimaryListBoxItem}">
@@ -44,13 +44,13 @@
                 </ListBox>
 
                 <StackPanel Grid.Row="3">
-                    <TextBlock x:Name="TxtStatus" Text="Status: Initializing..." Margin="0,0,0,16" HorizontalAlignment="Center" Style="{StaticResource MaterialDesignCaptionTextBlock}"/>
+                    <TextBlock x:Name="TxtStatus" Text="Status: Initializing..." Margin="0,0,0,16" HorizontalAlignment="Center" Style="{DynamicResource MaterialDesignCaptionTextBlock}"/>
                     <Button x:Name="BtnConnect" Content="CONNECT AND RIDE" Click="BtnConnect_Click" 
                             Height="56" Width="300" FontSize="16" FontWeight="Bold" IsEnabled="False" 
-                            Style="{StaticResource MaterialDesignRaisedButton}" 
+                            Style="{DynamicResource MaterialDesignRaisedButton}" 
                             materialDesign:ButtonAssist.CornerRadius="28"/>
                     <Button x:Name="BtnRescan" Content="RESCAN" Click="BtnRescan_Click" Margin="0,12,0,0" 
-                            Style="{StaticResource MaterialDesignFlatButton}" />
+                            Style="{DynamicResource MaterialDesignFlatButton}" />
                 </StackPanel>
             </Grid>
         </materialDesign:Card>

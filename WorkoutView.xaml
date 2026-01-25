@@ -6,7 +6,7 @@
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1200"
-             TextElement.Foreground="{StaticResource MaterialDesignBody}"
+             TextElement.Foreground="{DynamicResource MaterialDesignBody}"
              TextElement.FontWeight="Regular"
              TextElement.FontSize="14"
              TextOptions.TextFormattingMode="Ideal"
@@ -25,7 +25,7 @@
             <Grid>
                 <StackPanel Orientation="Horizontal">
                     <materialDesign:PackIcon Kind="BikeFast" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <TextBlock Text="KICKR SESSION" Style="{StaticResource MaterialDesignHeadline5TextBlock}" VerticalAlignment="Center" FontWeight="Bold"/>
+                    <TextBlock Text="TRAINING SESSION" Style="{DynamicResource MaterialDesignHeadline5TextBlock}" VerticalAlignment="Center" FontWeight="Bold"/>
                 </StackPanel>
                 <materialDesign:Chip x:Name="TxtStatus" Content="CONNECTED" HorizontalAlignment="Right" VerticalAlignment="Center"
                       Background="#4CAF50" Foreground="White" IconBackground="#388E3C">
@@ -47,15 +47,23 @@
             <StackPanel Grid.Column="0" Margin="0,0,12,0">
                 <materialDesign:Card Padding="24" materialDesign:ElevationAssist.Elevation="Dp2" UniformCornerRadius="16">
                     <StackPanel>
-                        <TextBlock Text="INTENSITY RANGE" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,24" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        <TextBlock Text="INTENSITY RANGE" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,24" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         
-                        <TextBlock Text="MIN RESISTANCE" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="MIN RESISTANCE" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
+                            <TextBlock Text="{Binding ElementName=SliderMin, Path=Value, StringFormat={}({0}%)}" 
+                                       Style="{DynamicResource MaterialDesignOverlineTextBlock}" Margin="8,0,0,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        </StackPanel>
                         <Slider x:Name="SliderMin" Minimum="0" Maximum="100" Value="0" TickFrequency="5" IsSnapToTickEnabled="True"
-                                Style="{StaticResource MaterialDesignDiscreteSlider}" Margin="0,0,0,24"/>
+                                Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,24"/>
                         
-                        <TextBlock Text="MAX RESISTANCE" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="MAX RESISTANCE" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
+                            <TextBlock Text="{Binding ElementName=SliderMax, Path=Value, StringFormat={}({0}%)}" 
+                                       Style="{DynamicResource MaterialDesignOverlineTextBlock}" Margin="8,0,0,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        </StackPanel>
                         <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="25" TickFrequency="5" IsSnapToTickEnabled="True"
-                                Style="{StaticResource MaterialDesignDiscreteSlider}" Margin="0,0,0,24"/>
+                                Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,24"/>
 
                         <materialDesign:ColorZone Mode="Light" Padding="12" CornerRadius="8" materialDesign:ElevationAssist.Elevation="Dp0">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -68,12 +76,12 @@
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,24,0,0">
                     <Button x:Name="BtnStart" Content="START" Click="BtnStart_Click" 
-                            Style="{StaticResource MaterialDesignRaisedButton}" 
+                            Style="{DynamicResource MaterialDesignRaisedButton}" 
                             Background="#4CAF50" BorderBrush="#4CAF50"
                             Width="140" Height="50" materialDesign:ButtonAssist.CornerRadius="25" Margin="0,0,16,0">
                     </Button>
                     <Button x:Name="BtnStop" Content="STOP" Click="BtnStop_Click" 
-                            Style="{StaticResource MaterialDesignRaisedButton}" 
+                            Style="{DynamicResource MaterialDesignRaisedButton}" 
                             Background="#F44336" BorderBrush="#F44336"
                             Width="140" Height="50" materialDesign:ButtonAssist.CornerRadius="25" IsEnabled="False">
                     </Button>
@@ -103,7 +111,7 @@
         <!-- Bottom Status -->
         <StatusBar Grid.Row="2" Background="Transparent">
             <StatusBarItem>
-                <TextBlock x:Name="TxtLog" Text="Ready to ride." Style="{StaticResource MaterialDesignCaptionTextBlock}"/>
+                <TextBlock x:Name="TxtLog" Text="Ready to ride." Style="{DynamicResource MaterialDesignCaptionTextBlock}"/>
             </StatusBarItem>
         </StatusBar>
     </Grid>
