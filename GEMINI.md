@@ -11,6 +11,7 @@ App should have robust logging to ensure we can figure out why it crashes.
  - [COMPLETED] Move scan and connect to initial startup page that on continue brings you to the app page with resistance controls and display
  - [COMPLETED] Integrate Material Design to get a better default look. Added MaterialDesignThemes, modern cards, vibrant colors, and a visual resistance gauge.
  - [COMPLETED] Implement Reconnection Logic: Added retry mechanism for COMException 0x80650081.
+ - [COMPLETED] Prevent System Sleep: Added PowerManagement class using SetThreadExecutionState to keep screen on during workouts.
  - [IN PROGRESS] Debug Connection Stability. Added ConnectionStatusChanged monitoring, Uncached service discovery, and better watcher cleanup to diagnose 0x80650081 errors.
  - [COMPLETED] Protocol Mismatch: Confirmed Wahoo Custom Characteristic requires Wahoo OpCodes. OpCode 0x42 (Resistance) with values 0-99 (integer) works successfully.
  - [COMPLETED] Re-enable Workout Timer: Restored sliders, removed debug UI, and connected timer to Wahoo resistance logic.

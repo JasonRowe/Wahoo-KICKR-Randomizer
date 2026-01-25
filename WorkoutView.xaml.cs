@@ -25,6 +25,7 @@ namespace BikeFitnessApp
             _device = device;
             _controlPoint = controlPoint;
             _device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
+            this.Unloaded += WorkoutView_Unloaded;
 
             // Setup Timer for random changes
             _workoutTimer = new DispatcherTimer();
@@ -33,6 +34,12 @@ namespace BikeFitnessApp
 
             // Initial command to take ownership
             _ = SendCommand(0x00, (byte?)null);
+        }
+
+        private void WorkoutView_Unloaded(object sender, RoutedEventArgs e)
+        {
+            _workoutTimer.Stop();
+            PowerManagement.AllowSleep();
         }
 
         private void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)
@@ -48,6 +55,7 @@ namespace BikeFitnessApp
                     BtnStart.IsEnabled = false;
                     BtnStop.IsEnabled = false;
                     _workoutTimer.Stop();
+                    PowerManagement.AllowSleep();
                     Disconnected?.Invoke();
                 }
             });
@@ -59,6 +67,7 @@ namespace BikeFitnessApp
             try
             {
                 _workoutTimer.Start();
+                PowerManagement.PreventSleep();
                 BtnStart.IsEnabled = false;
                 BtnStop.IsEnabled = true;
                 
@@ -80,6 +89,7 @@ namespace BikeFitnessApp
         {
             Logger.Log("Stop button clicked.");
             _workoutTimer.Stop();
+            PowerManagement.AllowSleep();
             BtnStart.IsEnabled = true;
             BtnStop.IsEnabled = false;
             TxtLog.Text = "Status: Workout Stopped";
