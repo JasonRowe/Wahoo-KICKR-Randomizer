@@ -13,6 +13,12 @@ namespace BikeFitnessApp
             ShowSetup();
         }
 
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            PowerManagement.AllowSleep();
+            base.OnClosing(e);
+        }
+
         private void ShowSetup()
         {
             var setupView = new SetupView();
