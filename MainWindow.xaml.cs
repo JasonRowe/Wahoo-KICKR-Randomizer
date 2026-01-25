@@ -130,12 +130,20 @@ namespace BikeFitnessApp
         private async void BtnStart_Click(object sender, RoutedEventArgs e)
         {
             Logger.Log("Start button clicked.");
-            _workoutTimer.Start();
-            BtnStart.IsEnabled = false;
-            BtnStop.IsEnabled = true;
-            await SendCommand(0x04, (byte)0); // Set initial resistance to 0
-            WorkoutTimer_Tick(this, EventArgs.Empty); // Trigger immediately
-            TxtStatus.Text = "Status: Workout Started";
+            try
+            {
+                _workoutTimer.Start();
+                BtnStart.IsEnabled = false;
+                BtnStop.IsEnabled = true;
+                await SendCommand(0x04, (byte)0); // Set initial resistance to 0
+                WorkoutTimer_Tick(this, EventArgs.Empty); // Trigger immediately
+                TxtStatus.Text = "Status: Workout Started";
+                Logger.Log("Set to Standard Power Mode.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Error setting power mode: {ex}");
+            }
         }
 
         private void BtnStop_Click(object sender, RoutedEventArgs e)
@@ -157,7 +165,7 @@ namespace BikeFitnessApp
 
             try
             {
-                int resistance = _logic.CalculateResistance(SliderMin.Value, SliderMax.Value);
+                double resistance = _logic.CalculateResistance(SliderMin.Value, SliderMax.Value);
                 Logger.Log($"Calculated resistance: {resistance}");
                 TxtCurrentResistance.Text = $"Min: {(int)SliderMin.Value}% Max: {(int)SliderMax.Value}% Current: {resistance}%";
 

@@ -17,14 +17,15 @@ namespace BikeFitnessApp
             _random = random;
         }
 
-        public int CalculateResistance(double min, double max)
+        // Calculate a random resistance value between min and max, clamped to 0-0.20   
+        public double CalculateResistance(double min, double max)
         {
             if (min > max) min = max;
-            // Ensure we stay within 0-100 bounds
-            min = Math.Clamp(min, 0, 100);
-            max = Math.Clamp(max, 0, 100);
-            
-            return _random.Next((int)min, (int)max + 1);
+            // Ensure we stay within 0-0.20 bounds
+            min = Math.Clamp(min, 0, 0.20);
+            max = Math.Clamp(max, 0, 0.20);
+
+            return _random.NextDouble() * (max - min) + min;
         }
 
         public byte[] CreateCommandBytes(byte opCode, byte parameter)

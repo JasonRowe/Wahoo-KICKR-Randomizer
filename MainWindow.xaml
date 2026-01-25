@@ -27,13 +27,13 @@
                         
                         <StackPanel Grid.Column="0" Margin="0,0,10,0">
                             <TextBlock Text="Min Resistance (%)"/>
-                            <Slider x:Name="SliderMin" Minimum="0" Maximum="100" Value="10" TickFrequency="5" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
+                            <Slider x:Name="SliderMin" Minimum="0" Maximum="0.20" Value="0" TickFrequency="0.01" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
                             <TextBlock Text="{Binding ElementName=SliderMin, Path=Value, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Margin="10,0,0,0">
                             <TextBlock Text="Max Resistance (%)"/>
-                            <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="50" TickFrequency="5" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
+                            <Slider x:Name="SliderMax" Minimum="0" Maximum="0.20" Value="0" TickFrequency="0.01" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
                             <TextBlock Text="{Binding ElementName=SliderMax, Path=Value, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
                         </StackPanel>
                     </Grid>

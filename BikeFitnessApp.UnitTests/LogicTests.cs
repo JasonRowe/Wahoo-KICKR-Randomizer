@@ -13,12 +13,11 @@ namespace BikeFitnessApp.Tests
             // Arrange
             var seededRandom = new Random(12345); // Use a fixed seed for predictability
             var logic = new KickrLogic(seededRandom);
-            double min = 10;
-            double max = 20;
+            double min = 0;
+            double max = 0.20;
 
             // Act
-            int resistance = logic.CalculateResistance(min, max);
-
+            double resistance = logic.CalculateResistance(min, max);
             // Assert
             Assert.IsTrue(resistance >= min, "Resistance should be greater than or equal to the minimum value.");
             Assert.IsTrue(resistance <= max, "Resistance should be less than or equal to the maximum value.");
@@ -31,15 +30,15 @@ namespace BikeFitnessApp.Tests
             var logic = new KickrLogic();
 
             // Act
-            int resistanceTooLow = logic.CalculateResistance(-10, 5);
-            int resistanceTooHigh = logic.CalculateResistance(95, 110);
-            int resistanceMinMaxSwapped = logic.CalculateResistance(80, 70);
+            double resistanceTooLow = logic.CalculateResistance(-10, 0.05);
+            double resistanceTooHigh = logic.CalculateResistance(.15, 0.25);
+            double resistanceMinMaxSwapped = logic.CalculateResistance(.08, .07);
 
 
             // Assert
-            Assert.IsTrue(resistanceTooLow >= 0 && resistanceTooLow <= 5, "Resistance should be clamped to a minimum of 0.");
-            Assert.IsTrue(resistanceTooHigh >= 95 && resistanceTooHigh <= 100, "Resistance should be clamped to a maximum of 100.");
-            Assert.IsTrue(resistanceMinMaxSwapped >= 70 && resistanceMinMaxSwapped <= 70, "Min should be clamped to max if min > max.");
+            Assert.IsTrue(resistanceTooLow >= 0 && resistanceTooLow <= 0.05, "Resistance should be clamped to a minimum of 0.20");
+            Assert.IsTrue(resistanceTooHigh >= 0.15 && resistanceTooHigh <= 0.20, "Resistance should be clamped to a maximum of 0.20");
+            Assert.IsTrue(resistanceMinMaxSwapped >= 0.07 && resistanceMinMaxSwapped <= 0.07, "Min should be clamped to max if min > max.");
         }
     }
 }
