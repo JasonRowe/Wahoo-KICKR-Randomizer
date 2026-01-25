@@ -14,7 +14,7 @@ namespace BikeFitnessApp.Tests
             var seededRandom = new Random(12345); // Use a fixed seed for predictability
             var logic = new KickrLogic(seededRandom);
             double min = 0;
-            double max = 0.20;
+            double max = 1.0;
 
             // Act
             double resistance = logic.CalculateResistance(min, max);
@@ -32,13 +32,19 @@ namespace BikeFitnessApp.Tests
             // Act
             double resistanceTooLow = logic.CalculateResistance(-10, 0.05);
             double resistanceTooHigh = logic.CalculateResistance(.15, 0.25);
-            double resistanceMinMaxSwapped = logic.CalculateResistance(.08, .07);
+            double resistanceMinMaxSwapped = logic.CalculateResistance(0.8, 0.7);
+            
+            double resistanceWayTooHigh = logic.CalculateResistance(1.5, 2.0);
+            double resistanceWayTooLow = logic.CalculateResistance(-5.0, -1.0);
 
 
             // Assert
-            Assert.IsTrue(resistanceTooLow >= 0 && resistanceTooLow <= 0.05, "Resistance should be clamped to a minimum of 0.20");
-            Assert.IsTrue(resistanceTooHigh >= 0.15 && resistanceTooHigh <= 0.20, "Resistance should be clamped to a maximum of 0.20");
-            Assert.IsTrue(resistanceMinMaxSwapped >= 0.07 && resistanceMinMaxSwapped <= 0.07, "Min should be clamped to max if min > max.");
+            Assert.IsTrue(resistanceTooLow >= 0 && resistanceTooLow <= 0.05, "Resistance should be clamped to a minimum of 0");
+            Assert.IsTrue(resistanceTooHigh >= 0.15 && resistanceTooHigh <= 0.25, "Resistance should be within range");
+            Assert.IsTrue(resistanceMinMaxSwapped >= 0.7 && resistanceMinMaxSwapped <= 0.7, "Min should be clamped to max if min > max.");
+            
+            Assert.IsTrue(resistanceWayTooHigh >= 1.0 && resistanceWayTooHigh <= 1.0, "Resistance should be clamped to a maximum of 1.0");
+            Assert.IsTrue(resistanceWayTooLow >= 0.0 && resistanceWayTooLow <= 0.0, "Resistance should be clamped to a minimum of 0.0");
         }
     }
 }

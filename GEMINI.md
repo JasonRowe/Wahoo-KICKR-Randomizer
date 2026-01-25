@@ -8,7 +8,7 @@ App should have robust logging to ensure we can figure out why it crashes.
 
 ### TODOs
  - Implement Reconnection Logic: Add robust reconnection logic to app to handle unexpected disconnects (GattCommunicationStatus.Unreachable).
- - Figure out correct resistance values to pass in and what a good min max would be. Need to search for FTMS and Kickr resources to figure out the correct min, max, and values to pass in. It appears to be some sort of double or percentage that makes out at 20. With current values 0 -> 0.2 I feel no resistence change. When I tried 0 - 100 anything over 1 felt like 100% but not positive.
+ - [COMPLETED] Figure out correct resistance values. Updated logic to use 0-1 range, with UI limited to 0-10% to prevent excessive resistance.
  - intermittently I get the following when connecting Connection error: System.Runtime.InteropServices.COMException (0x80650081)
  - Also COM Error 0x80650081 happens when trying to set some resistance values
 

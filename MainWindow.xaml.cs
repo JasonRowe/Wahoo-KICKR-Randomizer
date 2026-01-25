@@ -34,6 +34,13 @@ namespace BikeFitnessApp
             _workoutTimer = new DispatcherTimer();
             _workoutTimer.Interval = TimeSpan.FromSeconds(30); 
             _workoutTimer.Tick += WorkoutTimer_Tick;
+
+            // Initialize Sliders to 0-10 range (0% to 10%)
+            SliderMin.Minimum = 0;
+            SliderMin.Maximum = 10;
+            SliderMax.Minimum = 0;
+            SliderMax.Maximum = 10;
+            SliderMax.Value = 5; // Default max to 5%
         }
 
         private void BtnScan_Click(object sender, RoutedEventArgs e)
@@ -165,12 +172,14 @@ namespace BikeFitnessApp
 
             try
             {
-                double resistance = _logic.CalculateResistance(SliderMin.Value, SliderMax.Value);
+                // Convert UI percentage (0-10) to logic value (0.0-0.1)
+                double resistance = _logic.CalculateResistance(SliderMin.Value / 100.0, SliderMax.Value / 100.0);
+                
                 Logger.Log($"Calculated resistance: {resistance}");
-                TxtCurrentResistance.Text = $"Min: {(int)SliderMin.Value}% Max: {(int)SliderMax.Value}% Current: {resistance}%";
+                TxtCurrentResistance.Text = $"Min: {SliderMin.Value:F0}% Max: {SliderMax.Value:F0}% Current: {(resistance * 100):F1}%";
 
-                // FTMS Op Code 0x04 is "Set Target Resistance Level"
-                await SendCommand(0x04, (byte)resistance);
+                // FTMS Op Code 0x04 is "Set Target Resistance Level". Send byte 0-100.
+                await SendCommand(0x04, (byte)(resistance * 100));
                 Logger.Log("Successfully sent resistance command.");
             }
             catch (Exception ex)

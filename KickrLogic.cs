@@ -21,9 +21,9 @@ namespace BikeFitnessApp
         public double CalculateResistance(double min, double max)
         {
             if (min > max) min = max;
-            // Ensure we stay within 0-0.20 bounds
-            min = Math.Clamp(min, 0, 0.20);
-            max = Math.Clamp(max, 0, 0.20);
+            // Ensure we stay within 0-1.0 bounds
+            min = Math.Clamp(min, 0, 1.0);
+            max = Math.Clamp(max, 0, 1.0);
 
             return _random.NextDouble() * (max - min) + min;
         }
