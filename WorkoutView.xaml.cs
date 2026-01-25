@@ -62,7 +62,7 @@ namespace BikeFitnessApp
                 BtnStop.IsEnabled = true;
                 
                 // Trigger immediately
-                _ = WorkoutTimer_Tick(this, EventArgs.Empty); 
+                WorkoutTimer_Tick(this, EventArgs.Empty); 
                 
                 TxtStatus.Text = "Status: Workout Started";
                 TxtStatus.Foreground = Brushes.Green;
