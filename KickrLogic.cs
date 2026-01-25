@@ -46,5 +46,14 @@ namespace BikeFitnessApp
         {
             return new byte[] { opCode };
         }
+
+        public byte[] CreateWahooResistanceCommand(double resistancePercent)
+        {
+            // Wahoo Resistance Mode: OpCode 0x42
+            // Range: 0-100% (User verified 0-99 works)
+            byte opCode = 0x42;
+            int value = (int)Math.Clamp(resistancePercent * 100, 0, 99);
+            return CreateCommandBytes(opCode, (ushort)value);
+        }
     }
 }

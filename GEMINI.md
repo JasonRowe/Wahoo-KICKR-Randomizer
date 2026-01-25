@@ -7,8 +7,10 @@
 App should have robust logging to ensure we can figure out why it crashes.
 
 ### TODOs
- - Implement Reconnection Logic: Add robust reconnection logic to app to handle unexpected disconnects (GattCommunicationStatus.Unreachable).
- - [COMPLETED] Figure out correct resistance values. Updated logic to use 0-1 range, with UI limited to 0-10% to prevent excessive resistance.
+ - [COMPLETED] Implement Reconnection Logic: Added retry mechanism for COMException 0x80650081.
+ - [IN PROGRESS] Debug Connection Stability. Added ConnectionStatusChanged monitoring, Uncached service discovery, and better watcher cleanup to diagnose 0x80650081 errors.
+ - [COMPLETED] Protocol Mismatch: Confirmed Wahoo Custom Characteristic requires Wahoo OpCodes. OpCode 0x42 (Resistance) with values 0-99 (integer) works successfully.
+ - [TODO] Re-enable Workout Timer: Update MainWindow to use the new Wahoo command logic and switch back to automated resistance control.
  - intermittently I get the following when connecting Connection error: System.Runtime.InteropServices.COMException (0x80650081)
  - Also COM Error 0x80650081 happens when trying to set some resistance values
 

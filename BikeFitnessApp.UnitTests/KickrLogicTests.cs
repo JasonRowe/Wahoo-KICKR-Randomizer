@@ -49,5 +49,16 @@ namespace BikeFitnessApp.Tests
             // Assert
             CollectionAssert.AreEqual(new byte[] { 0x05, 0xE8, 0x03 }, command);
         }
+
+        [TestMethod]
+        public void TestCreateWahooResistanceCommand()
+        {
+            var logic = new KickrLogic();
+            // 50% resistance
+            byte[] bytes = logic.CreateWahooResistanceCommand(0.5);
+            
+            // 0x42, 50 (0x32), 0x00
+            CollectionAssert.AreEqual(new byte[] { 0x42, 0x32, 0x00 }, bytes);
+        }
     }
 }
