@@ -9,7 +9,7 @@ App should have robust logging to ensure we can figure out why it crashes.
 ### TODOs
  - [COMPLETED] Make scan happen auto on startup of app
  - [COMPLETED] Move scan and connect to initial startup page that on continue brings you to the app page with resistance controls and display
-  - Integrate Material Design to get a better default look. Needs something more then default forms. Need a nice sleek / modern vibe to the buttons, background, fonts, and colors.
+ - [COMPLETED] Integrate Material Design to get a better default look. Added MaterialDesignThemes, modern cards, vibrant colors, and a visual resistance gauge.
  - [COMPLETED] Implement Reconnection Logic: Added retry mechanism for COMException 0x80650081.
  - [IN PROGRESS] Debug Connection Stability. Added ConnectionStatusChanged monitoring, Uncached service discovery, and better watcher cleanup to diagnose 0x80650081 errors.
  - [COMPLETED] Protocol Mismatch: Confirmed Wahoo Custom Characteristic requires Wahoo OpCodes. OpCode 0x42 (Resistance) with values 0-99 (integer) works successfully.

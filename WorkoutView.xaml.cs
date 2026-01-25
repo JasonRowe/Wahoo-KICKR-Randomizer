@@ -42,8 +42,9 @@ namespace BikeFitnessApp
                 Logger.Log($"Device Connection Status Changed: {sender.ConnectionStatus}");
                 if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
                 {
-                    TxtStatus.Text = "Status: Device Disconnected.";
-                    TxtStatus.Foreground = Brushes.Red;
+                    TxtLog.Text = "Status: Device Disconnected.";
+                    TxtStatus.Content = "DISCONNECTED";
+                    TxtStatus.Background = Brushes.Red;
                     BtnStart.IsEnabled = false;
                     BtnStop.IsEnabled = false;
                     _workoutTimer.Stop();
@@ -64,13 +65,14 @@ namespace BikeFitnessApp
                 // Trigger immediately
                 WorkoutTimer_Tick(this, EventArgs.Empty); 
                 
-                TxtStatus.Text = "Status: Workout Started";
-                TxtStatus.Foreground = Brushes.Green;
+                TxtLog.Text = "Status: Workout Started";
+                TxtStatus.Content = "WORKOUT ACTIVE";
+                TxtStatus.Background = Brushes.Orange;
             }
             catch (Exception ex)
             {
                 Logger.Log($"Error starting workout: {ex}");
-                TxtStatus.Text = $"Error: {ex.Message}";
+                TxtLog.Text = $"Error: {ex.Message}";
             }
         }
 
@@ -80,8 +82,9 @@ namespace BikeFitnessApp
             _workoutTimer.Stop();
             BtnStart.IsEnabled = true;
             BtnStop.IsEnabled = false;
-            TxtStatus.Text = "Status: Workout Stopped";
-            TxtStatus.Foreground = Brushes.Black;
+            TxtLog.Text = "Status: Workout Stopped";
+            TxtStatus.Content = "CONNECTED";
+            TxtStatus.Background = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)); // #4CAF50
         }
 
         private async void WorkoutTimer_Tick(object? sender, EventArgs e)
@@ -100,6 +103,7 @@ namespace BikeFitnessApp
                 
                 Logger.Log($"Calculated resistance: {resistance}");
                 TxtCurrentResistance.Text = $"{(resistance * 100):F0}%";
+                ResistanceGauge.Value = resistance * 100;
 
                 // Color coding: Green (Low) -> Yellow -> Red (High) relative to the range
                 double range = max - min;
@@ -131,7 +135,7 @@ namespace BikeFitnessApp
             catch (Exception ex)
             {
                 Logger.Log($"Exception in WorkoutTimer_Tick: {ex}");
-                TxtStatus.Text = $"Error: {ex.Message}";
+                TxtLog.Text = $"Error: {ex.Message}";
             }
         }
 

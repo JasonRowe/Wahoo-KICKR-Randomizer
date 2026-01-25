@@ -3,56 +3,108 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="1200" Background="White">
-    <Grid Margin="24">
+             d:DesignHeight="700" d:DesignWidth="1200"
+             TextElement.Foreground="{StaticResource MaterialDesignBody}"
+             TextElement.FontWeight="Regular"
+             TextElement.FontSize="14"
+             TextOptions.TextFormattingMode="Ideal"
+             TextOptions.TextRenderingMode="Auto"
+             Background="{DynamicResource MaterialDesignPaper}"
+             FontFamily="{materialDesign:MaterialDesignFont}">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,24">
-            <TextBlock Text="Wahoo KICKR Controller" FontSize="24" FontWeight="Bold"/>
-            <TextBlock x:Name="TxtStatus" Text="Status: Connected" Foreground="Green" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-        </Grid>
-            
-        <!-- Control Section -->
-        <GroupBox Grid.Row="1" Header="Resistance Settings" Margin="0,0,0,12" Padding="12">
-            <StackPanel>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                        
-                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                        <TextBlock Text="Min Resistance (%)"/>
-                        <Slider x:Name="SliderMin" Minimum="0" Maximum="100" Value="0" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
-                        <TextBlock Text="{Binding ElementName=SliderMin, Path=Value, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
-                    </StackPanel>
+        <!-- Top Bar -->
+        <materialDesign:ColorZone Mode="PrimaryMid" Padding="16" materialDesign:ElevationAssist.Elevation="Dp4">
+            <Grid>
+                <StackPanel Orientation="Horizontal">
+                    <materialDesign:PackIcon Kind="BikeFast" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <TextBlock Text="KICKR SESSION" Style="{StaticResource MaterialDesignHeadline5TextBlock}" VerticalAlignment="Center" FontWeight="Bold"/>
+                </StackPanel>
+                <materialDesign:Chip x:Name="TxtStatus" Content="CONNECTED" HorizontalAlignment="Right" VerticalAlignment="Center"
+                      Background="#4CAF50" Foreground="White" IconBackground="#388E3C">
+                    <materialDesign:Chip.Icon>
+                        <materialDesign:PackIcon Kind="BluetoothConnected" />
+                    </materialDesign:Chip.Icon>
+                </materialDesign:Chip>
+            </Grid>
+        </materialDesign:ColorZone>
 
-                    <StackPanel Grid.Column="1" Margin="12,0,0,0">
-                        <TextBlock Text="Max Resistance (%)"/>
-                        <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="25" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
-                        <TextBlock Text="{Binding ElementName=SliderMax, Path=Value, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="24">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="3*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Controls Side -->
+            <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                <materialDesign:Card Padding="24" materialDesign:ElevationAssist.Elevation="Dp2" UniformCornerRadius="16">
+                    <StackPanel>
+                        <TextBlock Text="INTENSITY RANGE" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,24" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        
+                        <TextBlock Text="MIN RESISTANCE" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
+                        <Slider x:Name="SliderMin" Minimum="0" Maximum="100" Value="0" TickFrequency="5" IsSnapToTickEnabled="True"
+                                Style="{StaticResource MaterialDesignDiscreteSlider}" Margin="0,0,0,24"/>
+                        
+                        <TextBlock Text="MAX RESISTANCE" Style="{StaticResource MaterialDesignOverlineTextBlock}"/>
+                        <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="25" TickFrequency="5" IsSnapToTickEnabled="True"
+                                Style="{StaticResource MaterialDesignDiscreteSlider}" Margin="0,0,0,24"/>
+
+                        <materialDesign:ColorZone Mode="Light" Padding="12" CornerRadius="8" materialDesign:ElevationAssist.Elevation="Dp0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <materialDesign:PackIcon Kind="Timer" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Interval: 30 Seconds" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </materialDesign:ColorZone>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,24,0,0">
+                    <Button x:Name="BtnStart" Content="START" Click="BtnStart_Click" 
+                            Style="{StaticResource MaterialDesignRaisedButton}" 
+                            Background="#4CAF50" BorderBrush="#4CAF50"
+                            Width="140" Height="50" materialDesign:ButtonAssist.CornerRadius="25" Margin="0,0,16,0">
+                    </Button>
+                    <Button x:Name="BtnStop" Content="STOP" Click="BtnStop_Click" 
+                            Style="{StaticResource MaterialDesignRaisedButton}" 
+                            Background="#F44336" BorderBrush="#F44336"
+                            Width="140" Height="50" materialDesign:ButtonAssist.CornerRadius="25" IsEnabled="False">
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Display Side -->
+            <materialDesign:Card Grid.Column="1" Margin="12,0,0,0" UniformCornerRadius="16" Background="#1A1A1A">
+                <Grid>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="CURRENT RESISTANCE" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <Viewbox Height="200">
+                            <TextBlock x:Name="TxtCurrentResistance" Text="--" FontWeight="Black" Foreground="White" />
+                        </Viewbox>
+                        
+                        <!-- Visual Gauge -->
+                        <Grid Margin="48,24,48,0">
+                             <ProgressBar x:Name="ResistanceGauge" Height="20" Minimum="0" Maximum="100" Value="0" 
+                                         Foreground="{Binding ElementName=TxtCurrentResistance, Path=Foreground}"
+                                         Background="#333333" BorderThickness="0"/>
+                        </Grid>
                     </StackPanel>
                 </Grid>
-                    
-                <TextBlock Text="Change Interval: Every 30 Seconds" Margin="0,12,0,0" FontStyle="Italic"/>
-            </StackPanel>
-        </GroupBox>
+            </materialDesign:Card>
+        </Grid>
 
-        <!-- Action Section -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
-            <Button x:Name="BtnStart" Content="Start Workout" Click="BtnStart_Click" Height="40" Width="150" Background="LightGreen" Margin="0,0,12,0"/>
-            <Button x:Name="BtnStop" Content="Stop" Click="BtnStop_Click" Height="40" Width="150" Background="LightPink" IsEnabled="False"/>
-        </StackPanel>
-            
-        <!-- Resistance Display (Responsive) -->
-        <Viewbox Grid.Row="3" Margin="0,24,0,0">
-            <TextBlock x:Name="TxtCurrentResistance" Text="--" FontWeight="Bold" HorizontalAlignment="Center"/>
-        </Viewbox>
+        <!-- Bottom Status -->
+        <StatusBar Grid.Row="2" Background="Transparent">
+            <StatusBarItem>
+                <TextBlock x:Name="TxtLog" Text="Ready to ride." Style="{StaticResource MaterialDesignCaptionTextBlock}"/>
+            </StatusBarItem>
+        </StatusBar>
     </Grid>
 </UserControl>

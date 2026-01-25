@@ -3,33 +3,56 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
-             d:DesignHeight="700" d:DesignWidth="1200" Background="White">
-    <Grid Margin="48">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+             d:DesignHeight="700" d:DesignWidth="1200"
+             TextElement.Foreground="{StaticResource MaterialDesignBody}"
+             TextElement.FontWeight="Regular"
+             TextElement.FontSize="14"
+             TextOptions.TextFormattingMode="Ideal"
+             TextOptions.TextRenderingMode="Auto"
+             Background="{DynamicResource MaterialDesignPaper}"
+             FontFamily="{materialDesign:MaterialDesignFont}">
+    <Grid>
+        <materialDesign:Card UniformCornerRadius="16" Margin="48" VerticalAlignment="Center" HorizontalAlignment="Center" Width="600" materialDesign:ElevationAssist.Elevation="Dp8">
+            <Grid Margin="32">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="200"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Wahoo KICKR Setup" FontSize="32" FontWeight="Bold" Margin="0,0,0,8" HorizontalAlignment="Center"/>
-        <TextBlock Grid.Row="1" Text="Searching for your KICKR SNAP..." FontSize="18" Foreground="Gray" Margin="0,0,0,32" HorizontalAlignment="Center"/>
-            
-        <ListBox x:Name="ListDevices" Grid.Row="2" Margin="0,0,0,24" BorderThickness="1" BorderBrush="#EEEEEE" 
-                 ScrollViewer.VerticalScrollBarVisibility="Auto" DisplayMemberPath="Name">
-            <ListBox.ItemContainerStyle>
-                <Style TargetType="ListBoxItem">
-                    <Setter Property="Padding" Value="12"/>
-                    <Setter Property="FontSize" Value="16"/>
-                </Style>
-            </ListBox.ItemContainerStyle>
-        </ListBox>
+                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,8">
+                    <materialDesign:PackIcon Kind="Bike" Width="48" Height="48" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                    <TextBlock Text="Wahoo KICKR Setup" Style="{StaticResource MaterialDesignHeadline4TextBlock}" Margin="0,8,0,0" HorizontalAlignment="Center"/>
+                </StackPanel>
 
-        <StackPanel Grid.Row="3">
-            <TextBlock x:Name="TxtStatus" Text="Status: Initializing..." Margin="0,0,0,16" HorizontalAlignment="Center" Foreground="Gray"/>
-            <Button x:Name="BtnConnect" Content="Connect and Continue" Click="BtnConnect_Click" Height="50" Width="300" FontSize="18" FontWeight="SemiBold" IsEnabled="False" Background="#0078D7" Foreground="White"/>
-            <Button x:Name="BtnRescan" Content="Rescan" Click="BtnRescan_Click" Margin="0,12,0,0" Background="Transparent" BorderThickness="0" Foreground="#0078D7" Cursor="Hand"/>
-        </StackPanel>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,24">
+                    <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}" Value="0" IsIndeterminate="True" Width="20" Height="20" Margin="0,0,12,0" />
+                    <TextBlock Text="Searching for your KICKR SNAP..." Style="{StaticResource MaterialDesignSubtitle1TextBlock}" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                </StackPanel>
+                    
+                <ListBox x:Name="ListDevices" Grid.Row="2" Margin="0,0,0,24" 
+                         Style="{StaticResource MaterialDesignNavigationPrimaryListBox}"
+                         DisplayMemberPath="Name">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignNavigationPrimaryListBoxItem}">
+                            <Setter Property="Padding" Value="16,12"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+
+                <StackPanel Grid.Row="3">
+                    <TextBlock x:Name="TxtStatus" Text="Status: Initializing..." Margin="0,0,0,16" HorizontalAlignment="Center" Style="{StaticResource MaterialDesignCaptionTextBlock}"/>
+                    <Button x:Name="BtnConnect" Content="CONNECT AND RIDE" Click="BtnConnect_Click" 
+                            Height="56" Width="300" FontSize="16" FontWeight="Bold" IsEnabled="False" 
+                            Style="{StaticResource MaterialDesignRaisedButton}" 
+                            materialDesign:ButtonAssist.CornerRadius="28"/>
+                    <Button x:Name="BtnRescan" Content="RESCAN" Click="BtnRescan_Click" Margin="0,12,0,0" 
+                            Style="{StaticResource MaterialDesignFlatButton}" />
+                </StackPanel>
+            </Grid>
+        </materialDesign:Card>
     </Grid>
 </UserControl>
