@@ -1,7 +1,7 @@
 <Window x:Class="BikeFitnessApp.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Wahoo KICKR Randomizer" Height="500" Width="600">
+        Title="Wahoo KICKR Randomizer" Height="600" Width="800">
     <Grid Margin="20">
         <StackPanel>
             <TextBlock Text="Wahoo KICKR Controller" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
@@ -17,36 +17,36 @@
             </GroupBox>
 
             <!-- Control Section -->
-            <GroupBox Header="Manual Debug Control" Margin="0,0,0,10" Padding="10">
+            <GroupBox Header="Resistance Settings" Margin="0,0,0,10" Padding="10">
                 <StackPanel>
-                    <TextBlock Text="OpCode (Hex) - Try 42 (Resist), 41 (Watts), 40 (Level)" Margin="0,0,0,2"/>
-                    <TextBox x:Name="TxtOpCode" Text="42" Height="25" Margin="0,0,0,10"/>
-
-                    <TextBlock Text="Value (Decimal) - e.g., 50, 100, 200" Margin="0,0,0,2"/>
-                    <TextBox x:Name="TxtValue" Text="0" Height="25" Margin="0,0,0,10"/>
-                    <CheckBox x:Name="Chk16Bit" Content="Send as 16-bit (Short) - Required for Wahoo" IsChecked="True" Margin="0,0,0,10"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="Scale Input:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <ComboBox x:Name="CmbScale" SelectedIndex="0" Width="120">
-                            <ComboBoxItem Content="x1 (Raw)"/>
-                            <ComboBoxItem Content="x10 (0.1 Res)"/>
-                            <ComboBoxItem Content="x100 (Percentage)"/>
-                        </ComboBox>
-                    </StackPanel>
-
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Button x:Name="BtnSend" Grid.Column="0" Content="Send Command" Click="BtnSend_Click" Height="30" Margin="0,0,5,0" IsEnabled="False"/>
-                        <Button x:Name="BtnRequestControl" Grid.Column="1" Content="Request Control (0x00)" Click="BtnRequestControl_Click" Height="30" Margin="5,0,0,0" IsEnabled="False"/>
+                        
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                            <TextBlock Text="Min Resistance (%)"/>
+                            <Slider x:Name="SliderMin" Minimum="0" Maximum="100" Value="0" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
+                            <TextBlock Text="{Binding ElementName=SliderMin, Path=Value, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                            <TextBlock Text="Max Resistance (%)"/>
+                            <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="25" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
+                            <TextBlock Text="{Binding ElementName=SliderMax, Path=Value, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
+                        </StackPanel>
                     </Grid>
+                    
+                    <TextBlock Text="Change Interval: Every 30 Seconds" Margin="0,10,0,0" FontStyle="Italic"/>
                 </StackPanel>
             </GroupBox>
 
             <!-- Action Section -->
-            <!-- Removed Timer Buttons for Manual Mode -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                <Button x:Name="BtnStart" Content="Start Workout" Click="BtnStart_Click" Height="40" Width="150" Background="LightGreen" IsEnabled="False" Margin="0,0,10,0"/>
+                <Button x:Name="BtnStop" Content="Stop" Click="BtnStop_Click" Height="40" Width="150" Background="LightPink" IsEnabled="False"/>
+            </StackPanel>
             
             <TextBlock x:Name="TxtCurrentResistance" Text="Current Resistance: --" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,20,0,0"/>
         </StackPanel>

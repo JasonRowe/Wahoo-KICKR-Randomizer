@@ -133,8 +133,7 @@ namespace BikeFitnessApp
                 await SendCommand(0x00, (byte?)null);
 
                 TxtStatus.Text = $"Status: Connected to {selectedDevice.Name}";
-                BtnSend.IsEnabled = true;
-                BtnRequestControl.IsEnabled = true;
+                BtnStart.IsEnabled = true;
             }
             catch (Exception ex)
             {
@@ -151,79 +150,41 @@ namespace BikeFitnessApp
                 if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
                 {
                     TxtStatus.Text = "Status: Device Disconnected.";
-                    BtnSend.IsEnabled = false;
-                    BtnRequestControl.IsEnabled = false;
+                    BtnStart.IsEnabled = false;
+                    BtnStop.IsEnabled = false;
+                    _workoutTimer.Stop();
                 }
             });
         }
 
-        private async void BtnRequestControl_Click(object sender, RoutedEventArgs e)
+        private async void BtnStart_Click(object sender, RoutedEventArgs e)
         {
-            TxtStatus.Text = "Status: Requesting Control (0x00)...";
+            Logger.Log("Start button clicked.");
             try
             {
-                await SendCommand(0x00, (byte?)null);
-                TxtStatus.Text = "Status: Control Requested.";
+                _workoutTimer.Start();
+                BtnStart.IsEnabled = false;
+                BtnStop.IsEnabled = true;
+                
+                // Trigger immediately
+                WorkoutTimer_Tick(this, EventArgs.Empty); 
+                
+                TxtStatus.Text = "Status: Workout Started";
             }
             catch (Exception ex)
             {
-                HandleCommandError(ex);
+                Logger.Log($"Error starting workout: {ex}");
+                TxtStatus.Text = $"Error: {ex.Message}";
             }
         }
 
-        private async void BtnSend_Click(object sender, RoutedEventArgs e)
+        private void BtnStop_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                // Parse OpCode (Handle Hex with or without 0x prefix)
-                string opCodeText = TxtOpCode.Text.Trim();
-                if (opCodeText.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                {
-                    opCodeText = opCodeText.Substring(2);
-                }
-
-                if (!byte.TryParse(opCodeText, System.Globalization.NumberStyles.HexNumber, null, out byte opCode))
-                {
-                    TxtStatus.Text = "Error: Invalid OpCode. Use Hex (e.g., 04, 05).";
-                    return;
-                }
-                
-                // Parse Value (Allow decimals but cast to int, handle parsing errors)
-                if (!double.TryParse(TxtValue.Text, out double doubleVal))
-                {
-                    TxtStatus.Text = "Error: Invalid Value. Please enter a number.";
-                    return;
-                }
-                
-                // Apply Scaling
-                double multiplier = 1.0;
-                if (CmbScale.SelectedIndex == 1) multiplier = 10.0;
-                else if (CmbScale.SelectedIndex == 2) multiplier = 100.0;
-
-                int val = (int)(doubleVal * multiplier);
-
-                string logMsg = $"Input: {TxtValue.Text}, Scale: x{multiplier}, Sending: {val} (Op {opCode:X2})";
-                Logger.Log(logMsg);
-                TxtStatus.Text = $"Status: {logMsg}...";
-
-                // Use CheckBox to determine if we send as Short (16-bit) or Byte (8-bit)
-                if (Chk16Bit.IsChecked == true)
-                {
-                    // Cast to short first to handle negatives (2's complement), then ushort
-                    await SendCommand(opCode, (ushort)(short)val);
-                }
-                else
-                {
-                    // Cast to byte (unchecked) to allow wrapping for negatives/overflows
-                    await SendCommand(opCode, (byte)val);
-                }
-
-                TxtStatus.Text = $"Status: Sent Op {opCode:X2} Val {val}. Verify on Bike.";
-            }
-            catch (Exception ex)
-            {
-                HandleCommandError(ex);
-            }
+            Logger.Log("Stop button clicked.");
+            _workoutTimer.Stop();
+            BtnStart.IsEnabled = true;
+            BtnStop.IsEnabled = false;
+            TxtStatus.Text = "Status: Workout Stopped";
         }
 
         private async void WorkoutTimer_Tick(object? sender, EventArgs e)
@@ -237,13 +198,17 @@ namespace BikeFitnessApp
             try
             {
                 // Convert UI percentage (0-10) to logic value (0.0-0.1)
-                // double resistance = _logic.CalculateResistance(SliderMin.Value / 100.0, SliderMax.Value / 100.0);
+                double resistance = _logic.CalculateResistance(SliderMin.Value / 100.0, SliderMax.Value / 100.0);
                 
-                // Logger.Log($"Calculated resistance: {resistance}");
-                // TxtCurrentResistance.Text = $"Min: {SliderMin.Value:F0}% Max: {SliderMax.Value:F0}% Current: {(resistance * 100):F1}%";
+                Logger.Log($"Calculated resistance: {resistance}");
+                TxtCurrentResistance.Text = $"Min: {SliderMin.Value:F0}% Max: {SliderMax.Value:F0}% Current: {(resistance * 100):F1}%";
 
-                // FTMS Op Code 0x04 is "Set Target Resistance Level". Send byte 0-100.
-                // await SendCommand(0x04, (byte)(resistance * 100));
+                // Create Wahoo Command (OpCode 0x42)
+                byte[] commandBytes = _logic.CreateWahooResistanceCommand(resistance);
+                var writer = new DataWriter();
+                writer.WriteBytes(commandBytes);
+                await WriteCharacteristicWithRetry(writer.DetachBuffer());
+
                 Logger.Log("Successfully sent resistance command.");
             }
             catch (Exception ex)
