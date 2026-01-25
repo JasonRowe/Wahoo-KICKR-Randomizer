@@ -1,54 +1,64 @@
 <Window x:Class="BikeFitnessApp.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Wahoo KICKR Randomizer" Height="800" Width="800">
-    <Grid Margin="20">
-        <StackPanel>
-            <TextBlock Text="Wahoo KICKR Controller" FontSize="24" FontWeight="Bold" Margin="0,0,0,20"/>
+        Title="Wahoo KICKR Randomizer" Height="700" Width="1200" MinHeight="600" MinWidth="800"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Wahoo KICKR Controller" FontSize="24" FontWeight="Bold" Margin="0,0,0,24"/>
             
-            <!-- Connection Section -->
-            <GroupBox Header="Connection" Margin="0,0,0,10" Padding="10">
-                <StackPanel>
-                    <Button x:Name="BtnScan" Content="Scan for KICKR SNAP" Click="BtnScan_Click" Height="30" Margin="0,0,0,10"/>
-                    <ListBox x:Name="ListDevices" Height="100" Margin="0,0,0,10" DisplayMemberPath="Name"/>
-                    <Button x:Name="BtnConnect" Content="Connect to Selected" Click="BtnConnect_Click" Height="30" IsEnabled="False"/>
-                    <TextBlock x:Name="TxtStatus" Text="Status: Disconnected" Foreground="Gray" Margin="0,5,0,0"/>
-                </StackPanel>
-            </GroupBox>
-
-            <!-- Control Section -->
-            <GroupBox Header="Resistance Settings" Margin="0,0,0,10" Padding="10">
-                <StackPanel>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        
-                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                            <TextBlock Text="Min Resistance (%)"/>
-                            <Slider x:Name="SliderMin" Minimum="0" Maximum="100" Value="0" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
-                            <TextBlock Text="{Binding ElementName=SliderMin, Path=Value, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                            <TextBlock Text="Max Resistance (%)"/>
-                            <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="25" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
-                            <TextBlock Text="{Binding ElementName=SliderMax, Path=Value, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
-                        </StackPanel>
-                    </Grid>
-                    
-                    <TextBlock Text="Change Interval: Every 30 Seconds" Margin="0,10,0,0" FontStyle="Italic"/>
-                </StackPanel>
-            </GroupBox>
-
-            <!-- Action Section -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
-                <Button x:Name="BtnStart" Content="Start Workout" Click="BtnStart_Click" Height="40" Width="150" Background="LightGreen" IsEnabled="False" Margin="0,0,10,0"/>
-                <Button x:Name="BtnStop" Content="Stop" Click="BtnStop_Click" Height="40" Width="150" Background="LightPink" IsEnabled="False"/>
+        <!-- Connection Section -->
+        <GroupBox Grid.Row="1" Header="Connection" Margin="0,0,0,12" Padding="12">
+            <StackPanel>
+                <Button x:Name="BtnScan" Content="Scan for KICKR SNAP" Click="BtnScan_Click" Height="32" Margin="0,0,0,12"/>
+                <ListBox x:Name="ListDevices" Height="100" Margin="0,0,0,12" DisplayMemberPath="Name"/>
+                <Button x:Name="BtnConnect" Content="Connect to Selected" Click="BtnConnect_Click" Height="32" IsEnabled="False"/>
+                <TextBlock x:Name="TxtStatus" Text="Status: Disconnected" Foreground="Gray" Margin="0,4,0,0"/>
             </StackPanel>
-            
-            <TextBlock x:Name="TxtCurrentResistance" Text="--" FontSize="120" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+        </GroupBox>
+
+        <!-- Control Section -->
+        <GroupBox Grid.Row="2" Header="Resistance Settings" Margin="0,0,0,12" Padding="12">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                        
+                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                        <TextBlock Text="Min Resistance (%)"/>
+                        <Slider x:Name="SliderMin" Minimum="0" Maximum="100" Value="0" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
+                        <TextBlock Text="{Binding ElementName=SliderMin, Path=Value, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                        <TextBlock Text="Max Resistance (%)"/>
+                        <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="25" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
+                        <TextBlock Text="{Binding ElementName=SliderMax, Path=Value, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
+                    </StackPanel>
+                </Grid>
+                    
+                <TextBlock Text="Change Interval: Every 30 Seconds" Margin="0,12,0,0" FontStyle="Italic"/>
+            </StackPanel>
+        </GroupBox>
+
+        <!-- Action Section -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,12,0,0">
+            <Button x:Name="BtnStart" Content="Start Workout" Click="BtnStart_Click" Height="40" Width="150" Background="LightGreen" IsEnabled="False" Margin="0,0,12,0"/>
+            <Button x:Name="BtnStop" Content="Stop" Click="BtnStop_Click" Height="40" Width="150" Background="LightPink" IsEnabled="False"/>
         </StackPanel>
+            
+        <!-- Resistance Display (Responsive) -->
+        <Viewbox Grid.Row="4" Margin="0,24,0,0">
+            <TextBlock x:Name="TxtCurrentResistance" Text="--" FontWeight="Bold" HorizontalAlignment="Center"/>
+        </Viewbox>
     </Grid>
 </Window>
