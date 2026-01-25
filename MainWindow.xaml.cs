@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Advertisement;
@@ -197,11 +198,31 @@ namespace BikeFitnessApp
 
             try
             {
-                // Convert UI percentage (0-10) to logic value (0.0-0.1)
-                double resistance = _logic.CalculateResistance(SliderMin.Value / 100.0, SliderMax.Value / 100.0);
+                double min = SliderMin.Value / 100.0;
+                double max = SliderMax.Value / 100.0;
+                double resistance = _logic.CalculateResistance(min, max);
                 
                 Logger.Log($"Calculated resistance: {resistance}");
-                TxtCurrentResistance.Text = $"Min: {SliderMin.Value:F0}% Max: {SliderMax.Value:F0}% Current: {(resistance * 100):F1}%";
+                TxtCurrentResistance.Text = $"{(resistance * 100):F0}%";
+
+                // Color coding: Green (Low) -> Yellow -> Red (High) relative to the range
+                double range = max - min;
+                double ratio = range > 0 ? (resistance - min) / range : 0;
+                ratio = Math.Clamp(ratio, 0, 1);
+
+                byte r = 0;
+                byte g = 0;
+                if (ratio < 0.5)
+                {
+                    r = (byte)(ratio * 2 * 255);
+                    g = 255;
+                }
+                else
+                {
+                    r = 255;
+                    g = (byte)((1 - ratio) * 2 * 255);
+                }
+                TxtCurrentResistance.Foreground = new SolidColorBrush(Color.FromRgb(r, g, 0));
 
                 // Create Wahoo Command (OpCode 0x42)
                 byte[] commandBytes = _logic.CreateWahooResistanceCommand(resistance);

@@ -11,6 +11,7 @@ App should have robust logging to ensure we can figure out why it crashes.
  - [IN PROGRESS] Debug Connection Stability. Added ConnectionStatusChanged monitoring, Uncached service discovery, and better watcher cleanup to diagnose 0x80650081 errors.
  - [COMPLETED] Protocol Mismatch: Confirmed Wahoo Custom Characteristic requires Wahoo OpCodes. OpCode 0x42 (Resistance) with values 0-99 (integer) works successfully.
  - [COMPLETED] Re-enable Workout Timer: Restored sliders, removed debug UI, and connected timer to Wahoo resistance logic.
+ - [COMPLETED] UI Improvements: Enlarged window height, increased resistance text size, and added dynamic color coding (Green -> Red).
  - intermittently I get the following when connecting Connection error: System.Runtime.InteropServices.COMException (0x80650081)
  - Also COM Error 0x80650081 happens when trying to set some resistance values
 
