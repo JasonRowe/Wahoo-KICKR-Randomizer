@@ -36,6 +36,8 @@ This is a Windows Presentation Foundation (WPF) application designed to add vari
 6.  **Stop**:
     - Click **"Stop"** to pause the automated changes.
 
+![app screenshot](readme_image_connect.PNG)
+
 ![app screenshot](readme_image.PNG)
 ## Technical Details
 - **Protocol**: The app communicates using the Wahoo Custom Characteristic UUID `a026e005-0a7d-4ab3-97fa-f1500f9feb8b`.
