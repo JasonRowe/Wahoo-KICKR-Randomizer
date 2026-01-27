@@ -16,6 +16,7 @@ namespace BikeFitnessApp
         private GattCharacteristic _controlPoint;
         private DispatcherTimer _workoutTimer;
         private KickrLogic _logic = new KickrLogic();
+        private int _stepIndex = 0;
 
         public event Action? Disconnected;
 
@@ -77,6 +78,7 @@ namespace BikeFitnessApp
             Logger.Log("Start button clicked.");
             try
             {
+                _stepIndex = 0;
                 _workoutTimer.Start();
                 PowerManagement.PreventSleep();
                 BtnStart.IsEnabled = false;
@@ -120,9 +122,15 @@ namespace BikeFitnessApp
             {
                 double min = SliderMin.Value / 100.0;
                 double max = SliderMax.Value / 100.0;
-                double resistance = _logic.CalculateResistance(min, max);
+
+                WorkoutMode mode = WorkoutMode.Random;
+                if (ComboWorkoutMode.SelectedIndex == 1) mode = WorkoutMode.Hilly;
+                if (ComboWorkoutMode.SelectedIndex == 2) mode = WorkoutMode.Mountain;
+
+                double resistance = _logic.CalculateResistance(mode, min, max, _stepIndex);
+                _stepIndex++;
                 
-                Logger.Log($"Calculated resistance: {resistance}");
+                Logger.Log($"Calculated resistance: {resistance} (Mode: {mode}, Step: {_stepIndex})");
 
                 // Create Wahoo Command (OpCode 0x42)
                 byte[] commandBytes = _logic.CreateWahooResistanceCommand(resistance);

@@ -73,6 +73,15 @@
                         <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="25" TickFrequency="5" IsSnapToTickEnabled="True"
                                 Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,24"/>
 
+                        <StackPanel Margin="0,0,0,24">
+                            <TextBlock Text="WORKOUT MODE" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
+                            <ComboBox x:Name="ComboWorkoutMode" Style="{DynamicResource MaterialDesignOutlinedComboBox}" Margin="0,8,0,0" SelectedIndex="0">
+                                <ComboBoxItem Content="Random 🎲"/>
+                                <ComboBoxItem Content="Hilly ⛰️"/>
+                                <ComboBoxItem Content="Mountain Climb 🏔️"/>
+                            </ComboBox>
+                        </StackPanel>
+
                         <materialDesign:ColorZone Mode="Light" Padding="12" CornerRadius="8" materialDesign:ElevationAssist.Elevation="Dp0">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <materialDesign:PackIcon Kind="Timer" Margin="0,0,8,0" VerticalAlignment="Center"/>
