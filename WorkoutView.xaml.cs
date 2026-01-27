@@ -112,6 +112,13 @@ namespace BikeFitnessApp
                 double resistance = _logic.CalculateResistance(min, max);
                 
                 Logger.Log($"Calculated resistance: {resistance}");
+
+                // Create Wahoo Command (OpCode 0x42)
+                byte[] commandBytes = _logic.CreateWahooResistanceCommand(resistance);
+                var writer = new DataWriter();
+                writer.WriteBytes(commandBytes);
+                await WriteCharacteristicWithRetry(writer.DetachBuffer());
+
                 TxtCurrentResistance.Text = $"{(resistance * 100):F0}%";
                 ResistanceGauge.Value = resistance * 100;
 
@@ -133,12 +140,6 @@ namespace BikeFitnessApp
                     g = (byte)((1 - ratio) * 2 * 255);
                 }
                 TxtCurrentResistance.Foreground = new SolidColorBrush(Color.FromRgb(r, g, 0));
-
-                // Create Wahoo Command (OpCode 0x42)
-                byte[] commandBytes = _logic.CreateWahooResistanceCommand(resistance);
-                var writer = new DataWriter();
-                writer.WriteBytes(commandBytes);
-                await WriteCharacteristicWithRetry(writer.DetachBuffer());
 
                 Logger.Log("Successfully sent resistance command.");
             }

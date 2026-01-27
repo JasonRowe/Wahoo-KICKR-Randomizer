@@ -60,5 +60,35 @@ namespace BikeFitnessApp.Tests
             // 0x42, 50 (0x32), 0x00
             CollectionAssert.AreEqual(new byte[] { 0x42, 0x32, 0x00 }, bytes);
         }
+
+        [TestMethod]
+        public void TestCalculateResistance_Bounds()
+        {
+            var logic = new KickrLogic();
+            double val = logic.CalculateResistance(0.3, 0.7);
+            Assert.IsTrue(val >= 0.3 && val <= 0.7);
+        }
+
+        [TestMethod]
+        public void TestCalculateResistance_Clamping()
+        {
+            var logic = new KickrLogic();
+            // Both above 1.0, should be clamped to 1.0
+            double val = logic.CalculateResistance(1.5, 2.0);
+            Assert.AreEqual(1.0, val);
+            
+            // Both below 0.0, should be clamped to 0.0
+            val = logic.CalculateResistance(-0.5, -0.1);
+            Assert.AreEqual(0.0, val);
+        }
+
+        [TestMethod]
+        public void TestCalculateResistance_MinGreaterThanMax()
+        {
+            var logic = new KickrLogic();
+            // Min 0.8 > Max 0.2. Code sets min = max (0.2). Result should be 0.2.
+            double val = logic.CalculateResistance(0.8, 0.2);
+            Assert.AreEqual(0.2, val);
+        }
     }
 }

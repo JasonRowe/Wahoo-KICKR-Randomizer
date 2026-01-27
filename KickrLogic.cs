@@ -17,7 +17,7 @@ namespace BikeFitnessApp
             _random = random;
         }
 
-        // Calculate a random resistance value between min and max, clamped to 0-0.20   
+        // Calculate a random resistance value between min and max, clamped to 0-1.0
         public double CalculateResistance(double min, double max)
         {
             if (min > max) min = max;
