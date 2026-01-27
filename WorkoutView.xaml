@@ -30,7 +30,7 @@
                 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Menu Background="Transparent" TextElement.Foreground="{DynamicResource PrimaryHueMidForegroundBrush}" Margin="0,0,16,0">
-                        <MenuItem Header="ADMIN" Height="32">
+                        <MenuItem Header="SETTINGS" Height="32">
                             <MenuItem x:Name="MenuEnableLogging" Header="Enable Logging" IsCheckable="True" Click="MenuEnableLogging_Click" Foreground="Black"/>
                         </MenuItem>
                     </Menu>
