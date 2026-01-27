@@ -32,8 +32,19 @@ namespace BikeFitnessApp
             _workoutTimer.Interval = TimeSpan.FromSeconds(30); 
             _workoutTimer.Tick += WorkoutTimer_Tick;
 
+            // Initialize Logging Menu State
+            MenuEnableLogging.IsChecked = Logger.IsEnabled;
+
             // Initial command to take ownership
             _ = SendCommand(0x00, (byte?)null);
+        }
+
+        private void MenuEnableLogging_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem)
+            {
+                Logger.IsEnabled = menuItem.IsChecked;
+            }
         }
 
         private void WorkoutView_Unloaded(object sender, RoutedEventArgs e)

@@ -27,12 +27,20 @@
                     <materialDesign:PackIcon Kind="BikeFast" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <TextBlock Text="TRAINING SESSION" Style="{DynamicResource MaterialDesignHeadline5TextBlock}" VerticalAlignment="Center" FontWeight="Bold"/>
                 </StackPanel>
-                <materialDesign:Chip x:Name="TxtStatus" Content="CONNECTED" HorizontalAlignment="Right" VerticalAlignment="Center"
-                      Background="#4CAF50" Foreground="White" IconBackground="#388E3C">
-                    <materialDesign:Chip.Icon>
-                        <materialDesign:PackIcon Kind="BluetoothConnected" />
-                    </materialDesign:Chip.Icon>
-                </materialDesign:Chip>
+                
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Menu Background="Transparent" TextElement.Foreground="{DynamicResource PrimaryHueMidForegroundBrush}" Margin="0,0,16,0">
+                        <MenuItem Header="ADMIN" Height="32">
+                            <MenuItem x:Name="MenuEnableLogging" Header="Enable Logging" IsCheckable="True" Click="MenuEnableLogging_Click" Foreground="Black"/>
+                        </MenuItem>
+                    </Menu>
+                    <materialDesign:Chip x:Name="TxtStatus" Content="CONNECTED" 
+                          Background="#4CAF50" Foreground="White" IconBackground="#388E3C">
+                        <materialDesign:Chip.Icon>
+                            <materialDesign:PackIcon Kind="BluetoothConnected" />
+                        </materialDesign:Chip.Icon>
+                    </materialDesign:Chip>
+                </StackPanel>
             </Grid>
         </materialDesign:ColorZone>
 
