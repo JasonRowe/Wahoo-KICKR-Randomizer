@@ -17,6 +17,7 @@ namespace BikeFitnessApp
         private DispatcherTimer _workoutTimer;
         private KickrLogic _logic = new KickrLogic();
         private int _stepIndex = 0;
+        private int _intervalSeconds = 30;
 
         public event Action? Disconnected;
 
@@ -30,7 +31,7 @@ namespace BikeFitnessApp
 
             // Setup Timer for random changes
             _workoutTimer = new DispatcherTimer();
-            _workoutTimer.Interval = TimeSpan.FromSeconds(30); 
+            UpdateInterval();
             _workoutTimer.Tick += WorkoutTimer_Tick;
 
             // Initialize Logging Menu State
@@ -38,6 +39,30 @@ namespace BikeFitnessApp
 
             // Initial command to take ownership
             _ = SendCommand(0x00, (byte?)null);
+        }
+
+        private void UpdateInterval()
+        {
+            _workoutTimer.Interval = TimeSpan.FromSeconds(_intervalSeconds);
+            if (TxtInterval != null)
+            {
+                TxtInterval.Text = $"Interval: {_intervalSeconds}s";
+            }
+        }
+
+        private void BtnIncreaseInterval_Click(object sender, RoutedEventArgs e)
+        {
+            _intervalSeconds += 10;
+            UpdateInterval();
+        }
+
+        private void BtnDecreaseInterval_Click(object sender, RoutedEventArgs e)
+        {
+            if (_intervalSeconds > 10)
+            {
+                _intervalSeconds -= 10;
+                UpdateInterval();
+            }
         }
 
         private void MenuEnableLogging_Click(object sender, RoutedEventArgs e)

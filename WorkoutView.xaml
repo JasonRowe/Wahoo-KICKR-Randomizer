@@ -84,8 +84,16 @@
 
                         <materialDesign:ColorZone Mode="Light" Padding="12" CornerRadius="8" materialDesign:ElevationAssist.Elevation="Dp0">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Style="{DynamicResource MaterialDesignToolButton}" Click="BtnDecreaseInterval_Click" Margin="0,0,8,0">
+                                    <materialDesign:PackIcon Kind="ChevronDown" />
+                                </Button>
+                                
                                 <materialDesign:PackIcon Kind="Timer" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Interval: 30 Seconds" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                <TextBlock x:Name="TxtInterval" Text="Interval: 30s" VerticalAlignment="Center" FontWeight="SemiBold" Width="80" TextAlignment="Center"/>
+                                
+                                <Button Style="{DynamicResource MaterialDesignToolButton}" Click="BtnIncreaseInterval_Click" Margin="8,0,0,0">
+                                    <materialDesign:PackIcon Kind="ChevronUp" />
+                                </Button>
                             </StackPanel>
                         </materialDesign:ColorZone>
                     </StackPanel>
