@@ -14,18 +14,30 @@ namespace BikeFitnessApp
     {
         private BluetoothLEDevice _device;
         private GattCharacteristic _controlPoint;
+        private GattCharacteristic? _powerChar;
+        private GattCharacteristic? _speedChar;
+        
         private DispatcherTimer _workoutTimer;
         private KickrLogic _logic = new KickrLogic();
         private int _stepIndex = 0;
         private int _intervalSeconds = 30;
 
+        // Speed Calculation State
+        private uint _lastWheelRevs = 0;
+        private ushort _lastWheelTime = 0;
+        private bool _hasPrevWheelData = false;
+        private const double WheelCircumference = 2.096; // 700x23c
+
         public event Action? Disconnected;
 
-        public WorkoutView(BluetoothLEDevice device, GattCharacteristic controlPoint)
+        public WorkoutView(BluetoothLEDevice device, GattCharacteristic controlPoint, GattCharacteristic? powerChar, GattCharacteristic? speedChar)
         {
             InitializeComponent();
             _device = device;
             _controlPoint = controlPoint;
+            _powerChar = powerChar;
+            _speedChar = speedChar;
+
             _device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
             this.Unloaded += WorkoutView_Unloaded;
 
@@ -39,6 +51,78 @@ namespace BikeFitnessApp
 
             // Initial command to take ownership
             _ = SendCommand(0x00, (byte?)null);
+
+            SetupNotifications();
+        }
+
+        private async void SetupNotifications()
+        {
+            if (_powerChar != null)
+            {
+                try
+                {
+                    var status = await _powerChar.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
+                    if (status == GattCommunicationStatus.Success)
+                    {
+                        _powerChar.ValueChanged += Power_ValueChanged;
+                        Logger.Log("Subscribed to Power notifications.");
+                    }
+                }
+                catch(Exception ex) { Logger.Log($"Failed to subscribe to Power: {ex.Message}"); }
+            }
+
+            if (_speedChar != null)
+            {
+                try
+                {
+                    var status = await _speedChar.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
+                    if (status == GattCommunicationStatus.Success)
+                    {
+                        _speedChar.ValueChanged += Speed_ValueChanged;
+                        Logger.Log("Subscribed to Speed notifications.");
+                    }
+                }
+                catch (Exception ex) { Logger.Log($"Failed to subscribe to Speed: {ex.Message}"); }
+            }
+        }
+
+        private void Power_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
+        {
+            var reader = DataReader.FromBuffer(args.CharacteristicValue);
+            byte[] data = new byte[reader.UnconsumedBufferLength];
+            reader.ReadBytes(data);
+
+            int watts = _logic.ParsePower(data);
+            
+            Dispatcher.Invoke(() =>
+            {
+                if (TxtPower != null) TxtPower.Text = watts.ToString();
+            });
+        }
+
+        private void Speed_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
+        {
+            var reader = DataReader.FromBuffer(args.CharacteristicValue);
+            byte[] data = new byte[reader.UnconsumedBufferLength];
+            reader.ReadBytes(data);
+
+            var (hasWheelData, wheelRevs, lastWheelTime) = _logic.ParseCscData(data);
+
+            if (hasWheelData)
+            {
+                if (_hasPrevWheelData)
+                {
+                    double speed = _logic.CalculateSpeed(_lastWheelRevs, _lastWheelTime, wheelRevs, lastWheelTime, WheelCircumference);
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (TxtSpeed != null) TxtSpeed.Text = speed.ToString("F1");
+                    });
+                }
+                
+                _lastWheelRevs = wheelRevs;
+                _lastWheelTime = lastWheelTime;
+                _hasPrevWheelData = true;
+            }
         }
 
         private void UpdateInterval()
@@ -77,6 +161,9 @@ namespace BikeFitnessApp
         {
             _workoutTimer.Stop();
             PowerManagement.AllowSleep();
+            
+            if (_powerChar != null) _powerChar.ValueChanged -= Power_ValueChanged;
+            if (_speedChar != null) _speedChar.ValueChanged -= Speed_ValueChanged;
         }
 
         private void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)

@@ -106,11 +106,68 @@ namespace BikeFitnessApp
 
         public byte[] CreateWahooResistanceCommand(double resistancePercent)
         {
-            // Wahoo Resistance Mode: OpCode 0x42
-            // Range: 0-100% (User verified 0-99 works)
-            byte opCode = 0x42;
-            int value = (int)Math.Clamp(resistancePercent * 100, 0, 99);
+            // Wahoo Resistance Mode: OpCode 0x40 (Standard Resistance Mode)
+            // Range: 0-100%
+            byte opCode = 0x40;
+            int value = (int)Math.Clamp(resistancePercent * 100, 0, 100);
             return CreateCommandBytes(opCode, (ushort)value);
+        }
+
+        public int ParsePower(byte[] data)
+        {
+            if (data == null || data.Length < 4) return 0;
+            
+            // Flags (16 bit) - Byte 0-1
+            // Instantaneous Power (SInt16) - Byte 2-3
+            
+            // We assume standard format. Little Endian.
+            short power = BitConverter.ToInt16(data, 2);
+            return Math.Max(0, (int)power);
+        }
+
+        public (bool hasWheelData, uint wheelRevs, ushort lastWheelTime) ParseCscData(byte[] data)
+        {
+            if (data == null || data.Length == 0) return (false, 0, 0);
+
+            byte flags = data[0];
+            bool wheelRevPresent = (flags & 0x01) != 0;
+            
+            if (!wheelRevPresent) return (false, 0, 0);
+
+            // Data index starts at 1
+            int index = 1;
+
+            // If Crank Rev Present (Bit 1), we need to check if it comes before or after Wheel?
+            // Spec: Flags (1) + Wheel Data (if present) + Crank Data (if present)
+            // Wheel Data: Cumulative Wheel Revolutions (UInt32 - 4 bytes) + Last Wheel Event Time (UInt16 - 2 bytes)
+            
+            if (data.Length < index + 6) return (false, 0, 0);
+
+            uint wheelRevs = BitConverter.ToUInt32(data, index);
+            ushort lastWheelTime = BitConverter.ToUInt16(data, index + 4);
+
+            return (true, wheelRevs, lastWheelTime);
+        }
+
+        public double CalculateSpeed(uint prevRevs, ushort prevTime, uint currRevs, ushort currTime, double circumferenceMeters)
+        {
+            if (currRevs < prevRevs) return 0; // Handle wrap-around if needed, or just ignore simple case
+            
+            uint revsDiff = currRevs - prevRevs;
+            if (revsDiff == 0) return 0;
+
+            // Time unit is 1/1024 seconds
+            // Handle wrap-around of time (UInt16)
+            int timeDiff = currTime - prevTime;
+            if (timeDiff < 0) timeDiff += 65536; // Wrap around adjustment for UInt16
+
+            if (timeDiff == 0) return 0;
+
+            double timeSeconds = timeDiff / 1024.0;
+            double distanceMeters = revsDiff * circumferenceMeters;
+            
+            double speedMps = distanceMeters / timeSeconds;
+            return speedMps * 3.6; // Convert to KPH
         }
     }
 }

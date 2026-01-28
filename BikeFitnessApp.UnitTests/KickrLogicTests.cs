@@ -57,8 +57,85 @@ namespace BikeFitnessApp.Tests
             // 50% resistance
             byte[] bytes = logic.CreateWahooResistanceCommand(0.5);
             
-            // 0x42, 50 (0x32), 0x00
-            CollectionAssert.AreEqual(new byte[] { 0x42, 0x32, 0x00 }, bytes);
+            // 0x40 (Standard Resistance), 50 (0x32), 0x00
+            CollectionAssert.AreEqual(new byte[] { 0x40, 0x32, 0x00 }, bytes);
+        }
+
+        [TestMethod]
+        public void TestParsePower()
+        {
+            var logic = new KickrLogic();
+            // Flags (2 bytes) + Power (2 bytes, 150 watts = 0x0096)
+            byte[] data = new byte[] { 0x00, 0x00, 0x96, 0x00 };
+            
+            int watts = logic.ParsePower(data);
+            Assert.AreEqual(150, watts);
+        }
+
+        [TestMethod]
+        public void TestParseCscData()
+        {
+            var logic = new KickrLogic();
+            // Flags: 0x01 (Wheel present)
+            // Wheel Revs: 100 (0x64000000)
+            // Last Wheel Time: 2000 (0xD007)
+            byte[] data = new byte[] { 0x01, 0x64, 0x00, 0x00, 0x00, 0xD0, 0x07 };
+            
+            var result = logic.ParseCscData(data);
+            Assert.IsTrue(result.hasWheelData);
+            Assert.AreEqual(100u, result.wheelRevs);
+            Assert.AreEqual(2000, result.lastWheelTime);
+        }
+
+        [TestMethod]
+        public void TestParseCscData_NoWheelFlag()
+        {
+            var logic = new KickrLogic();
+            // Flags: 0x02 (Crank present, Wheel NOT present)
+            byte[] data = new byte[] { 0x02, 0x00, 0x00 }; 
+            
+            var result = logic.ParseCscData(data);
+            Assert.IsFalse(result.hasWheelData);
+        }
+
+        [TestMethod]
+        public void TestCalculateSpeed()
+        {
+            var logic = new KickrLogic();
+            uint prevRevs = 100;
+            ushort prevTime = 10000;
+            
+            uint currRevs = 101; // 1 rev
+            ushort currTime = 11024; // 1024 ticks = 1 second later
+            
+            double circumference = 2.0; // 2 meters
+            
+            // Speed = 1 rev * 2m / 1s = 2m/s
+            // 2m/s * 3.6 = 7.2 kph
+            
+            double speed = logic.CalculateSpeed(prevRevs, prevTime, currRevs, currTime, circumference);
+            Assert.AreEqual(7.2, speed, 0.001);
+        }
+
+        [TestMethod]
+        public void TestCalculateSpeed_TimeWrapAround()
+        {
+            var logic = new KickrLogic();
+            uint prevRevs = 100;
+            ushort prevTime = 65000;
+            
+            uint currRevs = 101; 
+            ushort currTime = 487; // Wrapped around. 65536 - 65000 = 536. 536 + 488 = 1024 ticks (1 sec)
+            // Let's do exact math: (65536 - 65000) + 488 = 1024 ticks = 1 second?
+            // Wait: 487 - 65000 = -64513. -64513 + 65536 = 1023 ticks?
+            // Let's set currTime to (65000 + 1024) % 65536 = 66024 % 65536 = 488
+            
+            currTime = 488;
+            
+            double circumference = 2.0; 
+            
+            double speed = logic.CalculateSpeed(prevRevs, prevTime, currRevs, currTime, circumference);
+            Assert.AreEqual(7.2, speed, 0.001);
         }
 
         [TestMethod]

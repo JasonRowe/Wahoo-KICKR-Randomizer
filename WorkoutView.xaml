@@ -128,6 +128,26 @@
                                          Foreground="{Binding ElementName=TxtCurrentResistance, Path=Foreground}"
                                          Background="#333333" BorderThickness="0"/>
                         </Grid>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,40,0,0">
+                            <!-- Power -->
+                            <StackPanel Margin="0,0,40,0" MinWidth="120">
+                                <TextBlock Text="POWER" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                     <TextBlock x:Name="TxtPower" Text="--" FontSize="48" FontWeight="Bold" Foreground="White"/>
+                                     <TextBlock Text="w" FontSize="24" Foreground="#888888" VerticalAlignment="Bottom" Margin="4,0,0,8"/>
+                                </StackPanel>
+                            </StackPanel>
+                            
+                            <!-- Speed -->
+                            <StackPanel Margin="40,0,0,0" MinWidth="120">
+                                <TextBlock Text="SPEED" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                     <TextBlock x:Name="TxtSpeed" Text="--" FontSize="48" FontWeight="Bold" Foreground="White"/>
+                                     <TextBlock Text="kph" FontSize="24" Foreground="#888888" VerticalAlignment="Bottom" Margin="4,0,0,8"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </materialDesign:Card>
