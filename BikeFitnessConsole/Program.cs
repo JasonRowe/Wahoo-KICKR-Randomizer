@@ -13,7 +13,8 @@ namespace BikeFitnessConsole
     class Program
     {
         // UUIDs
-        private static readonly Guid WAHOO_SERVICE = new Guid("a026e001-0a7d-4ab3-97fa-f1500f9feb8b");
+        // Updated WAHOO_SERVICE based on device dump (ee01)
+        private static readonly Guid WAHOO_SERVICE = new Guid("a026ee01-0a7d-4ab3-97fa-f1500f9feb8b");
         private static readonly Guid WAHOO_CP = new Guid("a026e005-0a7d-4ab3-97fa-f1500f9feb8b");
         
         private static readonly Guid POWER_SERVICE = new Guid("00001818-0000-1000-8000-00805f9b34fb");
@@ -63,19 +64,32 @@ namespace BikeFitnessConsole
                 return;
             }
 
-            Console.WriteLine("Connected. Dumping Services...");
-            await DumpDeviceDetails();
+            Console.WriteLine("Connected. discovering services...");
+            
+            // Get all services once to be robust
+            var servicesResult = await _device.GetGattServicesAsync(BluetoothCacheMode.Uncached);
+            if (servicesResult.Status != GattCommunicationStatus.Success)
+            {
+                Console.WriteLine($"Failed to get services: {servicesResult.Status}");
+                return;
+            }
+            var allServices = servicesResult.Services;
+            Console.WriteLine($"Found {allServices.Count} services.");
 
-            Console.WriteLine("Searching for specific services...");
+            // Dump for debug
+            foreach(var s in allServices)
+            {
+                Console.WriteLine($"Service: {s.Uuid}");
+            }
 
             // 1. Setup Control Point
-            await SetupControlPoint();
+            await SetupControlPoint(allServices);
 
             // 2. Setup Power Notifications
-            await SetupPower();
+            await SetupPower(allServices);
 
             // 3. Setup Speed Notifications
-            await SetupSpeed();
+            await SetupSpeed(allServices);
 
             // 4. Send Init/Unlock
             Console.WriteLine("\nInitializing (Sending 0x00)...");
@@ -93,85 +107,148 @@ namespace BikeFitnessConsole
 
             while (true)
             {
-                var key = Console.ReadKey(true).KeyChar;
-                if (key == 'q' || key == 'Q') break;
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(true).KeyChar;
+                    if (key == 'q' || key == 'Q') break;
 
-                if (char.IsDigit(key))
-                {
-                    int level = int.Parse(key.ToString());
-                    Console.WriteLine($"\n[Command] Level {level}");
-                    await SendLevel(level);
-                }
-                else if (key == 'r' || key == 'R')
-                {
-                    Console.Write("\nEnter Level 0-100: ");
-                    string? input = Console.ReadLine();
-                    if (int.TryParse(input, out int val))
+                    if (char.IsDigit(key))
                     {
-                        await SendResistance(val);
+                        int level = int.Parse(key.ToString());
+                        Console.WriteLine($"\n[Command] Level {level}");
+                        await SendLevel(level);
+                    }
+                    else if (key == 'r' || key == 'R')
+                    {
+                        Console.Write("\nEnter Level 0-100: ");
+                        string? input = Console.ReadLine();
+                        if (int.TryParse(input, out int val))
+                        {
+                            await SendResistance(val);
+                        }
+                    }
+                    else if (key == 's' || key == 'S')
+                    {
+                        Console.Write("\nEnter Resistance % (0-100): ");
+                        string? input = Console.ReadLine();
+                        if (int.TryParse(input, out int val))
+                        {
+                            await SendMode41(val);
+                        }
+                    }
+                    else if (key == 'e' || key == 'E')
+                    {
+                        Console.WriteLine("\n[Command] ERG 50W");
+                        await SendErg(50);
+                    }
+                    else if (key == 'f' || key == 'F')
+                    {
+                        Console.WriteLine("\n[Command] ERG 100W");
+                        await SendErg(100);
+                    }
+                    else if (key == 't' || key == 'T')
+                    {
+                        Console.WriteLine("\n[Test] Starting Hilly Mode Simulation (Ctrl+C to stop)...");
+                        await RunSimulation();
+                    }
+                    else if (key == 'u' || key == 'U')
+                    {
+                        Console.WriteLine("\n[Command] Init/Unlock (0x00)");
+                        await SendInit();
                     }
                 }
-                else if (key == 's' || key == 'S')
-                {
-                    Console.Write("\nEnter Resistance % (0-100): ");
-                    string? input = Console.ReadLine();
-                    if (int.TryParse(input, out int val))
-                    {
-                        await SendMode41(val);
-                    }
-                }
-                else if (key == 'e' || key == 'E')
-                {
-                    Console.WriteLine("\n[Command] ERG 50W");
-                    await SendErg(50);
-                }
-                else if (key == 'f' || key == 'F')
-                {
-                    Console.WriteLine("\n[Command] ERG 100W");
-                    await SendErg(100);
-                }
-                else if (key == 't' || key == 'T')
-                {
-                    Console.WriteLine("\n[Test] Starting Hilly Mode Simulation (Ctrl+C to stop)...");
-                    await RunSimulation();
-                }
-                else if (key == 'u' || key == 'U')
-                {
-                    Console.WriteLine("\n[Command] Init/Unlock (0x00)");
-                    await SendInit();
-                }
+                await Task.Delay(50); // Small loop delay
             }
             
             _device.Dispose();
         }
 
-        private static async Task DumpDeviceDetails()
+        private static async Task SetupControlPoint(IReadOnlyList<GattDeviceService> services)
         {
-            try
-            {
-                var services = await _device.GetGattServicesAsync(BluetoothCacheMode.Uncached);
-                if (services.Status != GattCommunicationStatus.Success)
-                {
-                    Console.WriteLine($"Failed to get services: {services.Status}");
-                    return;
-                }
+            // Find Wahoo Service OR Power Service
+            var targetService = services.FirstOrDefault(s => s.Uuid == WAHOO_SERVICE) 
+                             ?? services.FirstOrDefault(s => s.Uuid == POWER_SERVICE);
 
-                foreach(var s in services.Services)
-                {
-                    Console.WriteLine($"Service: {s.Uuid}");
-                    var chars = await s.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
-                    if (chars.Status == GattCommunicationStatus.Success)
-                    {
-                        foreach(var c in chars.Characteristics)
-                        {
-                            Console.WriteLine($"  - Char: {c.Uuid}  Props: {c.CharacteristicProperties}");
-                        }
-                    }
-                }
-            }
-            catch(Exception ex)
+            if (targetService == null)
             {
-                Console.WriteLine($"Dump Error: {ex.Message}");
+                Console.WriteLine("FAIL: Neither Wahoo nor Power service found for Control Point.");
+                return;
+            }
+
+            var charsResult = await targetService.GetCharacteristicsForUuidAsync(WAHOO_CP, BluetoothCacheMode.Uncached);
+            if (charsResult.Status == GattCommunicationStatus.Success && charsResult.Characteristics.Count > 0)
+            {
+                _controlPoint = charsResult.Characteristics[0];
+                Console.WriteLine($"OK: Control Point found in Service {targetService.Uuid}");
+            }
+            else
+            {
+                Console.WriteLine($"FAIL: Service {targetService.Uuid} found, but Control Point char missing.");
+            }
+        }
+
+        private static async Task SetupPower(IReadOnlyList<GattDeviceService> services)
+        {
+            var pwrService = services.FirstOrDefault(s => s.Uuid == POWER_SERVICE);
+            if (pwrService == null)
+            {
+                Console.WriteLine("FAIL: Power Service (1818) NOT found.");
+                return;
+            }
+
+            var chars = await pwrService.GetCharacteristicsForUuidAsync(POWER_MEASUREMENT, BluetoothCacheMode.Uncached);
+            if (chars.Status == GattCommunicationStatus.Success && chars.Characteristics.Count > 0)
+            {
+                var c = chars.Characteristics[0];
+                await c.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
+                c.ValueChanged += (s, e) =>
+                {
+                    var reader = DataReader.FromBuffer(e.CharacteristicValue);
+                    byte[] data = new byte[reader.UnconsumedBufferLength];
+                    reader.ReadBytes(data);
+                    int watts = _logic.ParsePower(data);
+                    Console.Write($"\r[POWER: {watts} W]   ");
+                };
+                Console.WriteLine("OK: Subscribed to POWER.");
+            }
+            else
+            {
+                Console.WriteLine("FAIL: Power Service found, but Measurement char missing.");
+            }
+        }
+
+        private static async Task SetupSpeed(IReadOnlyList<GattDeviceService> services)
+        {
+            var spdService = services.FirstOrDefault(s => s.Uuid == SPEED_SERVICE);
+            if (spdService == null)
+            {
+                Console.WriteLine("FAIL: Speed Service (1816) NOT found.");
+                return;
+            }
+
+            var chars = await spdService.GetCharacteristicsForUuidAsync(CSC_MEASUREMENT, BluetoothCacheMode.Uncached);
+            if (chars.Status == GattCommunicationStatus.Success && chars.Characteristics.Count > 0)
+            {
+                var c = chars.Characteristics[0];
+                await c.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
+                c.ValueChanged += (s, e) =>
+                {
+                    var reader = DataReader.FromBuffer(e.CharacteristicValue);
+                    byte[] data = new byte[reader.UnconsumedBufferLength];
+                    reader.ReadBytes(data);
+                    
+                    var (hasWheel, revs, time) = _logic.ParseCscData(data);
+                    if(hasWheel)
+                    {
+                        string hex = BitConverter.ToString(data);
+                        Console.Write($"\r[SPEED: {hex}]   ");
+                    }
+                };
+                Console.WriteLine("OK: Subscribed to SPEED.");
+            }
+            else
+            {
+                Console.WriteLine("FAIL: Speed Service found, but Measurement char missing.");
             }
         }
 
@@ -210,94 +287,6 @@ namespace BikeFitnessConsole
             // OpCode 0x41, Resistance % (0-100)
             byte[] cmd = new byte[] { 0x41, (byte)percent };
             await Write(cmd);
-        }
-
-        private static async Task SetupControlPoint()
-        {
-            // Try Wahoo Service First
-            var wahoo = await _device.GetGattServicesForUuidAsync(WAHOO_SERVICE, BluetoothCacheMode.Uncached);
-            if (wahoo.Status == GattCommunicationStatus.Success && wahoo.Services.Count > 0)
-            {
-                var cp = await wahoo.Services[0].GetCharacteristicsForUuidAsync(WAHOO_CP, BluetoothCacheMode.Uncached);
-                if (cp.Status == GattCommunicationStatus.Success && cp.Characteristics.Count > 0)
-                {
-                    _controlPoint = cp.Characteristics[0];
-                    Console.WriteLine("OK: Control Point found in WAHOO Service.");
-                    return;
-                }
-            }
-
-            // Try Power Service
-            var power = await _device.GetGattServicesForUuidAsync(POWER_SERVICE, BluetoothCacheMode.Uncached);
-            if (power.Status == GattCommunicationStatus.Success && power.Services.Count > 0)
-            {
-                var cp = await power.Services[0].GetCharacteristicsForUuidAsync(WAHOO_CP, BluetoothCacheMode.Uncached);
-                if (cp.Status == GattCommunicationStatus.Success && cp.Characteristics.Count > 0)
-                {
-                    _controlPoint = cp.Characteristics[0];
-                    Console.WriteLine("OK: Control Point found in POWER Service.");
-                    return;
-                }
-            }
-
-            Console.WriteLine("FAIL: Control Point NOT found.");
-        }
-
-        private static async Task SetupPower()
-        {
-            var services = await _device.GetGattServicesForUuidAsync(POWER_SERVICE, BluetoothCacheMode.Uncached);
-            if (services.Status == GattCommunicationStatus.Success && services.Services.Count > 0)
-            {
-                var chars = await services.Services[0].GetCharacteristicsForUuidAsync(POWER_MEASUREMENT, BluetoothCacheMode.Uncached);
-                if (chars.Status == GattCommunicationStatus.Success && chars.Characteristics.Count > 0)
-                {
-                    var c = chars.Characteristics[0];
-                    await c.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
-                    c.ValueChanged += (s, e) =>
-                    {
-                        var reader = DataReader.FromBuffer(e.CharacteristicValue);
-                        byte[] data = new byte[reader.UnconsumedBufferLength];
-                        reader.ReadBytes(data);
-                        int watts = _logic.ParsePower(data);
-                        Console.Write($"\r[POWER: {watts} W]   ");
-                    };
-                    Console.WriteLine("OK: Subscribed to POWER.");
-                    return;
-                }
-            }
-            Console.WriteLine("FAIL: Power Measurement NOT found.");
-        }
-
-        private static async Task SetupSpeed()
-        {
-            var services = await _device.GetGattServicesForUuidAsync(SPEED_SERVICE, BluetoothCacheMode.Uncached);
-            if (services.Status == GattCommunicationStatus.Success && services.Services.Count > 0)
-            {
-                var chars = await services.Services[0].GetCharacteristicsForUuidAsync(CSC_MEASUREMENT, BluetoothCacheMode.Uncached);
-                if (chars.Status == GattCommunicationStatus.Success && chars.Characteristics.Count > 0)
-                {
-                    var c = chars.Characteristics[0];
-                    await c.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
-                    c.ValueChanged += (s, e) =>
-                    {
-                        var reader = DataReader.FromBuffer(e.CharacteristicValue);
-                        byte[] data = new byte[reader.UnconsumedBufferLength];
-                        reader.ReadBytes(data);
-                        
-                        // Debug raw
-                        string hex = BitConverter.ToString(data);
-                        
-                        var (hasWheel, revs, time) = _logic.ParseCscData(data);
-                        if(hasWheel)
-                        {
-                            Console.Write($"\r[SPEED DATA: {hex} | Revs: {revs}]   ");
-                        }
-                    };
-                    Console.WriteLine("OK: Subscribed to SPEED.");
-                    return;
-                }
-            }
-            Console.WriteLine("FAIL: Speed Service NOT found.");
         }
 
         private static async Task SendInit()
