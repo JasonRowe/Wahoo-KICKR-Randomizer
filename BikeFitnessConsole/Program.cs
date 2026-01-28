@@ -165,26 +165,30 @@ namespace BikeFitnessConsole
 
         private static async Task SetupControlPoint(IReadOnlyList<GattDeviceService> services)
         {
-            // Find Wahoo Service OR Power Service
-            var targetService = services.FirstOrDefault(s => s.Uuid == WAHOO_SERVICE) 
-                             ?? services.FirstOrDefault(s => s.Uuid == POWER_SERVICE);
+            // Define candidates in preference order
+            var candidates = new[] { WAHOO_SERVICE, POWER_SERVICE };
 
-            if (targetService == null)
+            foreach (var uuid in candidates)
             {
-                Console.WriteLine("FAIL: Neither Wahoo nor Power service found for Control Point.");
-                return;
+                var service = services.FirstOrDefault(s => s.Uuid == uuid);
+                if (service != null)
+                {
+                    // Try to find the characteristic in this service
+                    var charsResult = await service.GetCharacteristicsForUuidAsync(WAHOO_CP, BluetoothCacheMode.Uncached);
+                    if (charsResult.Status == GattCommunicationStatus.Success && charsResult.Characteristics.Count > 0)
+                    {
+                        _controlPoint = charsResult.Characteristics[0];
+                        Console.WriteLine($"OK: Control Point found in Service {service.Uuid}");
+                        return; // Found it!
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Info: Service {service.Uuid} found, but Control Point missing inside it.");
+                    }
+                }
             }
 
-            var charsResult = await targetService.GetCharacteristicsForUuidAsync(WAHOO_CP, BluetoothCacheMode.Uncached);
-            if (charsResult.Status == GattCommunicationStatus.Success && charsResult.Characteristics.Count > 0)
-            {
-                _controlPoint = charsResult.Characteristics[0];
-                Console.WriteLine($"OK: Control Point found in Service {targetService.Uuid}");
-            }
-            else
-            {
-                Console.WriteLine($"FAIL: Service {targetService.Uuid} found, but Control Point char missing.");
-            }
+            Console.WriteLine("FAIL: Control Point characteristic NOT found in any candidate service.");
         }
 
         private static async Task SetupPower(IReadOnlyList<GattDeviceService> services)
