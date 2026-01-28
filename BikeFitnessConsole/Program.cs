@@ -73,10 +73,16 @@ namespace BikeFitnessConsole
             // 3. Setup Speed Notifications
             await SetupSpeed();
 
+            // 4. Send Init/Unlock
+            Console.WriteLine("\nInitializing (Sending 0x00)...");
+            await SendInit();
+
             Console.WriteLine("\n=== CONTROLS ===");
-            Console.WriteLine("0-9: Set Resistance Level (OpCode 0x40)");
+            Console.WriteLine("0-9: Send Level 0-9 (OpCode 0x40, Val 0-9)");
+            Console.WriteLine("R:   Send Resistance % (OpCode 0x40, Val 0-100) - Type value");
             Console.WriteLine("E:   Set ERG Mode 50 Watts (OpCode 0x42)");
             Console.WriteLine("F:   Set ERG Mode 100 Watts (OpCode 0x42)");
+            Console.WriteLine("U:   Send Init/Unlock (OpCode 0x00)");
             Console.WriteLine("Q:   Quit");
 
             while (true)
@@ -87,18 +93,32 @@ namespace BikeFitnessConsole
                 if (char.IsDigit(key))
                 {
                     int level = int.Parse(key.ToString());
-                    Console.WriteLine($"\nSending Level {level} (OpCode 0x40)...");
+                    Console.WriteLine($"\n[Command] Level {level}");
                     await SendLevel(level);
+                }
+                else if (key == 'r' || key == 'R')
+                {
+                    Console.Write("\nEnter Resistance % (0-100): ");
+                    string? input = Console.ReadLine();
+                    if (int.TryParse(input, out int val))
+                    {
+                        await SendResistance(val);
+                    }
                 }
                 else if (key == 'e' || key == 'E')
                 {
-                    Console.WriteLine("\nSending ERG 50W (OpCode 0x42)...");
+                    Console.WriteLine("\n[Command] ERG 50W");
                     await SendErg(50);
                 }
                 else if (key == 'f' || key == 'F')
                 {
-                    Console.WriteLine("\nSending ERG 100W (OpCode 0x42)...");
+                    Console.WriteLine("\n[Command] ERG 100W");
                     await SendErg(100);
+                }
+                else if (key == 'u' || key == 'U')
+                {
+                    Console.WriteLine("\n[Command] Init/Unlock (0x00)");
+                    await SendInit();
                 }
             }
             
@@ -193,11 +213,25 @@ namespace BikeFitnessConsole
             Console.WriteLine("FAIL: Speed Service NOT found.");
         }
 
+        private static async Task SendInit()
+        {
+            if (_controlPoint == null) return;
+            await Write(new byte[] { 0x00 });
+        }
+
         private static async Task SendLevel(int level)
         {
             if (_controlPoint == null) return;
             // OpCode 0x40, Level 0-9
             byte[] cmd = new byte[] { 0x40, (byte)level };
+            await Write(cmd);
+        }
+
+        private static async Task SendResistance(int percent)
+        {
+            if (_controlPoint == null) return;
+            // OpCode 0x40, but raw byte value 0-100
+            byte[] cmd = new byte[] { 0x40, (byte)percent };
             await Write(cmd);
         }
 
@@ -216,6 +250,9 @@ namespace BikeFitnessConsole
         {
             try
             {
+                string hex = BitConverter.ToString(cmd);
+                Console.WriteLine($"Sending: {hex}");
+                
                 var writer = new DataWriter();
                 writer.WriteBytes(cmd);
                 var result = await _controlPoint.WriteValueAsync(writer.DetachBuffer());

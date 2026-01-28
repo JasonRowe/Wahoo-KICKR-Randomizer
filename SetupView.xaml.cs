@@ -94,50 +94,57 @@ namespace BikeFitnessApp
                     return;
                 }
 
-                // 1. Find Wahoo Control Point
-                GattCharacteristic? controlPoint = null;
-                
-                // Try Wahoo Service First
-                Logger.Log($"Looking for Wahoo Service: {WAHOO_SERVICE_UUID}");
-                var wahooServices = await device.GetGattServicesForUuidAsync(WAHOO_SERVICE_UUID, BluetoothCacheMode.Uncached);
-                if (wahooServices.Status == GattCommunicationStatus.Success && wahooServices.Services.Count > 0)
+                // Helper local function to find a characteristic
+                async Task<GattCharacteristic?> FindCharacteristic(BluetoothLEDevice d, Guid serviceUuid, Guid charUuid)
                 {
-                    Logger.Log("Found Wahoo Service.");
-                    var cpResult = await wahooServices.Services[0].GetCharacteristicsForUuidAsync(WAHOO_CONTROL_POINT_UUID, BluetoothCacheMode.Uncached);
-                    if (cpResult.Status == GattCommunicationStatus.Success && cpResult.Characteristics.Count > 0)
+                    try 
                     {
-                        controlPoint = cpResult.Characteristics[0];
-                        Logger.Log("Found Wahoo Control Point.");
-                    }
-                }
-                else
-                {
-                    Logger.Log($"Wahoo Service not found. Status: {wahooServices.Status}");
-                }
-
-                // Fallback: Try Power Service for CP (Legacy/Odd behavior)
-                GattDeviceService? powerService = null;
-                Logger.Log($"Looking for Power Service: {POWER_SERVICE_UUID}");
-                var powerServices = await device.GetGattServicesForUuidAsync(POWER_SERVICE_UUID, BluetoothCacheMode.Uncached);
-                if (powerServices.Status == GattCommunicationStatus.Success && powerServices.Services.Count > 0)
-                {
-                    powerService = powerServices.Services[0];
-                    Logger.Log("Found Power Service.");
-                    
-                    if (controlPoint == null)
-                    {
-                        Logger.Log("Looking for Control Point in Power Service...");
-                        var cpResult = await powerService.GetCharacteristicsForUuidAsync(WAHOO_CONTROL_POINT_UUID, BluetoothCacheMode.Uncached);
-                        if (cpResult.Status == GattCommunicationStatus.Success && cpResult.Characteristics.Count > 0)
+                        var serviceResult = await d.GetGattServicesForUuidAsync(serviceUuid, BluetoothCacheMode.Uncached);
+                        if (serviceResult.Status == GattCommunicationStatus.Success && serviceResult.Services.Count > 0)
                         {
-                            controlPoint = cpResult.Characteristics[0];
-                            Logger.Log("Found Wahoo Control Point in Power Service.");
+                            var service = serviceResult.Services[0];
+                            var charResult = await service.GetCharacteristicsForUuidAsync(charUuid, BluetoothCacheMode.Uncached);
+                            if (charResult.Status == GattCommunicationStatus.Success && charResult.Characteristics.Count > 0)
+                            {
+                                return charResult.Characteristics[0];
+                            }
                         }
                     }
+                    catch { /* Ignore specific lookup errors */ }
+                    return null;
                 }
-                else
+
+                // 1. Find Wahoo Control Point
+                GattCharacteristic? controlPoint = await FindCharacteristic(device, WAHOO_SERVICE_UUID, WAHOO_CONTROL_POINT_UUID);
+                
+                if (controlPoint == null)
                 {
-                    Logger.Log($"Power Service not found. Status: {powerServices.Status}");
+                    Logger.Log("Control Point not found in Wahoo Service. Checking Power Service...");
+                    controlPoint = await FindCharacteristic(device, POWER_SERVICE_UUID, WAHOO_CONTROL_POINT_UUID);
+                }
+
+                if (controlPoint == null)
+                {
+                    // Fallback: Get ALL services and search manually (most robust method)
+                    Logger.Log("Control Point not found by UUID. Scanning ALL services...");
+                    var allServices = await device.GetGattServicesAsync(BluetoothCacheMode.Uncached);
+                    if (allServices.Status == GattCommunicationStatus.Success)
+                    {
+                        foreach (var service in allServices.Services)
+                        {
+                            Logger.Log($"Scanning Service: {service.Uuid}");
+                            if (service.Uuid == WAHOO_SERVICE_UUID || service.Uuid == POWER_SERVICE_UUID)
+                            {
+                                var cpResult = await service.GetCharacteristicsForUuidAsync(WAHOO_CONTROL_POINT_UUID, BluetoothCacheMode.Uncached);
+                                if (cpResult.Status == GattCommunicationStatus.Success && cpResult.Characteristics.Count > 0)
+                                {
+                                    controlPoint = cpResult.Characteristics[0];
+                                    Logger.Log("Found Control Point via ALL scan.");
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
 
                 if (controlPoint == null)
@@ -148,61 +155,15 @@ namespace BikeFitnessApp
                     return;
                 }
 
-                // 2. Get Power Measurement
-                GattCharacteristic? powerChar = null;
-                if (powerService != null) // Already found above
-                {
-                    var pmResult = await powerService.GetCharacteristicsForUuidAsync(POWER_MEASUREMENT_UUID, BluetoothCacheMode.Uncached);
-                    if (pmResult.Status == GattCommunicationStatus.Success && pmResult.Characteristics.Count > 0)
-                    {
-                        powerChar = pmResult.Characteristics[0];
-                        Logger.Log("Found Power Measurement Characteristic.");
-                    }
-                    else
-                    {
-                        Logger.Log($"Power Measurement not found in cached Power Service. Status: {pmResult.Status}");
-                    }
-                }
-                else 
-                {
-                   // Try to find Power Service again if we didn't find it in fallback step
-                   Logger.Log("Power Service was not found earlier, trying again for Measurement...");
-                   var servicesResult = await device.GetGattServicesForUuidAsync(POWER_SERVICE_UUID, BluetoothCacheMode.Uncached);
-                   if (servicesResult.Status == GattCommunicationStatus.Success && servicesResult.Services.Count > 0)
-                   {
-                       var service = servicesResult.Services[0];
-                       var pmResult = await service.GetCharacteristicsForUuidAsync(POWER_MEASUREMENT_UUID, BluetoothCacheMode.Uncached);
-                       if (pmResult.Status == GattCommunicationStatus.Success && pmResult.Characteristics.Count > 0)
-                       {
-                           powerChar = pmResult.Characteristics[0];
-                           Logger.Log("Found Power Measurement Characteristic (Retry).");
-                       }
-                   }
-                }
+                // 2. Get Power Measurement (Soft Fail)
+                GattCharacteristic? powerChar = await FindCharacteristic(device, POWER_SERVICE_UUID, POWER_MEASUREMENT_UUID);
+                if (powerChar == null) Logger.Log("Power Measurement not found.");
+                else Logger.Log("Found Power Measurement.");
 
-                // 3. Get Speed Service
-                GattCharacteristic? speedChar = null;
-                Logger.Log($"Looking for Speed Service: {SPEED_SERVICE_UUID}");
-                var speedServicesResult = await device.GetGattServicesForUuidAsync(SPEED_SERVICE_UUID, BluetoothCacheMode.Uncached);
-                if (speedServicesResult.Status == GattCommunicationStatus.Success && speedServicesResult.Services.Count > 0)
-                {
-                    Logger.Log("Found Speed Service.");
-                    var speedService = speedServicesResult.Services[0];
-                    var cscResult = await speedService.GetCharacteristicsForUuidAsync(CSC_MEASUREMENT_UUID, BluetoothCacheMode.Uncached);
-                    if (cscResult.Status == GattCommunicationStatus.Success && cscResult.Characteristics.Count > 0)
-                    {
-                        speedChar = cscResult.Characteristics[0];
-                        Logger.Log("Found CSC Measurement Characteristic.");
-                    }
-                    else
-                    {
-                        Logger.Log($"CSC Measurement not found. Status: {cscResult.Status}");
-                    }
-                }
-                else
-                {
-                    Logger.Log($"Speed Service not found. Status: {speedServicesResult.Status}");
-                }
+                // 3. Get Speed Service (Soft Fail)
+                GattCharacteristic? speedChar = await FindCharacteristic(device, SPEED_SERVICE_UUID, CSC_MEASUREMENT_UUID);
+                if (speedChar == null) Logger.Log("Speed Measurement not found.");
+                else Logger.Log("Found Speed Measurement.");
 
                 ConnectionSuccessful?.Invoke(device, controlPoint, powerChar, speedChar);
             }

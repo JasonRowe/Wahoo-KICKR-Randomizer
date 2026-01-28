@@ -49,10 +49,31 @@ namespace BikeFitnessApp
             // Initialize Logging Menu State
             MenuEnableLogging.IsChecked = Logger.IsEnabled;
 
-            // Initial command to take ownership
-            _ = SendCommand(0x00, (byte?)null);
+            // Initial command to take ownership (Unlock/Init)
+            _ = InitializeTrainer();
 
             SetupNotifications();
+        }
+
+        private async Task InitializeTrainer()
+        {
+            Logger.Log("Initializing Trainer (0x00)...");
+            // Retry init specifically
+            for(int i=0; i<3; i++)
+            {
+                try
+                {
+                    await SendCommand(0x00);
+                    Logger.Log("Trainer Initialized.");
+                    return;
+                }
+                catch(Exception ex)
+                {
+                    Logger.Log($"Init failed attempt {i}: {ex.Message}");
+                    await Task.Delay(500);
+                }
+            }
+            Logger.Log("Trainer Init failed after retries.");
         }
 
         private async void SetupNotifications()
