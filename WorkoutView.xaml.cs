@@ -28,32 +28,10 @@ namespace BikeFitnessApp
         private bool _hasPrevWheelData = false;
         private const double WheelCircumference = 2.096; // 700x23c
 
-        public event Action? Disconnected;
-
-        public WorkoutView(BluetoothLEDevice device, GattCharacteristic controlPoint, GattCharacteristic? powerChar, GattCharacteristic? speedChar)
-        {
-            InitializeComponent();
-            _device = device;
-            _controlPoint = controlPoint;
-            _powerChar = powerChar;
-            _speedChar = speedChar;
-
-            _device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
-            this.Unloaded += WorkoutView_Unloaded;
-
-            // Setup Timer for random changes
-            _workoutTimer = new DispatcherTimer();
-            UpdateInterval();
-            _workoutTimer.Tick += WorkoutTimer_Tick;
-
-            // Initialize Logging Menu State
-            MenuEnableLogging.IsChecked = Logger.IsEnabled;
-
         // Command Loop State
         private double? _pendingResistance = null;
         private bool _isLoopRunning = false;
-        private DateTime _lastSuccessfulSend = DateTime.MinValue;
-
+        
         public event Action? Disconnected;
 
         public WorkoutView(BluetoothLEDevice device, GattCharacteristic controlPoint, GattCharacteristic? powerChar, GattCharacteristic? speedChar)
@@ -132,7 +110,6 @@ namespace BikeFitnessApp
         private async Task InitializeTrainer()
         {
             Logger.Log("Initializing Trainer (0x00)...");
-            // Direct write for init, separate from loop
             byte[] initCmd = new byte[] { 0x00 };
             for(int i=0; i<5; i++)
             {
@@ -147,96 +124,6 @@ namespace BikeFitnessApp
         }
 
         private async void SetupNotifications()
-        {
-            // ... (keep existing)
-            if (_powerChar != null)
-            {
-                try
-                {
-                    var status = await _powerChar.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
-                    if (status == GattCommunicationStatus.Success)
-                    {
-                        _powerChar.ValueChanged += Power_ValueChanged;
-                        Logger.Log("Subscribed to Power notifications.");
-                    }
-                }
-                catch(Exception ex) { Logger.Log($"Failed to subscribe to Power: {ex.Message}"); }
-            }
-
-            if (_speedChar != null)
-            {
-                try
-                {
-                    var status = await _speedChar.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
-                    if (status == GattCommunicationStatus.Success)
-                    {
-                        _speedChar.ValueChanged += Speed_ValueChanged;
-                        Logger.Log("Subscribed to Speed notifications.");
-                    }
-                }
-                catch (Exception ex) { Logger.Log($"Failed to subscribe to Speed: {ex.Message}"); }
-            }
-        }
-
-        // ... (Keep handlers) ...
-
-        private void WorkoutView_Unloaded(object sender, RoutedEventArgs e)
-        {
-            _isLoopRunning = false;
-            _workoutTimer.Stop();
-            PowerManagement.AllowSleep();
-            
-            if (_powerChar != null) _powerChar.ValueChanged -= Power_ValueChanged;
-            if (_speedChar != null) _speedChar.ValueChanged -= Speed_ValueChanged;
-        }
-
-        // ... (Keep Connection Status Handler) ...
-
-        // ... (Keep BtnStart/Stop) ...
-
-        private void WorkoutTimer_Tick(object? sender, EventArgs e)
-        {
-            if (_controlPoint == null) return;
-
-            try
-            {
-                double min = SliderMin.Value / 100.0;
-                double max = SliderMax.Value / 100.0;
-
-                WorkoutMode mode = WorkoutMode.Random;
-                if (ComboWorkoutMode.SelectedIndex == 1) mode = WorkoutMode.Hilly;
-                if (ComboWorkoutMode.SelectedIndex == 2) mode = WorkoutMode.Mountain;
-
-                double resistance = _logic.CalculateResistance(mode, min, max, _stepIndex);
-                _stepIndex++;
-                
-                // Update UI immediately
-                TxtCurrentResistance.Text = $"{(resistance * 100):F0}%";
-                ResistanceGauge.Value = resistance * 100;
-                
-                // Update Color
-                double range = max - min;
-                double ratio = range > 0 ? (resistance - min) / range : 0;
-                ratio = Math.Clamp(ratio, 0, 1);
-                byte r = 0;
-                byte g = 0;
-                if (ratio < 0.5) { r = (byte)(ratio * 2 * 255); g = 255; }
-                else { r = 255; g = (byte)((1 - ratio) * 2 * 255); }
-                TxtCurrentResistance.Foreground = new SolidColorBrush(Color.FromRgb(r, g, 0));
-
-                // Queue the resistance command!
-                _pendingResistance = resistance;
-                Logger.Log($"Queued resistance: {resistance:F2}");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"Exception in WorkoutTimer_Tick: {ex}");
-                TxtLog.Text = $"Error: {ex.Message}";
-            }
-        }
-
-        // Remove old SendCommand/WriteCharacteristicWithRetry methods as they are replaced by the loop
-
         {
             if (_powerChar != null)
             {
@@ -287,9 +174,8 @@ namespace BikeFitnessApp
             byte[] data = new byte[reader.UnconsumedBufferLength];
             reader.ReadBytes(data);
 
-            // Debug Log
             string hex = BitConverter.ToString(data);
-            Logger.Log($"Speed Raw Data: {hex}");
+            // Logger.Log($"Speed Raw Data: {hex}"); // Reduce log noise unless debugging
 
             var (hasWheelData, wheelRevs, lastWheelTime) = _logic.ParseCscData(data);
 
@@ -344,6 +230,7 @@ namespace BikeFitnessApp
 
         private void WorkoutView_Unloaded(object sender, RoutedEventArgs e)
         {
+            _isLoopRunning = false;
             _workoutTimer.Stop();
             PowerManagement.AllowSleep();
             
@@ -407,13 +294,9 @@ namespace BikeFitnessApp
             TxtStatus.Background = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)); // #4CAF50
         }
 
-        private async void WorkoutTimer_Tick(object? sender, EventArgs e)
+        private void WorkoutTimer_Tick(object? sender, EventArgs e)
         {
-            if (_controlPoint == null)
-            {
-                Logger.Log("WorkoutTimer_Tick called but _controlPoint is null.");
-                return;
-            }
+            if (_controlPoint == null) return;
 
             try
             {
@@ -427,88 +310,28 @@ namespace BikeFitnessApp
                 double resistance = _logic.CalculateResistance(mode, min, max, _stepIndex);
                 _stepIndex++;
                 
-                Logger.Log($"Calculated resistance: {resistance} (Mode: {mode}, Step: {_stepIndex})");
-
-                // Create Wahoo Command (OpCode 0x42)
-                byte[] commandBytes = _logic.CreateWahooResistanceCommand(resistance);
-                var writer = new DataWriter();
-                writer.WriteBytes(commandBytes);
-                await WriteCharacteristicWithRetry(writer.DetachBuffer());
-
+                // Update UI immediately
                 TxtCurrentResistance.Text = $"{(resistance * 100):F0}%";
                 ResistanceGauge.Value = resistance * 100;
-
-                // Color coding: Green (Low) -> Yellow -> Red (High) relative to the range
+                
+                // Update Color
                 double range = max - min;
                 double ratio = range > 0 ? (resistance - min) / range : 0;
                 ratio = Math.Clamp(ratio, 0, 1);
-
                 byte r = 0;
                 byte g = 0;
-                if (ratio < 0.5)
-                {
-                    r = (byte)(ratio * 2 * 255);
-                    g = 255;
-                }
-                else
-                {
-                    r = 255;
-                    g = (byte)((1 - ratio) * 2 * 255);
-                }
+                if (ratio < 0.5) { r = (byte)(ratio * 2 * 255); g = 255; }
+                else { r = 255; g = (byte)((1 - ratio) * 2 * 255); }
                 TxtCurrentResistance.Foreground = new SolidColorBrush(Color.FromRgb(r, g, 0));
 
-                Logger.Log("Successfully sent resistance command.");
+                // Queue the resistance command!
+                _pendingResistance = resistance;
+                Logger.Log($"Queued resistance: {resistance:F2}");
             }
             catch (Exception ex)
             {
                 Logger.Log($"Exception in WorkoutTimer_Tick: {ex}");
                 TxtLog.Text = $"Error: {ex.Message}";
-            }
-        }
-
-        private async Task SendCommand(byte opCode, byte? parameter = null)
-        {
-            if (_device == null || _device.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
-            {
-                return;
-            }
-
-            byte[] bytes = parameter.HasValue 
-                ? _logic.CreateCommandBytes(opCode, parameter.Value) 
-                : _logic.CreateCommandBytes(opCode);
-
-            var writer = new DataWriter();
-            writer.WriteBytes(bytes);
-
-            if (_controlPoint != null)
-            {
-                await WriteCharacteristicWithRetry(writer.DetachBuffer());
-            }
-        }
-
-        private async Task WriteCharacteristicWithRetry(IBuffer buffer)
-        {
-            const int MaxRetries = 5;
-            int delay = 250;
-
-            for (int i = 0; i < MaxRetries; i++)
-            {
-                try
-                {
-                    var status = await _controlPoint.WriteValueAsync(buffer);
-                    if (status == GattCommunicationStatus.Success)
-                    {
-                        return;
-                    }
-                    Logger.Log($"Write failed with status: {status}. Retry {i + 1}/{MaxRetries}");
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log($"Write exception: {ex}. Retry {i + 1}/{MaxRetries}");
-                    if (i == MaxRetries - 1) throw; 
-                }
-                await Task.Delay(delay);
-                delay *= 2; 
             }
         }
     }

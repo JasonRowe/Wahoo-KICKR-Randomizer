@@ -83,6 +83,7 @@ namespace BikeFitnessConsole
             Console.WriteLine("S:   Send Resistance Mode (OpCode 0x41, Val 0-100%)");
             Console.WriteLine("E:   Set ERG Mode 50 Watts (OpCode 0x42)");
             Console.WriteLine("F:   Set ERG Mode 100 Watts (OpCode 0x42)");
+            Console.WriteLine("T:   Test Simulation (Hilly Mode loop)");
             Console.WriteLine("U:   Send Init/Unlock (OpCode 0x00)");
             Console.WriteLine("Q:   Quit");
 
@@ -125,6 +126,11 @@ namespace BikeFitnessConsole
                     Console.WriteLine("\n[Command] ERG 100W");
                     await SendErg(100);
                 }
+                else if (key == 't' || key == 'T')
+                {
+                    Console.WriteLine("\n[Test] Starting Hilly Mode Simulation (Ctrl+C to stop)...");
+                    await RunSimulation();
+                }
                 else if (key == 'u' || key == 'U')
                 {
                     Console.WriteLine("\n[Command] Init/Unlock (0x00)");
@@ -133,6 +139,35 @@ namespace BikeFitnessConsole
             }
             
             _device.Dispose();
+        }
+
+        private static async Task RunSimulation()
+        {
+            Console.WriteLine("Press any key to stop...");
+            int step = 0;
+            // Loop until key press
+            while (!Console.KeyAvailable)
+            {
+                // Simulate Hilly, Min 0.2, Max 0.8
+                double r = _logic.CalculateResistance(WorkoutMode.Hilly, 0.2, 0.8, step);
+                
+                // Print visualization bar
+                int barLen = (int)(r * 50);
+                string bar = new string('#', barLen);
+                Console.WriteLine($"Step {step:D3}: {r:F2} | {bar}");
+
+                // Send actual command if connected
+                if (_controlPoint != null)
+                {
+                    byte[] cmd = _logic.CreateWahooResistanceCommand(r);
+                    await Write(cmd);
+                }
+
+                step++;
+                await Task.Delay(1000); // 1 sec steps for testing
+            }
+            Console.ReadKey(true); // Consume key
+            Console.WriteLine("Simulation Stopped.");
         }
 
         private static async Task SendMode41(int percent)
@@ -266,20 +301,32 @@ namespace BikeFitnessConsole
 
         private static async Task Write(byte[] cmd)
         {
-            try
+            const int MaxRetries = 3;
+            for(int i=0; i<MaxRetries; i++)
             {
-                string hex = BitConverter.ToString(cmd);
-                Console.WriteLine($"Sending: {hex}");
-                
-                var writer = new DataWriter();
-                writer.WriteBytes(cmd);
-                var result = await _controlPoint.WriteValueAsync(writer.DetachBuffer());
-                Console.WriteLine($"Write Result: {result}");
+                try
+                {
+                    // string hex = BitConverter.ToString(cmd);
+                    // Console.WriteLine($"Sending: {hex}");
+                    
+                    var writer = new DataWriter();
+                    writer.WriteBytes(cmd);
+                    var result = await _controlPoint.WriteValueAsync(writer.DetachBuffer());
+                    
+                    if (result == GattCommunicationStatus.Success) 
+                    {
+                        // Console.WriteLine("OK");
+                        return;
+                    }
+                    Console.WriteLine($"Write Retry {i+1}: {result}");
+                }
+                catch(Exception ex)
+                {
+                    Console.WriteLine($"Write Exception {i+1}: {ex.Message}");
+                }
+                await Task.Delay(250);
             }
-            catch(Exception ex)
-            {
-                Console.WriteLine($"Write Error: {ex.Message}");
-            }
+            Console.WriteLine("Write FAILED after retries.");
         }
     }
 }
