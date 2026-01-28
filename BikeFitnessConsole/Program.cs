@@ -225,7 +225,7 @@ namespace BikeFitnessConsole
                     byte[] data = new byte[reader.UnconsumedBufferLength];
                     reader.ReadBytes(data);
                     int watts = _logic.ParsePower(data);
-                    Console.Write($"\r[POWER: {watts} W]   ");
+                    //Console.Write($"\r[POWER: {watts} W]   ");
                 };
                 Console.WriteLine("OK: Subscribed to POWER.");
             }

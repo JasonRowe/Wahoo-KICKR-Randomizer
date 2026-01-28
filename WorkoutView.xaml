@@ -70,7 +70,7 @@
                             <TextBlock Text="{Binding ElementName=SliderMax, Path=Value, StringFormat={}({0}%)}" 
                                        Style="{DynamicResource MaterialDesignOverlineTextBlock}" Margin="8,0,0,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         </StackPanel>
-                        <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="25" TickFrequency="5" IsSnapToTickEnabled="True"
+                        <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="7" TickFrequency="5" IsSnapToTickEnabled="True"
                                 Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,24"/>
 
                         <StackPanel Margin="0,0,0,24">
@@ -131,20 +131,11 @@
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,40,0,0">
                             <!-- Power -->
-                            <StackPanel Margin="0,0,40,0" MinWidth="120">
+                            <StackPanel MinWidth="120">
                                 <TextBlock Text="POWER" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                      <TextBlock x:Name="TxtPower" Text="--" FontSize="48" FontWeight="Bold" Foreground="White"/>
                                      <TextBlock Text="w" FontSize="24" Foreground="#888888" VerticalAlignment="Bottom" Margin="4,0,0,8"/>
-                                </StackPanel>
-                            </StackPanel>
-                            
-                            <!-- Speed -->
-                            <StackPanel Margin="40,0,0,0" MinWidth="120">
-                                <TextBlock Text="SPEED" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold"/>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                     <TextBlock x:Name="TxtSpeed" Text="--" FontSize="48" FontWeight="Bold" Foreground="White"/>
-                                     <TextBlock Text="kph" FontSize="24" Foreground="#888888" VerticalAlignment="Bottom" Margin="4,0,0,8"/>
                                 </StackPanel>
                             </StackPanel>
                         </StackPanel>

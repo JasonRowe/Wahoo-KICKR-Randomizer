@@ -22,17 +22,17 @@ namespace BikeFitnessApp
         private void ShowSetup()
         {
             var setupView = new SetupView();
-            setupView.ConnectionSuccessful += (device, controlPoint, powerChar, speedChar) =>
+            setupView.ConnectionSuccessful += (device, controlPoint, powerChar) =>
             {
-                ShowWorkout(device, controlPoint, powerChar, speedChar);
+                ShowWorkout(device, controlPoint, powerChar);
             };
             MainContainer.Children.Clear();
             MainContainer.Children.Add(setupView);
         }
 
-        private void ShowWorkout(BluetoothLEDevice device, GattCharacteristic controlPoint, GattCharacteristic? powerChar, GattCharacteristic? speedChar)
+        private void ShowWorkout(BluetoothLEDevice device, GattCharacteristic controlPoint, GattCharacteristic? powerChar)
         {
-            var workoutView = new WorkoutView(device, controlPoint, powerChar, speedChar);
+            var workoutView = new WorkoutView(device, controlPoint, powerChar);
             workoutView.Disconnected += () =>
             {
                 // Optionally go back to setup or show error

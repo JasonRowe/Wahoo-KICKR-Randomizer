@@ -7,10 +7,5 @@
 App should have robust logging to ensure we can figure out why it crashes.
 
 ### TODOs
- - [COMPLETED] App should have a way to disable or enable logging from an admin menu. Admin menu should be subtle at top of workout app. Logging should be off by default.
- - [COMPLETED] allow for changing interval of intensity changes 30sec by clicking up or down arrow and increasing by 10sec + or -.
- - [COMPLETED] Allow for users to select option for smooth hilly ride where ride slowing moves from min to max and back to min until ride is stopped.
- - Sometimes resistance changes are obvious but sometimes I'm not sure the change went through. It would be nice if we could find any API to verify the setting from the device after we send the command.
- - [COMPLETED] When the resistance change is requested and failed we should not show that value in the UI.
- - intermittently I get the following when connecting Connection error: System.Runtime.InteropServices.COMException (0x80650081)
- - Also COM Error 0x80650081 happens when trying to set some resistance values
+ - It turns out the resistance levels are very aggressive and biking at over 10% is tough. Might be worth figuring out how to use Simulation (Sim) mode you can modify the nominal grade in .5% increments and the app will provide  resistance accounting for your weight as entered into your profile to simulate riding that grade outdoors. THis would allow for more incremental resistance instead of 1-100. 
+ - Would be nice to show cadence or distance also.
