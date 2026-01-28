@@ -106,6 +106,10 @@ namespace BikeFitnessApp
             byte[] data = new byte[reader.UnconsumedBufferLength];
             reader.ReadBytes(data);
 
+            // Debug Log
+            string hex = BitConverter.ToString(data);
+            Logger.Log($"Speed Raw Data: {hex}");
+
             var (hasWheelData, wheelRevs, lastWheelTime) = _logic.ParseCscData(data);
 
             if (hasWheelData)

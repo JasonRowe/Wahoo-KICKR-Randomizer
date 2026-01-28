@@ -106,11 +106,12 @@ namespace BikeFitnessApp
 
         public byte[] CreateWahooResistanceCommand(double resistancePercent)
         {
-            // Wahoo Resistance Mode: OpCode 0x40 (Standard Resistance Mode)
-            // Range: 0-100%
+            // Wahoo Level Mode: OpCode 0x40
+            // Range: 0-9 (Standard Level Mode)
+            // We map 0-100% input to Levels 0-9
             byte opCode = 0x40;
-            int value = (int)Math.Clamp(resistancePercent * 100, 0, 100);
-            return CreateCommandBytes(opCode, (ushort)value);
+            int level = (int)Math.Clamp(resistancePercent * 9, 0, 9);
+            return CreateCommandBytes(opCode, (byte)level);
         }
 
         public int ParsePower(byte[] data)
