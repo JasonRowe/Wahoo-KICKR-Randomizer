@@ -55,17 +55,17 @@ namespace BikeFitnessApp.Tests
         {
             var logic = new KickrLogic();
             
-            // 50% resistance -> 0.5 * 9 = 4.5 -> Level 4
+            // 50% resistance -> 0.5 * 100 = 50 -> 0x32
             byte[] bytes = logic.CreateWahooResistanceCommand(0.5);
-            CollectionAssert.AreEqual(new byte[] { 0x40, 0x04 }, bytes);
+            CollectionAssert.AreEqual(new byte[] { 0x41, 50 }, bytes);
 
-            // 100% resistance -> 1.0 * 9 = 9 -> Level 9
+            // 100% resistance -> 1.0 * 100 = 100 -> 0x64
             bytes = logic.CreateWahooResistanceCommand(1.0);
-            CollectionAssert.AreEqual(new byte[] { 0x40, 0x09 }, bytes);
+            CollectionAssert.AreEqual(new byte[] { 0x41, 100 }, bytes);
 
-            // 0% resistance -> Level 0
+            // 0% resistance -> 0
             bytes = logic.CreateWahooResistanceCommand(0.0);
-            CollectionAssert.AreEqual(new byte[] { 0x40, 0x00 }, bytes);
+            CollectionAssert.AreEqual(new byte[] { 0x41, 0 }, bytes);
         }
 
         [TestMethod]
