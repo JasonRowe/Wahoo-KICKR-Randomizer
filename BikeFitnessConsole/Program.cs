@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.Devices.Bluetooth;
@@ -62,7 +63,10 @@ namespace BikeFitnessConsole
                 return;
             }
 
-            Console.WriteLine("Connected. Searching for services...");
+            Console.WriteLine("Connected. Dumping Services...");
+            await DumpDeviceDetails();
+
+            Console.WriteLine("Searching for specific services...");
 
             // 1. Setup Control Point
             await SetupControlPoint();
@@ -141,6 +145,36 @@ namespace BikeFitnessConsole
             _device.Dispose();
         }
 
+        private static async Task DumpDeviceDetails()
+        {
+            try
+            {
+                var services = await _device.GetGattServicesAsync(BluetoothCacheMode.Uncached);
+                if (services.Status != GattCommunicationStatus.Success)
+                {
+                    Console.WriteLine($"Failed to get services: {services.Status}");
+                    return;
+                }
+
+                foreach(var s in services.Services)
+                {
+                    Console.WriteLine($"Service: {s.Uuid}");
+                    var chars = await s.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
+                    if (chars.Status == GattCommunicationStatus.Success)
+                    {
+                        foreach(var c in chars.Characteristics)
+                        {
+                            Console.WriteLine($"  - Char: {c.Uuid}  Props: {c.CharacteristicProperties}");
+                        }
+                    }
+                }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine($"Dump Error: {ex.Message}");
+            }
+        }
+
         private static async Task RunSimulation()
         {
             Console.WriteLine("Press any key to stop...");
@@ -181,10 +215,10 @@ namespace BikeFitnessConsole
         private static async Task SetupControlPoint()
         {
             // Try Wahoo Service First
-            var wahoo = await _device.GetGattServicesForUuidAsync(WAHOO_SERVICE);
+            var wahoo = await _device.GetGattServicesForUuidAsync(WAHOO_SERVICE, BluetoothCacheMode.Uncached);
             if (wahoo.Status == GattCommunicationStatus.Success && wahoo.Services.Count > 0)
             {
-                var cp = await wahoo.Services[0].GetCharacteristicsForUuidAsync(WAHOO_CP);
+                var cp = await wahoo.Services[0].GetCharacteristicsForUuidAsync(WAHOO_CP, BluetoothCacheMode.Uncached);
                 if (cp.Status == GattCommunicationStatus.Success && cp.Characteristics.Count > 0)
                 {
                     _controlPoint = cp.Characteristics[0];
@@ -194,10 +228,10 @@ namespace BikeFitnessConsole
             }
 
             // Try Power Service
-            var power = await _device.GetGattServicesForUuidAsync(POWER_SERVICE);
+            var power = await _device.GetGattServicesForUuidAsync(POWER_SERVICE, BluetoothCacheMode.Uncached);
             if (power.Status == GattCommunicationStatus.Success && power.Services.Count > 0)
             {
-                var cp = await power.Services[0].GetCharacteristicsForUuidAsync(WAHOO_CP);
+                var cp = await power.Services[0].GetCharacteristicsForUuidAsync(WAHOO_CP, BluetoothCacheMode.Uncached);
                 if (cp.Status == GattCommunicationStatus.Success && cp.Characteristics.Count > 0)
                 {
                     _controlPoint = cp.Characteristics[0];
@@ -211,10 +245,10 @@ namespace BikeFitnessConsole
 
         private static async Task SetupPower()
         {
-            var services = await _device.GetGattServicesForUuidAsync(POWER_SERVICE);
+            var services = await _device.GetGattServicesForUuidAsync(POWER_SERVICE, BluetoothCacheMode.Uncached);
             if (services.Status == GattCommunicationStatus.Success && services.Services.Count > 0)
             {
-                var chars = await services.Services[0].GetCharacteristicsForUuidAsync(POWER_MEASUREMENT);
+                var chars = await services.Services[0].GetCharacteristicsForUuidAsync(POWER_MEASUREMENT, BluetoothCacheMode.Uncached);
                 if (chars.Status == GattCommunicationStatus.Success && chars.Characteristics.Count > 0)
                 {
                     var c = chars.Characteristics[0];
@@ -236,10 +270,10 @@ namespace BikeFitnessConsole
 
         private static async Task SetupSpeed()
         {
-            var services = await _device.GetGattServicesForUuidAsync(SPEED_SERVICE);
+            var services = await _device.GetGattServicesForUuidAsync(SPEED_SERVICE, BluetoothCacheMode.Uncached);
             if (services.Status == GattCommunicationStatus.Success && services.Services.Count > 0)
             {
-                var chars = await services.Services[0].GetCharacteristicsForUuidAsync(CSC_MEASUREMENT);
+                var chars = await services.Services[0].GetCharacteristicsForUuidAsync(CSC_MEASUREMENT, BluetoothCacheMode.Uncached);
                 if (chars.Status == GattCommunicationStatus.Success && chars.Characteristics.Count > 0)
                 {
                     var c = chars.Characteristics[0];
