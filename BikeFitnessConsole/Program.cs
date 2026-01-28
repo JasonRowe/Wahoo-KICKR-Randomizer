@@ -103,6 +103,7 @@ namespace BikeFitnessConsole
             Console.WriteLine("F:   Set ERG Mode 100 Watts (OpCode 0x42)");
             Console.WriteLine("T:   Test Simulation (Hilly Mode loop)");
             Console.WriteLine("U:   Send Init/Unlock (OpCode 0x00)");
+            Console.WriteLine("D:   Dump Characteristic Details");
             Console.WriteLine("Q:   Quit");
 
             while (true)
@@ -156,6 +157,11 @@ namespace BikeFitnessConsole
                         Console.WriteLine("\n[Command] Init/Unlock (0x00)");
                         await SendInit();
                     }
+                    else if (key == 'd' || key == 'D')
+                    {
+                        Console.WriteLine("\n[Debug] Dumping Characteristic Details...");
+                        await DumpAllCharacteristics(allServices);
+                    }
                 }
                 await Task.Delay(50); // Small loop delay
             }
@@ -163,42 +169,50 @@ namespace BikeFitnessConsole
             _device.Dispose();
         }
 
+        private static async Task DumpAllCharacteristics(IReadOnlyList<GattDeviceService> services)
+        {
+            foreach(var s in services)
+            {
+                Console.WriteLine($"Service: {s.Uuid}");
+                var chars = await s.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
+                if (chars.Status == GattCommunicationStatus.Success)
+                {
+                    foreach(var c in chars.Characteristics)
+                    {
+                        Console.WriteLine($"  - Char: {c.Uuid}  Props: {c.CharacteristicProperties}");
+                    }
+                }
+            }
+        }
+
         private static async Task SetupControlPoint(IReadOnlyList<GattDeviceService> services)
         {
-            // Define candidates in preference order
             var candidates = new[] { WAHOO_SERVICE, POWER_SERVICE };
-
             foreach (var uuid in candidates)
             {
                 var service = services.FirstOrDefault(s => s.Uuid == uuid);
                 if (service != null)
                 {
-                    // Try to find the characteristic in this service
                     var charsResult = await service.GetCharacteristicsForUuidAsync(WAHOO_CP, BluetoothCacheMode.Uncached);
                     if (charsResult.Status == GattCommunicationStatus.Success && charsResult.Characteristics.Count > 0)
                     {
                         _controlPoint = charsResult.Characteristics[0];
                         Console.WriteLine($"OK: Control Point found in Service {service.Uuid}");
-                        return; // Found it!
+                        return;
                     }
                     else
                     {
-                        Console.WriteLine($"Info: Service {service.Uuid} found, but Control Point missing inside it.");
+                        Console.WriteLine($"Info: Service {service.Uuid} found, but Control Point missing inside.");
                     }
                 }
             }
-
-            Console.WriteLine("FAIL: Control Point characteristic NOT found in any candidate service.");
+            Console.WriteLine("FAIL: Control Point characteristic NOT found.");
         }
 
         private static async Task SetupPower(IReadOnlyList<GattDeviceService> services)
         {
-            var pwrService = services.FirstOrDefault(s => s.Uuid == POWER_SERVICE);
-            if (pwrService == null)
-            {
-                Console.WriteLine("FAIL: Power Service (1818) NOT found.");
-                return;
-            }
+            var pwrService = services.FirstOrDefault(s => s.Uuid == POWER_SERVICE); 
+            if (pwrService == null) { Console.WriteLine("FAIL: Power Service (1818) NOT found."); return; }
 
             var chars = await pwrService.GetCharacteristicsForUuidAsync(POWER_MEASUREMENT, BluetoothCacheMode.Uncached);
             if (chars.Status == GattCommunicationStatus.Success && chars.Characteristics.Count > 0)
@@ -215,20 +229,13 @@ namespace BikeFitnessConsole
                 };
                 Console.WriteLine("OK: Subscribed to POWER.");
             }
-            else
-            {
-                Console.WriteLine("FAIL: Power Service found, but Measurement char missing.");
-            }
+            else { Console.WriteLine("FAIL: Power Measurement char missing."); }
         }
 
         private static async Task SetupSpeed(IReadOnlyList<GattDeviceService> services)
         {
             var spdService = services.FirstOrDefault(s => s.Uuid == SPEED_SERVICE);
-            if (spdService == null)
-            {
-                Console.WriteLine("FAIL: Speed Service (1816) NOT found.");
-                return;
-            }
+            if (spdService == null) { Console.WriteLine("FAIL: Speed Service (1816) NOT found."); return; }
 
             var chars = await spdService.GetCharacteristicsForUuidAsync(CSC_MEASUREMENT, BluetoothCacheMode.Uncached);
             if (chars.Status == GattCommunicationStatus.Success && chars.Characteristics.Count > 0)
@@ -240,117 +247,58 @@ namespace BikeFitnessConsole
                     var reader = DataReader.FromBuffer(e.CharacteristicValue);
                     byte[] data = new byte[reader.UnconsumedBufferLength];
                     reader.ReadBytes(data);
-                    
                     var (hasWheel, revs, time) = _logic.ParseCscData(data);
-                    if(hasWheel)
-                    {
-                        string hex = BitConverter.ToString(data);
-                        Console.Write($"\r[SPEED: {hex}]   ");
-                    }
+                    if(hasWheel) Console.Write($"\r[SPEED DATA: {BitConverter.ToString(data)}]   ");
                 };
                 Console.WriteLine("OK: Subscribed to SPEED.");
             }
-            else
-            {
-                Console.WriteLine("FAIL: Speed Service found, but Measurement char missing.");
-            }
+            else { Console.WriteLine("FAIL: Speed Measurement char missing."); }
         }
 
         private static async Task RunSimulation()
         {
             Console.WriteLine("Press any key to stop...");
             int step = 0;
-            // Loop until key press
             while (!Console.KeyAvailable)
             {
-                // Simulate Hilly, Min 0.2, Max 0.8
                 double r = _logic.CalculateResistance(WorkoutMode.Hilly, 0.2, 0.8, step);
-                
-                // Print visualization bar
                 int barLen = (int)(r * 50);
-                string bar = new string('#', barLen);
-                Console.WriteLine($"Step {step:D3}: {r:F2} | {bar}");
-
-                // Send actual command if connected
-                if (_controlPoint != null)
-                {
-                    byte[] cmd = _logic.CreateWahooResistanceCommand(r);
-                    await Write(cmd);
-                }
-
+                Console.WriteLine($"Step {step:D3}: {r:F2} | {new string('#', barLen)}");
+                await Write(_logic.CreateWahooResistanceCommand(r));
                 step++;
-                await Task.Delay(1000); // 1 sec steps for testing
+                await Task.Delay(1000);
             }
-            Console.ReadKey(true); // Consume key
+            Console.ReadKey(true);
             Console.WriteLine("Simulation Stopped.");
         }
 
-        private static async Task SendMode41(int percent)
-        {
-            if (_controlPoint == null) return;
-            // OpCode 0x41, Resistance % (0-100)
-            byte[] cmd = new byte[] { 0x41, (byte)percent };
-            await Write(cmd);
-        }
-
-        private static async Task SendInit()
-        {
-            if (_controlPoint == null) return;
-            await Write(new byte[] { 0x00 });
-        }
-
-        private static async Task SendLevel(int level)
-        {
-            if (_controlPoint == null) return;
-            // OpCode 0x40, Level 0-9
-            byte[] cmd = new byte[] { 0x40, (byte)level };
-            await Write(cmd);
-        }
-
-        private static async Task SendResistance(int percent)
-        {
-            if (_controlPoint == null) return;
-            // OpCode 0x40, but raw byte value 0-100
-            byte[] cmd = new byte[] { 0x40, (byte)percent };
-            await Write(cmd);
-        }
-
-        private static async Task SendErg(int watts)
-        {
-            if (_controlPoint == null) return;
-            // OpCode 0x42, Watts (Low byte, High byte)
-            byte[] cmd = new byte[3];
-            cmd[0] = 0x42;
-            cmd[1] = (byte)(watts & 0xFF);
-            cmd[2] = (byte)(watts >> 8);
-            await Write(cmd);
-        }
+        private static async Task SendMode41(int percent) => await Write(new byte[] { 0x41, (byte)percent });
+        private static async Task SendInit() => await Write(new byte[] { 0x00 });
+        private static async Task SendLevel(int level) => await Write(new byte[] { 0x40, (byte)level });
+        private static async Task SendResistance(int percent) => await Write(new byte[] { 0x40, (byte)percent });
+        private static async Task SendErg(int watts) => await Write(new byte[] { 0x42, (byte)(watts & 0xFF), (byte)(watts >> 8) });
 
         private static async Task Write(byte[] cmd)
         {
+            if (_controlPoint == null)
+            {
+                Console.WriteLine("ERROR: Cannot write. Control Point is NULL.");
+                return;
+            }
+
             const int MaxRetries = 3;
             for(int i=0; i<MaxRetries; i++)
             {
                 try
                 {
-                    // string hex = BitConverter.ToString(cmd);
-                    // Console.WriteLine($"Sending: {hex}");
-                    
+                    Console.WriteLine($"[TX] {BitConverter.ToString(cmd)}");
                     var writer = new DataWriter();
                     writer.WriteBytes(cmd);
                     var result = await _controlPoint.WriteValueAsync(writer.DetachBuffer());
-                    
-                    if (result == GattCommunicationStatus.Success) 
-                    {
-                        // Console.WriteLine("OK");
-                        return;
-                    }
+                    if (result == GattCommunicationStatus.Success) return;
                     Console.WriteLine($"Write Retry {i+1}: {result}");
                 }
-                catch(Exception ex)
-                {
-                    Console.WriteLine($"Write Exception {i+1}: {ex.Message}");
-                }
+                catch(Exception ex) { Console.WriteLine($"Write Exception {i+1}: {ex.Message}"); }
                 await Task.Delay(250);
             }
             Console.WriteLine("Write FAILED after retries.");
