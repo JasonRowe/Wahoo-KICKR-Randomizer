@@ -79,7 +79,8 @@ namespace BikeFitnessConsole
 
             Console.WriteLine("\n=== CONTROLS ===");
             Console.WriteLine("0-9: Send Level 0-9 (OpCode 0x40, Val 0-9)");
-            Console.WriteLine("R:   Send Resistance % (OpCode 0x40, Val 0-100) - Type value");
+            Console.WriteLine("R:   Send Level 0-100 (OpCode 0x40, Val 0-100)");
+            Console.WriteLine("S:   Send Resistance Mode (OpCode 0x41, Val 0-100%)");
             Console.WriteLine("E:   Set ERG Mode 50 Watts (OpCode 0x42)");
             Console.WriteLine("F:   Set ERG Mode 100 Watts (OpCode 0x42)");
             Console.WriteLine("U:   Send Init/Unlock (OpCode 0x00)");
@@ -98,11 +99,20 @@ namespace BikeFitnessConsole
                 }
                 else if (key == 'r' || key == 'R')
                 {
-                    Console.Write("\nEnter Resistance % (0-100): ");
+                    Console.Write("\nEnter Level 0-100: ");
                     string? input = Console.ReadLine();
                     if (int.TryParse(input, out int val))
                     {
                         await SendResistance(val);
+                    }
+                }
+                else if (key == 's' || key == 'S')
+                {
+                    Console.Write("\nEnter Resistance % (0-100): ");
+                    string? input = Console.ReadLine();
+                    if (int.TryParse(input, out int val))
+                    {
+                        await SendMode41(val);
                     }
                 }
                 else if (key == 'e' || key == 'E')
@@ -123,6 +133,14 @@ namespace BikeFitnessConsole
             }
             
             _device.Dispose();
+        }
+
+        private static async Task SendMode41(int percent)
+        {
+            if (_controlPoint == null) return;
+            // OpCode 0x41, Resistance % (0-100)
+            byte[] cmd = new byte[] { 0x41, (byte)percent };
+            await Write(cmd);
         }
 
         private static async Task SetupControlPoint()

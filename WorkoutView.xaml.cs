@@ -49,34 +49,194 @@ namespace BikeFitnessApp
             // Initialize Logging Menu State
             MenuEnableLogging.IsChecked = Logger.IsEnabled;
 
-            // Initial command to take ownership (Unlock/Init)
-            _ = InitializeTrainer();
+        // Command Loop State
+        private double? _pendingResistance = null;
+        private bool _isLoopRunning = false;
+        private DateTime _lastSuccessfulSend = DateTime.MinValue;
+
+        public event Action? Disconnected;
+
+        public WorkoutView(BluetoothLEDevice device, GattCharacteristic controlPoint, GattCharacteristic? powerChar, GattCharacteristic? speedChar)
+        {
+            InitializeComponent();
+            _device = device;
+            _controlPoint = controlPoint;
+            _powerChar = powerChar;
+            _speedChar = speedChar;
+
+            _device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
+            this.Unloaded += WorkoutView_Unloaded;
+
+            // Setup Timer for random changes
+            _workoutTimer = new DispatcherTimer();
+            UpdateInterval();
+            _workoutTimer.Tick += WorkoutTimer_Tick;
+
+            // Initialize Logging Menu State
+            MenuEnableLogging.IsChecked = Logger.IsEnabled;
 
             SetupNotifications();
+            
+            // Start the robust command loop
+            _isLoopRunning = true;
+            _ = CommandLoop();
+            
+            // Queue Initial Init
+            _ = InitializeTrainer();
+        }
+
+        private async Task CommandLoop()
+        {
+            Logger.Log("Starting Command Loop...");
+            while (_isLoopRunning)
+            {
+                if (_pendingResistance.HasValue && _controlPoint != null)
+                {
+                    double target = _pendingResistance.Value;
+                    byte[] cmd = _logic.CreateWahooResistanceCommand(target);
+                    
+                    bool success = await WriteWithRetry(cmd);
+                    if (success)
+                    {
+                        _pendingResistance = null; // Clear pending only on success
+                        Logger.Log($"Sent Resistance: {(target*100):F0}%");
+                    }
+                    else
+                    {
+                        Logger.Log("Retrying resistance command...");
+                        await Task.Delay(500); // Wait before retry
+                        continue; // Loop again to retry same command
+                    }
+                }
+                
+                await Task.Delay(200); // Idle polling
+            }
+        }
+
+        private async Task<bool> WriteWithRetry(byte[] data)
+        {
+            try
+            {
+                var writer = new DataWriter();
+                writer.WriteBytes(data);
+                var result = await _controlPoint.WriteValueAsync(writer.DetachBuffer());
+                if(result == GattCommunicationStatus.Success) return true;
+            }
+            catch(Exception ex)
+            {
+                Logger.Log($"Write Error: {ex.Message}");
+            }
+            return false;
         }
 
         private async Task InitializeTrainer()
         {
             Logger.Log("Initializing Trainer (0x00)...");
-            // Retry init specifically
-            for(int i=0; i<3; i++)
+            // Direct write for init, separate from loop
+            byte[] initCmd = new byte[] { 0x00 };
+            for(int i=0; i<5; i++)
             {
-                try
+                if (await WriteWithRetry(initCmd))
                 {
-                    await SendCommand(0x00);
                     Logger.Log("Trainer Initialized.");
                     return;
                 }
-                catch(Exception ex)
-                {
-                    Logger.Log($"Init failed attempt {i}: {ex.Message}");
-                    await Task.Delay(500);
-                }
+                await Task.Delay(500);
             }
             Logger.Log("Trainer Init failed after retries.");
         }
 
         private async void SetupNotifications()
+        {
+            // ... (keep existing)
+            if (_powerChar != null)
+            {
+                try
+                {
+                    var status = await _powerChar.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
+                    if (status == GattCommunicationStatus.Success)
+                    {
+                        _powerChar.ValueChanged += Power_ValueChanged;
+                        Logger.Log("Subscribed to Power notifications.");
+                    }
+                }
+                catch(Exception ex) { Logger.Log($"Failed to subscribe to Power: {ex.Message}"); }
+            }
+
+            if (_speedChar != null)
+            {
+                try
+                {
+                    var status = await _speedChar.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
+                    if (status == GattCommunicationStatus.Success)
+                    {
+                        _speedChar.ValueChanged += Speed_ValueChanged;
+                        Logger.Log("Subscribed to Speed notifications.");
+                    }
+                }
+                catch (Exception ex) { Logger.Log($"Failed to subscribe to Speed: {ex.Message}"); }
+            }
+        }
+
+        // ... (Keep handlers) ...
+
+        private void WorkoutView_Unloaded(object sender, RoutedEventArgs e)
+        {
+            _isLoopRunning = false;
+            _workoutTimer.Stop();
+            PowerManagement.AllowSleep();
+            
+            if (_powerChar != null) _powerChar.ValueChanged -= Power_ValueChanged;
+            if (_speedChar != null) _speedChar.ValueChanged -= Speed_ValueChanged;
+        }
+
+        // ... (Keep Connection Status Handler) ...
+
+        // ... (Keep BtnStart/Stop) ...
+
+        private void WorkoutTimer_Tick(object? sender, EventArgs e)
+        {
+            if (_controlPoint == null) return;
+
+            try
+            {
+                double min = SliderMin.Value / 100.0;
+                double max = SliderMax.Value / 100.0;
+
+                WorkoutMode mode = WorkoutMode.Random;
+                if (ComboWorkoutMode.SelectedIndex == 1) mode = WorkoutMode.Hilly;
+                if (ComboWorkoutMode.SelectedIndex == 2) mode = WorkoutMode.Mountain;
+
+                double resistance = _logic.CalculateResistance(mode, min, max, _stepIndex);
+                _stepIndex++;
+                
+                // Update UI immediately
+                TxtCurrentResistance.Text = $"{(resistance * 100):F0}%";
+                ResistanceGauge.Value = resistance * 100;
+                
+                // Update Color
+                double range = max - min;
+                double ratio = range > 0 ? (resistance - min) / range : 0;
+                ratio = Math.Clamp(ratio, 0, 1);
+                byte r = 0;
+                byte g = 0;
+                if (ratio < 0.5) { r = (byte)(ratio * 2 * 255); g = 255; }
+                else { r = 255; g = (byte)((1 - ratio) * 2 * 255); }
+                TxtCurrentResistance.Foreground = new SolidColorBrush(Color.FromRgb(r, g, 0));
+
+                // Queue the resistance command!
+                _pendingResistance = resistance;
+                Logger.Log($"Queued resistance: {resistance:F2}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Exception in WorkoutTimer_Tick: {ex}");
+                TxtLog.Text = $"Error: {ex.Message}";
+            }
+        }
+
+        // Remove old SendCommand/WriteCharacteristicWithRetry methods as they are replaced by the loop
+
         {
             if (_powerChar != null)
             {
