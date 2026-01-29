@@ -64,6 +64,12 @@ namespace BikeFitnessApp
                     {
                         FoundDevices.Add(new DeviceDisplay { Name = args.Advertisement.LocalName, Address = args.BluetoothAddress });
                         BtnConnect.IsEnabled = true;
+
+                        // Auto-select if it's the only device
+                        if (FoundDevices.Count == 1)
+                        {
+                            ListDevices.SelectedIndex = 0;
+                        }
                     }
                 });
             }
