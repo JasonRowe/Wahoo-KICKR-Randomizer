@@ -1,7 +1,5 @@
 using System;
 using System.Windows;
-using Windows.Devices.Bluetooth;
-using Windows.Devices.Bluetooth.GenericAttributeProfile;
 
 namespace BikeFitnessApp
 {
@@ -16,26 +14,26 @@ namespace BikeFitnessApp
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             PowerManagement.AllowSleep();
+            // Disconnect service if needed
             base.OnClosing(e);
         }
 
         private void ShowSetup()
         {
             var setupView = new SetupView();
-            setupView.ConnectionSuccessful += (device, controlPoint, powerChar) =>
+            setupView.ConnectionSuccessful += () =>
             {
-                ShowWorkout(device, controlPoint, powerChar);
+                ShowWorkout();
             };
             MainContainer.Children.Clear();
             MainContainer.Children.Add(setupView);
         }
 
-        private void ShowWorkout(BluetoothLEDevice device, GattCharacteristic controlPoint, GattCharacteristic? powerChar)
+        private void ShowWorkout()
         {
-            var workoutView = new WorkoutView(device, controlPoint, powerChar);
+            var workoutView = new WorkoutView();
             workoutView.Disconnected += () =>
             {
-                // Optionally go back to setup or show error
                 Dispatcher.Invoke(() => ShowSetup());
             };
             MainContainer.Children.Clear();

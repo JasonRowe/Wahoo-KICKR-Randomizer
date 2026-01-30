@@ -4,37 +4,29 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Windows.Devices.Bluetooth;
-using Windows.Devices.Bluetooth.GenericAttributeProfile;
-using Windows.Storage.Streams;
+using BikeFitnessApp.Services;
 
 namespace BikeFitnessApp
 {
     public partial class WorkoutView : UserControl
     {
-        private BluetoothLEDevice _device;
-        private GattCharacteristic _controlPoint;
-        private GattCharacteristic? _powerChar;
-        
+        private IBluetoothService _bluetoothService;
         private DispatcherTimer _workoutTimer;
         private KickrLogic _logic = new KickrLogic();
         private int _stepIndex = 0;
         private int _intervalSeconds = 30;
 
-        // Command Loop State
-        private double? _pendingResistance = null;
-        private bool _isLoopRunning = false;
-        
         public event Action? Disconnected;
 
-        public WorkoutView(BluetoothLEDevice device, GattCharacteristic controlPoint, GattCharacteristic? powerChar)
+        public WorkoutView()
         {
             InitializeComponent();
-            _device = device;
-            _controlPoint = controlPoint;
-            _powerChar = powerChar;
+            _bluetoothService = App.BluetoothService;
 
-            _device.ConnectionStatusChanged += Device_ConnectionStatusChanged;
+            // Subscribe to Service Events
+            _bluetoothService.ConnectionLost += OnConnectionLost;
+            _bluetoothService.PowerReceived += OnPowerReceived;
+
             this.Unloaded += WorkoutView_Unloaded;
 
             // Setup Timer for random changes
@@ -45,104 +37,44 @@ namespace BikeFitnessApp
             // Initialize Logging Menu State
             MenuEnableLogging.IsChecked = Logger.IsEnabled;
 
-            SetupNotifications();
-            
-            // Start the robust command loop
-            _isLoopRunning = true;
-            _ = CommandLoop();
-            
-            // Queue Initial Init
+            // Init Trainer
             _ = InitializeTrainer();
-        }
-
-        private async Task CommandLoop()
-        {
-            Logger.Log("Starting Command Loop...");
-            while (_isLoopRunning)
-            {
-                if (_pendingResistance.HasValue && _controlPoint != null)
-                {
-                    double target = _pendingResistance.Value;
-                    byte[] cmd = _logic.CreateWahooResistanceCommand(target);
-                    
-                    bool success = await WriteWithRetry(cmd);
-                    if (success)
-                    {
-                        _pendingResistance = null; // Clear pending only on success
-                        Logger.Log($"Sent Resistance: {(target*100):F0}%");
-                    }
-                    else
-                    {
-                        Logger.Log("Retrying resistance command...");
-                        await Task.Delay(500); // Wait before retry
-                        continue; // Loop again to retry same command
-                    }
-                }
-                
-                await Task.Delay(200); // Idle polling
-            }
-        }
-
-        private async Task<bool> WriteWithRetry(byte[] data)
-        {
-            try
-            {
-                var writer = new DataWriter();
-                writer.WriteBytes(data);
-                var result = await _controlPoint.WriteValueAsync(writer.DetachBuffer());
-                if(result == GattCommunicationStatus.Success) return true;
-            }
-            catch(Exception ex)
-            {
-                Logger.Log($"Write Error: {ex.Message}");
-            }
-            return false;
         }
 
         private async Task InitializeTrainer()
         {
             Logger.Log("Initializing Trainer (0x00)...");
-            byte[] initCmd = new byte[] { 0x00 };
-            for(int i=0; i<5; i++)
+            bool success = await _bluetoothService.SendInitCommand();
+            if (success)
             {
-                if (await WriteWithRetry(initCmd))
-                {
-                    Logger.Log("Trainer Initialized.");
-                    return;
-                }
-                await Task.Delay(500);
+                Logger.Log("Trainer Initialized.");
             }
-            Logger.Log("Trainer Init failed after retries.");
-        }
-
-        private async void SetupNotifications()
-        {
-            if (_powerChar != null)
+            else
             {
-                try
-                {
-                    var status = await _powerChar.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
-                    if (status == GattCommunicationStatus.Success)
-                    {
-                        _powerChar.ValueChanged += Power_ValueChanged;
-                        Logger.Log("Subscribed to Power notifications.");
-                    }
-                }
-                catch(Exception ex) { Logger.Log($"Failed to subscribe to Power: {ex.Message}"); }
+                Logger.Log("Trainer Init failed (or not connected).");
             }
         }
 
-        private void Power_ValueChanged(GattCharacteristic sender, GattValueChangedEventArgs args)
+        private void OnPowerReceived(int watts)
         {
-            var reader = DataReader.FromBuffer(args.CharacteristicValue);
-            byte[] data = new byte[reader.UnconsumedBufferLength];
-            reader.ReadBytes(data);
-
-            int watts = _logic.ParsePower(data);
-            
             Dispatcher.Invoke(() =>
             {
                 if (TxtPower != null) TxtPower.Text = watts.ToString();
+            });
+        }
+
+        private void OnConnectionLost()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                TxtLog.Text = "Status: Device Disconnected.";
+                TxtStatus.Content = "DISCONNECTED";
+                TxtStatus.Background = Brushes.Red;
+                BtnStart.IsEnabled = false;
+                BtnStop.IsEnabled = false;
+                _workoutTimer.Stop();
+                PowerManagement.AllowSleep();
+                Disconnected?.Invoke();
             });
         }
 
@@ -180,30 +112,10 @@ namespace BikeFitnessApp
 
         private void WorkoutView_Unloaded(object sender, RoutedEventArgs e)
         {
-            _isLoopRunning = false;
+            _bluetoothService.ConnectionLost -= OnConnectionLost;
+            _bluetoothService.PowerReceived -= OnPowerReceived;
             _workoutTimer.Stop();
             PowerManagement.AllowSleep();
-            
-            if (_powerChar != null) _powerChar.ValueChanged -= Power_ValueChanged;
-        }
-
-        private void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                Logger.Log($"Device Connection Status Changed: {sender.ConnectionStatus}");
-                if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
-                {
-                    TxtLog.Text = "Status: Device Disconnected.";
-                    TxtStatus.Content = "DISCONNECTED";
-                    TxtStatus.Background = Brushes.Red;
-                    BtnStart.IsEnabled = false;
-                    BtnStop.IsEnabled = false;
-                    _workoutTimer.Stop();
-                    PowerManagement.AllowSleep();
-                    Disconnected?.Invoke();
-                }
-            });
         }
 
         private void BtnStart_Click(object sender, RoutedEventArgs e)
@@ -240,12 +152,12 @@ namespace BikeFitnessApp
             BtnStop.IsEnabled = false;
             TxtLog.Text = "Status: Workout Stopped";
             TxtStatus.Content = "CONNECTED";
-            TxtStatus.Background = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)); // #4CAF50
+            TxtStatus.Background = new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)); 
         }
 
         private void WorkoutTimer_Tick(object? sender, EventArgs e)
         {
-            if (_controlPoint == null) return;
+            if (!_bluetoothService.IsConnected) return;
 
             try
             {
@@ -273,8 +185,8 @@ namespace BikeFitnessApp
                 else { r = 255; g = (byte)((1 - ratio) * 2 * 255); }
                 TxtCurrentResistance.Foreground = new SolidColorBrush(Color.FromRgb(r, g, 0));
 
-                // Queue the resistance command!
-                _pendingResistance = resistance;
+                // Queue the resistance command via Service
+                _bluetoothService.QueueResistance(resistance);
                 Logger.Log($"Queued resistance: {resistance:F2}");
             }
             catch (Exception ex)

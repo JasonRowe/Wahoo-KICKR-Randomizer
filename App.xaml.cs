@@ -5,6 +5,7 @@ using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using BikeFitnessApp.Services;
 
 namespace BikeFitnessApp
 {
@@ -13,6 +14,8 @@ namespace BikeFitnessApp
     /// </summary>
     public partial class App : Application
     {
+        public static IBluetoothService BluetoothService { get; private set; } = new BluetoothService();
+
         protected override void OnStartup(StartupEventArgs e)
         {
             AppDomain.CurrentDomain.UnhandledException += (s, ex) =>
