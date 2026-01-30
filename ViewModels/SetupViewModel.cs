@@ -79,12 +79,6 @@ namespace BikeFitnessApp.ViewModels
 
         private void OnDeviceDiscovered(DeviceDisplay device)
         {
-            // Note: In WPF, updating ObservableCollection from background thread requires Dispatcher
-            // or using a thread-safe collection. For now, I'll assume we might need to jump to UI thread
-            // but I'll try to keep VM UI-agnostic. 
-            // Actually, I'll use App.Current.Dispatcher if needed, but let's see if Service already invokes on UI thread.
-            // SetupView used Dispatcher.Invoke. So I should probably do it here or in Service.
-            // Better to do it in VM or use a helper.
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
                 if (!FoundDevices.Any(d => d.Address == device.Address))
