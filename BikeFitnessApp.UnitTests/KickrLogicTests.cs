@@ -1,3 +1,4 @@
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BikeFitnessApp;
 
@@ -103,6 +104,75 @@ namespace BikeFitnessApp.Tests
             
             var result = logic.ParseCscData(data);
             Assert.IsFalse(result.hasWheelData);
+        }
+
+        [TestMethod]
+        public void TestParseCscCrankData()
+        {
+            var logic = new KickrLogic();
+            // Flags: 0x02 (Crank present, Wheel NOT present)
+            // Crank Revs: 50 (0x3200)
+            // Last Crank Time: 1000 (0xE803)
+            byte[] data = new byte[] { 0x02, 0x32, 0x00, 0xE8, 0x03 };
+            
+            var result = logic.ParseCscCrankData(data);
+            Assert.IsTrue(result.hasCrankData);
+            Assert.AreEqual(50, result.crankRevs);
+            Assert.AreEqual(1000, result.lastCrankTime);
+        }
+
+        [TestMethod]
+        public void TestParseCscCrankData_WithWheelData()
+        {
+            var logic = new KickrLogic();
+            // Flags: 0x03 (Wheel present | Crank present)
+            // Wheel Data (4+2 bytes): 0x11,0x22,0x33,0x44, 0x55,0x66
+            // Crank Data (2+2 bytes): 0x77,0x88 (Revs), 0x99,0xAA (Time)
+            byte[] data = new byte[] { 
+                0x03, 
+                0x11, 0x22, 0x33, 0x44, 0x55, 0x66, // Wheel
+                0x77, 0x88, 0x99, 0xAA  // Crank
+            };
+            
+            var result = logic.ParseCscCrankData(data);
+            Assert.IsTrue(result.hasCrankData);
+            
+            ushort expectedRevs = BitConverter.ToUInt16(new byte[] { 0x77, 0x88 });
+            ushort expectedTime = BitConverter.ToUInt16(new byte[] { 0x99, 0xAA });
+
+            Assert.AreEqual(expectedRevs, result.crankRevs);
+            Assert.AreEqual(expectedTime, result.lastCrankTime);
+        }
+
+        [TestMethod]
+        public void TestCalculateCadence()
+        {
+            var logic = new KickrLogic();
+            ushort prevRevs = 100;
+            ushort prevTime = 10000;
+            
+            ushort currRevs = 101; // 1 rev
+            ushort currTime = 11024; // 1024 ticks = 1 second later
+            
+            // 1 rev per second = 60 RPM
+            double rpm = logic.CalculateCadence(prevRevs, prevTime, currRevs, currTime);
+            Assert.AreEqual(60.0, rpm, 0.1);
+        }
+
+        [TestMethod]
+        public void TestParseCrankDataFromPower()
+        {
+            var logic = new KickrLogic();
+            // Flags (2 bytes): 0x20 (Crank Data Present)
+            // Power (2 bytes): 100W (0x6400)
+            // Crank Revs (2 bytes): 50 (0x3200)
+            // Crank Time (2 bytes): 1000 (0xE803)
+            byte[] data = new byte[] { 0x20, 0x00, 0x64, 0x00, 0x32, 0x00, 0xE8, 0x03 };
+            
+            var result = logic.ParseCrankDataFromPower(data);
+            Assert.IsTrue(result.hasCrankData);
+            Assert.AreEqual(50, result.crankRevs);
+            Assert.AreEqual(1000, result.lastCrankTime);
         }
 
         [TestMethod]

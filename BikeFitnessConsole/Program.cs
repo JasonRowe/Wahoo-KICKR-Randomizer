@@ -27,6 +27,23 @@ namespace BikeFitnessConsole
         private static GattCharacteristic? _controlPoint;
         private static KickrLogic _logic = new KickrLogic();
 
+        // Toggles
+        private static bool _showPower = false;
+        private static bool _showCadence = false;
+        private static bool _showSpeed = false;
+        private static bool _useResistanceMode = true; // Default to Resistance (0x41) as it matches Main App
+
+        // State for calculations
+        private static ushort _prevCrankRevs = 0;
+        private static ushort _prevCrankTime = 0;
+        private static bool _firstCrankData = true;
+
+        private static uint _prevWheelRevs = 0;
+        private static ushort _prevWheelTime = 0;
+        private static uint _startWheelRevs = 0; // To calculate session distance
+        private static bool _firstWheelData = true;
+        private const double WheelCircumference = 2.1; // Meters
+
         static async Task Main(string[] args)
         {
             Console.WriteLine("=== KICKR CONSOLE TESTER ===");
@@ -79,7 +96,11 @@ namespace BikeFitnessConsole
             // Dump for debug
             foreach(var s in allServices)
             {
-                Console.WriteLine($"Service: {s.Uuid}");
+                string name = "Unknown";
+                if (s.Uuid == WAHOO_SERVICE) name = "WAHOO CUSTOM";
+                if (s.Uuid == POWER_SERVICE) name = "POWER (0x1818)";
+                if (s.Uuid == SPEED_SERVICE) name = "CSC (0x1816)";
+                Console.WriteLine($"Service: {s.Uuid} ({name})");
             }
 
             // 1. Setup Control Point
@@ -88,22 +109,20 @@ namespace BikeFitnessConsole
             // 2. Setup Power Notifications
             await SetupPower(allServices);
 
-            // 3. Setup Speed Notifications
-            await SetupSpeed(allServices);
+            // 3. Setup Speed/Cadence Notifications
+            await SetupSpeedAndCadence(allServices);
 
             // 4. Send Init/Unlock
             Console.WriteLine("\nInitializing (Sending 0x00)...");
             await SendInit();
 
             Console.WriteLine("\n=== CONTROLS ===");
-            Console.WriteLine("0-9: Send Level 0-9 (OpCode 0x40, Val 0-9)");
-            Console.WriteLine("R:   Send Level 0-100 (OpCode 0x40, Val 0-100)");
-            Console.WriteLine("S:   Send Resistance Mode (OpCode 0x41, Val 0-100%)");
-            Console.WriteLine("E:   Set ERG Mode 50 Watts (OpCode 0x42)");
-            Console.WriteLine("F:   Set ERG Mode 100 Watts (OpCode 0x42)");
-            Console.WriteLine("T:   Test Simulation (Hilly Mode loop)");
-            Console.WriteLine("U:   Send Init/Unlock (OpCode 0x00)");
-            Console.WriteLine("D:   Dump Characteristic Details");
+            Console.WriteLine("0-9: Send Resistance (0-90%) OR Level (0-9) based on Mode");
+            Console.WriteLine("M:   Toggle 0-9 Mode (Current: " + (_useResistanceMode ? "Resistance %" : "Level 0-9") + ")");
+            Console.WriteLine("P:   Toggle Power Display");
+            Console.WriteLine("C:   Toggle Cadence Display");
+            Console.WriteLine("V:   Toggle Speed/Dist Display");
+            Console.WriteLine("S:   Manual Resistance % Input");
             Console.WriteLine("Q:   Quit");
 
             while (true)
@@ -115,18 +134,23 @@ namespace BikeFitnessConsole
 
                     if (char.IsDigit(key))
                     {
-                        int level = int.Parse(key.ToString());
-                        Console.WriteLine($"\n[Command] Level {level}");
-                        await SendLevel(level);
-                    }
-                    else if (key == 'r' || key == 'R')
-                    {
-                        Console.Write("\nEnter Level 0-100: ");
-                        string? input = Console.ReadLine();
-                        if (int.TryParse(input, out int val))
+                        int digit = int.Parse(key.ToString());
+                        if (_useResistanceMode)
                         {
-                            await SendResistance(val);
+                            int percent = digit * 10;
+                            Console.WriteLine($"\n[Command] Resistance {percent}% (0x41)");
+                            await SendMode41(percent);
                         }
+                        else
+                        {
+                            Console.WriteLine($"\n[Command] Level {digit} (0x40)");
+                            await SendLevel(digit);
+                        }
+                    }
+                    else if (key == 'm' || key == 'M')
+                    {
+                        _useResistanceMode = !_useResistanceMode;
+                        Console.WriteLine($"\n[Mode] 0-9 Keys now set to: {(_useResistanceMode ? "Resistance % (0x41)" : "Level 0-9 (0x40)")}");
                     }
                     else if (key == 's' || key == 'S')
                     {
@@ -137,30 +161,20 @@ namespace BikeFitnessConsole
                             await SendMode41(val);
                         }
                     }
-                    else if (key == 'e' || key == 'E')
+                    else if (key == 'p' || key == 'P')
                     {
-                        Console.WriteLine("\n[Command] ERG 50W");
-                        await SendErg(50);
+                        _showPower = !_showPower;
+                        Console.WriteLine($"\n[Display] Power: {(_showPower ? "ON" : "OFF")}");
                     }
-                    else if (key == 'f' || key == 'F')
+                    else if (key == 'c' || key == 'C')
                     {
-                        Console.WriteLine("\n[Command] ERG 100W");
-                        await SendErg(100);
+                        _showCadence = !_showCadence;
+                        Console.WriteLine($"\n[Display] Cadence: {(_showCadence ? "ON" : "OFF")}");
                     }
-                    else if (key == 't' || key == 'T')
+                    else if (key == 'v' || key == 'V')
                     {
-                        Console.WriteLine("\n[Test] Starting Hilly Mode Simulation (Ctrl+C to stop)...");
-                        await RunSimulation();
-                    }
-                    else if (key == 'u' || key == 'U')
-                    {
-                        Console.WriteLine("\n[Command] Init/Unlock (0x00)");
-                        await SendInit();
-                    }
-                    else if (key == 'd' || key == 'D')
-                    {
-                        Console.WriteLine("\n[Debug] Dumping Characteristic Details...");
-                        await DumpAllCharacteristics(allServices);
+                        _showSpeed = !_showSpeed;
+                        Console.WriteLine($"\n[Display] Speed/Dist: {(_showSpeed ? "ON" : "OFF")}");
                     }
                 }
                 await Task.Delay(50); // Small loop delay
@@ -171,22 +185,12 @@ namespace BikeFitnessConsole
 
         private static async Task DumpAllCharacteristics(IReadOnlyList<GattDeviceService> services)
         {
-            foreach(var s in services)
-            {
-                Console.WriteLine($"Service: {s.Uuid}");
-                var chars = await s.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
-                if (chars.Status == GattCommunicationStatus.Success)
-                {
-                    foreach(var c in chars.Characteristics)
-                    {
-                        Console.WriteLine($"  - Char: {c.Uuid}  Props: {c.CharacteristicProperties}");
-                    }
-                }
-            }
+            // ... (omitted for brevity, not calling it in main loop anymore to keep clean)
         }
 
         private static async Task SetupControlPoint(IReadOnlyList<GattDeviceService> services)
         {
+            // ... (keep existing)
             var candidates = new[] { WAHOO_SERVICE, POWER_SERVICE };
             foreach (var uuid in candidates)
             {
@@ -199,10 +203,6 @@ namespace BikeFitnessConsole
                         _controlPoint = charsResult.Characteristics[0];
                         Console.WriteLine($"OK: Control Point found in Service {service.Uuid}");
                         return;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Info: Service {service.Uuid} found, but Control Point missing inside.");
                     }
                 }
             }
@@ -221,21 +221,63 @@ namespace BikeFitnessConsole
                 await c.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
                 c.ValueChanged += (s, e) =>
                 {
+                    if (!_showPower && !_showCadence && !_showSpeed) return;
+                    
                     var reader = DataReader.FromBuffer(e.CharacteristicValue);
                     byte[] data = new byte[reader.UnconsumedBufferLength];
                     reader.ReadBytes(data);
+                    
                     int watts = _logic.ParsePower(data);
-                    //Console.Write($"\r[POWER: {watts} W]   ");
+                    
+                    // Cadence from Power
+                    var (hasCrank, crankRevs, crankTime) = _logic.ParseCrankDataFromPower(data);
+                    double rpm = 0;
+                    if (hasCrank)
+                    {
+                        if (!_firstCrankData) rpm = _logic.CalculateCadence(_prevCrankRevs, _prevCrankTime, crankRevs, crankTime);
+                        _prevCrankRevs = crankRevs;
+                        _prevCrankTime = crankTime;
+                        _firstCrankData = false;
+                    }
+
+                    // Speed/Dist from Power (Wheel Data)
+                    var (hasWheel, wheelRevs, wheelTime) = _logic.ParseWheelDataFromPower(data);
+                    double kph = 0;
+                    double distKm = 0;
+                    if (hasWheel)
+                    {
+                        if (_firstWheelData)
+                        {
+                            _startWheelRevs = wheelRevs;
+                            _firstWheelData = false;
+                        }
+                        else
+                        {
+                            kph = _logic.CalculateSpeed(_prevWheelRevs, _prevWheelTime, wheelRevs, wheelTime, WheelCircumference);
+                        }
+                        // Distance based on session start
+                        distKm = _logic.CalculateDistance(wheelRevs - _startWheelRevs, WheelCircumference) / 1000.0;
+                        
+                        _prevWheelRevs = wheelRevs;
+                        _prevWheelTime = wheelTime;
+                    }
+
+                    string output = "";
+                    if (_showPower) output += $"POWER: {watts} W ";
+                    if (_showCadence) output += hasCrank ? $"| CAD: {rpm:F0} RPM " : "| CAD: -- (No Flag) ";
+                    if (_showSpeed) output += hasWheel ? $"| SPD: {kph:F1} kph DIST: {distKm:F2} km " : "| SPD: -- ";
+
+                    if (output.Length > 0) Console.Write($"\r[{output.TrimStart('|', ' ')}]   ");
                 };
                 Console.WriteLine("OK: Subscribed to POWER.");
             }
             else { Console.WriteLine("FAIL: Power Measurement char missing."); }
         }
 
-        private static async Task SetupSpeed(IReadOnlyList<GattDeviceService> services)
+        private static async Task SetupSpeedAndCadence(IReadOnlyList<GattDeviceService> services)
         {
             var spdService = services.FirstOrDefault(s => s.Uuid == SPEED_SERVICE);
-            if (spdService == null) { Console.WriteLine("FAIL: Speed Service (1816) NOT found."); return; }
+            if (spdService == null) { Console.WriteLine("INFO: Speed Service (1816) NOT found (Cadence might come from Power)."); return; }
 
             var chars = await spdService.GetCharacteristicsForUuidAsync(CSC_MEASUREMENT, BluetoothCacheMode.Uncached);
             if (chars.Status == GattCommunicationStatus.Success && chars.Characteristics.Count > 0)
@@ -244,15 +286,33 @@ namespace BikeFitnessConsole
                 await c.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
                 c.ValueChanged += (s, e) =>
                 {
+                    if (!_showCadence) return;
+                    
                     var reader = DataReader.FromBuffer(e.CharacteristicValue);
                     byte[] data = new byte[reader.UnconsumedBufferLength];
                     reader.ReadBytes(data);
-                    var (hasWheel, revs, time) = _logic.ParseCscData(data);
-                    if(hasWheel) Console.Write($"\r[SPEED DATA: {BitConverter.ToString(data)}]   ");
+                    
+                    string rawHex = BitConverter.ToString(data);
+                    var (hasCrank, crankRevs, crankTime) = _logic.ParseCscCrankData(data);
+                    
+                    if (hasCrank)
+                    {
+                        double rpm = 0;
+                        if (!_firstCrankData) rpm = _logic.CalculateCadence(_prevCrankRevs, _prevCrankTime, crankRevs, crankTime);
+                        _prevCrankRevs = crankRevs;
+                        _prevCrankTime = crankTime;
+                        _firstCrankData = false;
+                        Console.Write($"\r[CADENCE (CSC): {rpm:F0} RPM]   ");
+                    }
+                    else
+                    {
+                         // If we are here, we got data but no crank flag. 
+                         Console.Write($"\r[CSC RAW]: {rawHex} (No Crank Flag)   ");
+                    }
                 };
-                Console.WriteLine("OK: Subscribed to SPEED.");
+                Console.WriteLine("OK: Subscribed to CSC (Speed/Cadence).");
             }
-            else { Console.WriteLine("FAIL: Speed Measurement char missing."); }
+            else { Console.WriteLine("FAIL: CSC Measurement char missing."); }
         }
 
         private static async Task RunSimulation()

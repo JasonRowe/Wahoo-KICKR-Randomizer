@@ -4,6 +4,8 @@
 
 ### Changes should always be added to git and committed after every valid build / test phase.
 
+## When working with new bluetooth operations or devices we should first prove out the logic in test app BikeFitnessConsole.
+
 App should have robust logging to ensure we can figure out why it crashes.
 
 ### TODOs
@@ -47,3 +49,19 @@ App should have robust logging to ensure we can figure out why it crashes.
 3.  **Add Cadence & Distance Display**
     *   **Why:** Requested feature.
     *   **Action:** Update `KickrLogic` to parse the "CSC Measurement" (Cycling Speed & Cadence) characteristic if available, or derive cadence from power meter data if provided.
+
+## Findings (2026-01-29) - Console App Testing
+
+### 1. Resistance Control Modes
+*   **Level Mode (OpCode 0x40):** Tested in Console App. User reported "no change" in resistance when sending levels 0-9. This mode appears unsupported or ineffective on the test device.
+*   **Resistance Mode (OpCode 0x41):** Tested in Console App. User confirmed they "felt a change". This works as intended (0-100% resistance). 
+    *   *Note:* The current implementation uses `0x41`. We should stick with this or investigate "Simulation Mode" for finer gradients (Sim mode uses OpCode 0x43 usually, taking weight/grade/Crr inputs).
+
+### 2. Data Metrics
+*   **Speed & Distance:** 
+    *   Successfully implemented in Console App using **Wheel Revolution** data from the **Power Service (0x1818)**.
+    *   Logic: `CalculateSpeed` and `CalculateDistance` methods added to `KickrLogic`.
+    *   *Action:* Needs to be ported to the main WPF application.
+*   **Cadence:**
+    *   **Power Service:** The test device sends `0x1818` Power packets with the "Crank Data Present" flag (Bit 5) **UNSET**. This means we cannot derive cadence from the Power service on this device.
+    *   **CSC Service (0x1816):** The device advertises this service. We need to ensure the main app subscribes to it as a fallback (or primary) source for Cadence when the Power service lacks it.

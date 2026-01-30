@@ -137,10 +137,95 @@ namespace BikeFitnessApp
             // Data index starts at 1
             int index = 1;
 
-            // If Crank Rev Present (Bit 1), we need to check if it comes before or after Wheel?
-            // Spec: Flags (1) + Wheel Data (if present) + Crank Data (if present)
-            // Wheel Data: Cumulative Wheel Revolutions (UInt32 - 4 bytes) + Last Wheel Event Time (UInt16 - 2 bytes)
+            if (data.Length < index + 6) return (false, 0, 0);
+
+            uint wheelRevs = BitConverter.ToUInt32(data, index);
+            ushort lastWheelTime = BitConverter.ToUInt16(data, index + 4);
+
+            return (true, wheelRevs, lastWheelTime);
+        }
+
+        public (bool hasCrankData, ushort crankRevs, ushort lastCrankTime) ParseCscCrankData(byte[] data)
+        {
+            if (data == null || data.Length == 0) return (false, 0, 0);
+
+            byte flags = data[0];
+            bool wheelRevPresent = (flags & 0x01) != 0;
+            bool crankRevPresent = (flags & 0x02) != 0;
+
+            if (!crankRevPresent) return (false, 0, 0);
+
+            int index = 1;
+            if (wheelRevPresent)
+            {
+                index += 6; // Skip Wheel Data (4 + 2 bytes)
+            }
+
+            if (data.Length < index + 4) return (false, 0, 0);
+
+            ushort crankRevs = BitConverter.ToUInt16(data, index);
+            ushort lastCrankTime = BitConverter.ToUInt16(data, index + 2);
+
+            return (true, crankRevs, lastCrankTime);
+        }
+
+        public double CalculateCadence(ushort prevRevs, ushort prevTime, ushort currRevs, ushort currTime)
+        {
+            if (currRevs < prevRevs) return 0; // Simple wrap-around handling: ignore negative diffs
             
+            int revsDiff = currRevs - prevRevs;
+            if (revsDiff == 0) return 0;
+
+            // Time unit is 1/1024 seconds
+            int timeDiff = currTime - prevTime;
+            if (timeDiff < 0) timeDiff += 65536; // Wrap around adjustment for UInt16
+
+            if (timeDiff == 0) return 0;
+
+            double timeMinutes = (timeDiff / 1024.0) / 60.0;
+            return revsDiff / timeMinutes;
+        }
+
+        public (bool hasCrankData, ushort crankRevs, ushort lastCrankTime) ParseCrankDataFromPower(byte[] data)
+        {
+            if (data == null || data.Length < 4) return (false, 0, 0);
+
+            ushort flags = BitConverter.ToUInt16(data, 0);
+            bool pedalBalancePresent = (flags & 0x01) != 0;
+            bool torquePresent = (flags & 0x04) != 0;
+            bool wheelRevPresent = (flags & 0x10) != 0;
+            bool crankRevPresent = (flags & 0x20) != 0;
+
+            if (!crankRevPresent) return (false, 0, 0);
+
+            int index = 4; // Skip Flags(2) and Power(2)
+            if (pedalBalancePresent) index += 1;
+            if (torquePresent) index += 2;
+            if (wheelRevPresent) index += 6;
+
+            if (data.Length < index + 4) return (false, 0, 0);
+
+            ushort crankRevs = BitConverter.ToUInt16(data, index);
+            ushort lastCrankTime = BitConverter.ToUInt16(data, index + 2);
+
+            return (true, crankRevs, lastCrankTime);
+        }
+
+        public (bool hasWheelData, uint wheelRevs, ushort lastWheelTime) ParseWheelDataFromPower(byte[] data)
+        {
+            if (data == null || data.Length < 4) return (false, 0, 0);
+
+            ushort flags = BitConverter.ToUInt16(data, 0);
+            bool pedalBalancePresent = (flags & 0x01) != 0;
+            bool torquePresent = (flags & 0x04) != 0;
+            bool wheelRevPresent = (flags & 0x10) != 0;
+
+            if (!wheelRevPresent) return (false, 0, 0);
+
+            int index = 4; // Skip Flags(2) and Power(2)
+            if (pedalBalancePresent) index += 1;
+            if (torquePresent) index += 2;
+
             if (data.Length < index + 6) return (false, 0, 0);
 
             uint wheelRevs = BitConverter.ToUInt32(data, index);
@@ -168,6 +253,11 @@ namespace BikeFitnessApp
             
             double speedMps = distanceMeters / timeSeconds;
             return speedMps * 3.6; // Convert to KPH
+        }
+
+        public double CalculateDistance(uint totalRevs, double circumferenceMeters)
+        {
+            return totalRevs * circumferenceMeters;
         }
     }
 }
