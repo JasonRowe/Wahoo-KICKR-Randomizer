@@ -11,6 +11,8 @@ App should have robust logging to ensure we can figure out why it crashes.
 ### TODOs
  - It turns out the resistance levels are very aggressive and biking at over 10% is tough. Might be worth figuring out how to use Simulation (Sim) mode you can modify the nominal grade in .5% increments and the app will provide  resistance accounting for your weight as entered into your profile to simulate riding that grade outdoors. THis would allow for more incremental resistance instead of 1-100. 
  - Would be nice to show cadence or distance also.
+ - WheelCircumference should be set using standard bike tire sizes (26, 27, 29, 700c) and converted to meters internally via user settings menu in the workout page.
+ - MPH vs KPH should be selected via settings menu in the workout page
 
 ## Refactoring & Improvement Plan (2026-01-28)
 

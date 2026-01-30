@@ -36,7 +36,7 @@
                 <ListBox x:Name="ListDevices" Grid.Row="2" Margin="0,0,0,24" 
                          Style="{DynamicResource MaterialDesignNavigationPrimaryListBox}"
                          DisplayMemberPath="Name"
-                         ItemsSource="{Binding FoundDevices}"
+                         ItemsSource="{Binding Devices}"
                          SelectedItem="{Binding SelectedDevice}">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource MaterialDesignNavigationPrimaryListBoxItem}">
@@ -47,7 +47,7 @@
 
                 <StackPanel Grid.Row="3">
                     <TextBlock x:Name="TxtStatus" Text="{Binding Status, StringFormat={}Status: {0}}" Margin="0,0,0,16" HorizontalAlignment="Center" Style="{DynamicResource MaterialDesignCaptionTextBlock}"/>
-                    <Button x:Name="BtnConnect" Content="CONNECT AND RIDE" Command="{Binding ConnectCommand}" 
+                    <Button x:Name="BtnConnect" Content="CONNECT AND RIDE" Command="{Binding ConnectCommand}"  
                             Height="56" Width="300" FontSize="16" FontWeight="Bold" 
                             Style="{DynamicResource MaterialDesignRaisedButton}" 
                             materialDesign:ButtonAssist.CornerRadius="28"/>

@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:converters="clr-namespace:BikeFitnessApp.Converters"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1200"
              TextElement.Foreground="{DynamicResource MaterialDesignBody}"
@@ -32,6 +33,28 @@
                     <Menu Background="Transparent" TextElement.Foreground="{DynamicResource PrimaryHueMidForegroundBrush}" Margin="0,0,16,0">
                         <MenuItem Header="SETTINGS" Height="32">
                             <MenuItem x:Name="MenuEnableLogging" Header="Enable Logging" IsCheckable="True" IsChecked="{Binding IsLoggingEnabled}" Foreground="Black"/>
+                            <Separator/>
+                            <MenuItem Header="Units" Foreground="Black">
+                                <MenuItem Header="Metric (KPH)" IsCheckable="True" IsChecked="{Binding IsMetric}" Foreground="Black"/>
+                            </MenuItem>
+                            <MenuItem Header="Tire Size" Foreground="Black" ItemsSource="{Binding TireSizes}">
+                                <MenuItem.ItemContainerStyle>
+                                    <Style TargetType="MenuItem" BasedOn="{StaticResource MaterialDesignMenuItem}">
+                                        <Setter Property="Header" Value="{Binding Name}"/>
+                                        <Setter Property="IsCheckable" Value="True"/>
+                                        <Setter Property="IsChecked">
+                                            <Setter.Value>
+                                                <MultiBinding Converter="{x:Static converters:EqualityConverter.Instance}">
+                                                    <Binding Path="DataContext.SelectedTireSize" RelativeSource="{RelativeSource AncestorType=MenuItem, AncestorLevel=2}"/>
+                                                    <Binding Path="."/>
+                                                </MultiBinding>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="Command" Value="{Binding DataContext.SelectTireSizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                        <Setter Property="CommandParameter" Value="{Binding .}"/>
+                                    </Style>
+                                </MenuItem.ItemContainerStyle>
+                            </MenuItem>
                         </MenuItem>
                     </Menu>
                     <materialDesign:Chip x:Name="TxtStatus" Content="{Binding Status}" 
@@ -130,16 +153,25 @@
                                          Background="#333333" BorderThickness="0"/>
                         </Grid>
 
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,40,0,0">
-                            <!-- Power -->
-                            <StackPanel MinWidth="120">
-                                <TextBlock Text="POWER" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold"/>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                     <TextBlock x:Name="TxtPower" Text="{Binding Power}" FontSize="48" FontWeight="Bold" Foreground="White"/>
-                                     <TextBlock Text="w" FontSize="24" Foreground="#888888" VerticalAlignment="Bottom" Margin="4,0,0,8"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20">
+            <!-- Power -->
+            <StackPanel Margin="20,0">
+                <TextBlock Text="Power" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding PowerText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Speed -->
+            <StackPanel Margin="20,0">
+                <TextBlock Text="{Binding SpeedLabel}" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding SpeedText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Distance -->
+            <StackPanel Margin="20,0">
+                <TextBlock Text="{Binding DistanceLabel}" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding DistanceText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </StackPanel>
                     </StackPanel>
                 </Grid>
             </materialDesign:Card>

@@ -8,9 +8,10 @@ namespace BikeFitnessApp.Services
     public interface IBluetoothService
     {
         event Action<DeviceDisplay> DeviceDiscovered;
-        event Action<string> StatusChanged;
-        event Action<int> PowerReceived;
-        event Action ConnectionLost;
+        event Action<string>? StatusChanged;
+        event Action<int>? PowerReceived;
+        event Action<double, double>? SpeedValuesUpdated; // Speed (KPH), Distance (Meters)
+        event Action? ConnectionLost;
 
         bool IsScanning { get; }
         bool IsConnected { get; }

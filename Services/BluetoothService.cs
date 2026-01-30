@@ -28,11 +28,18 @@ namespace BikeFitnessApp.Services
         // Command Loop State
         private bool _isLoopRunning;
         private double? _pendingResistance;
+
+        // Speed/Distance State
+        private uint _prevWheelRevs = 0;
+        private ushort _prevWheelTime = 0;
+        private uint _startWheelRevs = 0;
+        private bool _firstWheelData = true;
         
         // Events
         public event Action<DeviceDisplay>? DeviceDiscovered;
         public event Action<string>? StatusChanged;
         public event Action<int>? PowerReceived;
+        public event Action<double, double>? SpeedValuesUpdated;
         public event Action? ConnectionLost;
 
         public bool IsScanning => _watcher != null && _watcher.Status == BluetoothLEAdvertisementWatcherStatus.Started;
@@ -91,6 +98,12 @@ namespace BikeFitnessApp.Services
         {
             StopScanning();
             UpdateStatus($"Connecting to {address}...");
+
+            // Reset Calculation State
+            _firstWheelData = true;
+            _prevWheelRevs = 0;
+            _prevWheelTime = 0;
+            _startWheelRevs = 0;
 
             try
             {
@@ -188,8 +201,45 @@ namespace BikeFitnessApp.Services
             var reader = DataReader.FromBuffer(args.CharacteristicValue);
             byte[] data = new byte[reader.UnconsumedBufferLength];
             reader.ReadBytes(data);
+            
+            // 1. Parse Power
             int watts = _logic.ParsePower(data);
             PowerReceived?.Invoke(watts);
+
+            // 2. Parse Speed/Distance (Wheel Data)
+            var (hasWheel, wheelRevs, wheelTime) = _logic.ParseWheelDataFromPower(data);
+            if (hasWheel)
+            {
+                double kph = 0;
+                double distMeters = 0;
+
+                if (_firstWheelData)
+                {
+                    _startWheelRevs = wheelRevs;
+                    _prevWheelRevs = wheelRevs;
+                    _prevWheelTime = wheelTime;
+                    _firstWheelData = false;
+                }
+                else
+                {
+                    kph = _logic.CalculateSpeed(_prevWheelRevs, _prevWheelTime, wheelRevs, wheelTime, AppSettings.WheelCircumference);
+                    
+                    // We calculate distance based on accumulated revolutions since session start
+                    // This handles potential wrapping of wheelRevs (UInt32) better if we just do current - start
+                    // But if it wraps, current < start. CalculateDistance handles totalRevs.
+                    // Let's assume standard logic:
+                    
+                    long totalRevs = (long)wheelRevs - _startWheelRevs;
+                    if (totalRevs < 0) totalRevs += uint.MaxValue; // Handle wrap once? rarely happens for uint32 (4 billion revs)
+                    
+                    distMeters = _logic.CalculateDistance((uint)totalRevs, AppSettings.WheelCircumference);
+                    
+                    _prevWheelRevs = wheelRevs;
+                    _prevWheelTime = wheelTime;
+                }
+
+                SpeedValuesUpdated?.Invoke(kph, distMeters);
+            }
         }
 
         private void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)

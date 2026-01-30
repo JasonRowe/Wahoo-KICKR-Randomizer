@@ -25,10 +25,77 @@ namespace BikeFitnessApp.ViewModels
         private Brush _resistanceBrush = Brushes.White;
         private string _log = "Ready to ride.";
 
+        // New Speed/Distance Properties
+        private string _speedText = "--";
+        private string _distanceText = "0.00";
+        private string _speedLabel = "MPH";
+        private string _distanceLabel = "Miles";
+        private TireSize _selectedTireSize;
+
+        public System.Collections.Generic.List<TireSize> TireSizes => AppSettings.StandardTireSizes;
+
+        public TireSize SelectedTireSize
+        {
+            get => _selectedTireSize;
+            set
+            {
+                if (SetProperty(ref _selectedTireSize, value))
+                {
+                    AppSettings.WheelCircumference = value.Circumference;
+                }
+            }
+        }
+
+        public bool IsMetric
+        {
+            get => AppSettings.UseMetric;
+            set
+            {
+                if (AppSettings.UseMetric != value)
+                {
+                    AppSettings.UseMetric = value;
+                    OnPropertyChanged();
+                    UpdateUnitLabels();
+                }
+            }
+        }
+
         public int Power
         {
             get => _power;
-            set => SetProperty(ref _power, value);
+            set
+            {
+                if (SetProperty(ref _power, value))
+                {
+                    OnPropertyChanged(nameof(PowerText));
+                }
+            }
+        }
+
+        public string PowerText => $"{Power} W";
+
+        public string SpeedText
+        {
+            get => _speedText;
+            set => SetProperty(ref _speedText, value);
+        }
+
+        public string DistanceText
+        {
+            get => _distanceText;
+            set => SetProperty(ref _distanceText, value);
+        }
+
+        public string SpeedLabel
+        {
+            get => _speedLabel;
+            set => SetProperty(ref _speedLabel, value);
+        }
+
+        public string DistanceLabel
+        {
+            get => _distanceLabel;
+            set => SetProperty(ref _distanceLabel, value);
         }
 
         public double ResistancePercent
@@ -133,6 +200,7 @@ namespace BikeFitnessApp.ViewModels
         public ICommand StopCommand { get; }
         public ICommand IncreaseIntervalCommand { get; }
         public ICommand DecreaseIntervalCommand { get; }
+        public ICommand SelectTireSizeCommand { get; }
 
         public event Action? Disconnected;
 
@@ -141,6 +209,7 @@ namespace BikeFitnessApp.ViewModels
             _bluetoothService = bluetoothService;
             _bluetoothService.ConnectionLost += OnConnectionLost;
             _bluetoothService.PowerReceived += OnPowerReceived;
+            _bluetoothService.SpeedValuesUpdated += OnSpeedValuesUpdated;
 
             _workoutTimer = new DispatcherTimer();
             _workoutTimer.Interval = TimeSpan.FromSeconds(_intervalSeconds);
@@ -150,16 +219,59 @@ namespace BikeFitnessApp.ViewModels
             StopCommand = new RelayCommand(_ => StopWorkout(), _ => CanStop);
             IncreaseIntervalCommand = new RelayCommand(_ => IntervalSeconds += 10);
             DecreaseIntervalCommand = new RelayCommand(_ => { if (IntervalSeconds > 10) IntervalSeconds -= 10; });
+            SelectTireSizeCommand = new RelayCommand(param => SelectedTireSize = (TireSize)param!);
+
+            // Initialize Settings
+            _selectedTireSize = AppSettings.StandardTireSizes.Find(t => Math.Abs(t.Circumference - AppSettings.WheelCircumference) < 0.01) 
+                                ?? AppSettings.StandardTireSizes[0];
+            OnPropertyChanged(nameof(SelectedTireSize));
 
             _ = InitializeTrainer();
+            UpdateUnitLabels();
         }
 
         public void Cleanup()
         {
             _bluetoothService.ConnectionLost -= OnConnectionLost;
             _bluetoothService.PowerReceived -= OnPowerReceived;
+            _bluetoothService.SpeedValuesUpdated -= OnSpeedValuesUpdated;
             _workoutTimer.Stop();
             PowerManagement.AllowSleep();
+        }
+
+        private void UpdateUnitLabels()
+        {
+            if (AppSettings.UseMetric)
+            {
+                SpeedLabel = "KPH";
+                DistanceLabel = "KM";
+            }
+            else
+            {
+                SpeedLabel = "MPH";
+                DistanceLabel = "Miles";
+            }
+        }
+
+        private void OnSpeedValuesUpdated(double kph, double meters)
+        {
+            // Ensure labels match current setting
+            UpdateUnitLabels();
+
+            if (AppSettings.UseMetric)
+            {
+                SpeedText = $"{kph:F1}";
+                DistanceText = $"{(meters / 1000.0):F2}";
+            }
+            else
+            {
+                // Convert to MPH and Miles
+                double mph = kph * 0.621371;
+                double miles = (meters / 1000.0) * 0.621371;
+                
+                SpeedText = $"{mph:F1}";
+                DistanceText = $"{miles:F2}";
+            }
         }
 
         private async System.Threading.Tasks.Task InitializeTrainer()
