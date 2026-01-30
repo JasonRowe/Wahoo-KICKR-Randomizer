@@ -12,23 +12,23 @@ App should have robust logging to ensure we can figure out why it crashes.
 
 ## Refactoring & Improvement Plan (2026-01-28)
 
-### Phase 1: Reliability & Architecture (Highest Priority)
+### Phase 1: Reliability & Architecture (Highest Priority) - **COMPLETED**
 **Goal:** Decouple logic from the UI to prevent crashes and ensure robust connection handling.
 
-1.  **Extract Bluetooth Service (`IBluetoothService`)**
+1.  **Extract Bluetooth Service (`IBluetoothService`)** - **DONE**
     *   **Why:** Currently, connection logic is in `SetupView` and command logic is in `WorkoutView`. This split makes it hard to maintain a stable connection or recover from errors.
     *   **Action:** Create a dedicated `BluetoothService` class that handles scanning, connecting, writing commands, and receiving notifications. This service will be a "Singleton" that persists even if Views change.
     *   **Benefit:** Centralized error handling and reconnection logic (solving the "robust logging" requirement).
 
-2.  **Implement MVVM (Model-View-ViewModel)**
+2.  **Implement MVVM (Model-View-ViewModel)** - **DONE** (Implemented "Zero-Dependency" approach)
     *   **Why:** To remove complex logic from `.xaml.cs` files. This is the standard for WPF/WinUI.
     *   **Action:**
-        *   Add `CommunityToolkit.Mvvm` package.
+        *   Create `ObservableObject` and `RelayCommand` (Zero-Dependency).
         *   Create `MainViewModel`, `SetupViewModel`, and `WorkoutViewModel`.
         *   Move `DispatcherTimer` and workout logic from `WorkoutView.xaml.cs` into `WorkoutViewModel`.
     *   **Benefit:** Makes the workout logic testable without a physical device or running the UI.
 
-3.  **Dependency Injection (DI) Setup**
+3.  **Dependency Injection (DI) Setup** - **DONE**
     *   **Why:** To cleanly manage the `BluetoothService` and ViewModels.
     *   **Action:** Configure `Microsoft.Extensions.DependencyInjection` in `App.xaml.cs`.
 
@@ -38,6 +38,7 @@ App should have robust logging to ensure we can figure out why it crashes.
 1.  **Navigation Improvements**
     *   **Why:** Manually clearing `MainContainer.Children` is brittle.
     *   **Action:** Use a `CurrentViewModel` property in `MainViewModel` and DataTemplates in `App.xaml` to switch views automatically.
+    *   *Status:* **Partially Completed** (Implemented as part of MVVM refactor in Phase 1).
 
 2.  **Implement "Simulation Mode"**
     *   **Why:** To address the user feedback that percentage-based resistance is too aggressive.
