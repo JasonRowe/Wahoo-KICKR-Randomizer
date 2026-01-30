@@ -87,23 +87,6 @@ namespace BikeFitnessApp.Services
             }
         }
 
-        public async Task ConnectAsync(string addressStr)
-        {
-             // Address comes in as string or we can change interface to take ulong. 
-             // DeviceDisplay has ulong Address, but View might pass it differently. 
-             // Let's assume input is ulong for better type safety, but the interface said string.
-             // I'll overload or parse.
-             // Let's change the interface signature to ulong to be precise or parse existing.
-             // Wait, DeviceDisplay has ulong. I'll assume the caller passes the ulong if they can, 
-             // but if interface is string, I'll parse. 
-             // Actually, I control the interface. Let's make it ulong or just parse inside if it's string.
-             // Looking at SetupView, it passes DeviceDisplay.Address which is ulong.
-             // I will update the Interface to take ulong or handle the conversion.
-             // Let's stick to the interface I wrote (string) for now and parse it, OR update the interface.
-             // Updating interface to ulong is cleaner.
-             throw new NotImplementedException("Use ConnectAsync(ulong address)");
-        }
-        
         public async Task ConnectAsync(ulong address)
         {
             StopScanning();
