@@ -178,9 +178,11 @@
         </Grid>
 
         <!-- Bottom Status -->
-        <StatusBar Grid.Row="2" Background="Transparent">
+        <StatusBar Grid.Row="2" Background="Transparent" Margin="8,0">
             <StatusBarItem>
-                <TextBlock x:Name="TxtLog" Text="{Binding Log}" Style="{DynamicResource MaterialDesignCaptionTextBlock}"/>
+                <TextBlock x:Name="TxtLog" Text="{Binding Log}" 
+                           Style="{DynamicResource MaterialDesignCaptionTextBlock}" 
+                           Foreground="Gray" Opacity="0.5" FontSize="10"/>
             </StatusBarItem>
         </StatusBar>
     </Grid>
