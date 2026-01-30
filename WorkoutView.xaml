@@ -31,10 +31,10 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <Menu Background="Transparent" TextElement.Foreground="{DynamicResource PrimaryHueMidForegroundBrush}" Margin="0,0,16,0">
                         <MenuItem Header="SETTINGS" Height="32">
-                            <MenuItem x:Name="MenuEnableLogging" Header="Enable Logging" IsCheckable="True" Click="MenuEnableLogging_Click" Foreground="Black"/>
+                            <MenuItem x:Name="MenuEnableLogging" Header="Enable Logging" IsCheckable="True" IsChecked="{Binding IsLoggingEnabled}" Foreground="Black"/>
                         </MenuItem>
                     </Menu>
-                    <materialDesign:Chip x:Name="TxtStatus" Content="CONNECTED" 
+                    <materialDesign:Chip x:Name="TxtStatus" Content="{Binding Status}" 
                           Background="#4CAF50" Foreground="White" IconBackground="#388E3C">
                         <materialDesign:Chip.Icon>
                             <materialDesign:PackIcon Kind="BluetoothConnected" />
@@ -59,23 +59,23 @@
                         
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="MIN RESISTANCE" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
-                            <TextBlock Text="{Binding ElementName=SliderMin, Path=Value, StringFormat={}({0}%)}" 
+                            <TextBlock Text="{Binding MinResistance, StringFormat={}({0}%)}" 
                                        Style="{DynamicResource MaterialDesignOverlineTextBlock}" Margin="8,0,0,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         </StackPanel>
-                        <Slider x:Name="SliderMin" Minimum="0" Maximum="100" Value="0" TickFrequency="5" IsSnapToTickEnabled="True"
+                        <Slider x:Name="SliderMin" Minimum="0" Maximum="100" Value="{Binding MinResistance}" TickFrequency="5" IsSnapToTickEnabled="True"
                                 Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,24"/>
                         
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="MAX RESISTANCE" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
-                            <TextBlock Text="{Binding ElementName=SliderMax, Path=Value, StringFormat={}({0}%)}" 
+                            <TextBlock Text="{Binding MaxResistance, StringFormat={}({0}%)}" 
                                        Style="{DynamicResource MaterialDesignOverlineTextBlock}" Margin="8,0,0,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         </StackPanel>
-                        <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="7" TickFrequency="5" IsSnapToTickEnabled="True"
+                        <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="{Binding MaxResistance}" TickFrequency="5" IsSnapToTickEnabled="True"
                                 Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,24"/>
 
                         <StackPanel Margin="0,0,0,24">
                             <TextBlock Text="WORKOUT MODE" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
-                            <ComboBox x:Name="ComboWorkoutMode" Style="{DynamicResource MaterialDesignOutlinedComboBox}" Margin="0,8,0,0" SelectedIndex="0">
+                            <ComboBox x:Name="ComboWorkoutMode" SelectedIndex="{Binding SelectedModeIndex}" Style="{DynamicResource MaterialDesignOutlinedComboBox}" Margin="0,8,0,0">
                                 <ComboBoxItem Content="Random 🎲"/>
                                 <ComboBoxItem Content="Hilly ⛰️"/>
                                 <ComboBoxItem Content="Mountain Climb 🏔️"/>
@@ -84,14 +84,14 @@
 
                         <materialDesign:ColorZone Mode="Light" Padding="12" CornerRadius="8" materialDesign:ElevationAssist.Elevation="Dp0">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Style="{DynamicResource MaterialDesignToolButton}" Click="BtnDecreaseInterval_Click" Margin="0,0,8,0">
+                                <Button Style="{DynamicResource MaterialDesignToolButton}" Command="{Binding DecreaseIntervalCommand}" Margin="0,0,8,0">
                                     <materialDesign:PackIcon Kind="ChevronDown" />
                                 </Button>
                                 
                                 <materialDesign:PackIcon Kind="Timer" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="TxtInterval" Text="Interval: 30s" VerticalAlignment="Center" FontWeight="SemiBold" Width="80" TextAlignment="Center"/>
+                                <TextBlock x:Name="TxtInterval" Text="{Binding IntervalText}" VerticalAlignment="Center" FontWeight="SemiBold" Width="80" TextAlignment="Center"/>
                                 
-                                <Button Style="{DynamicResource MaterialDesignToolButton}" Click="BtnIncreaseInterval_Click" Margin="8,0,0,0">
+                                <Button Style="{DynamicResource MaterialDesignToolButton}" Command="{Binding IncreaseIntervalCommand}" Margin="8,0,0,0">
                                     <materialDesign:PackIcon Kind="ChevronUp" />
                                 </Button>
                             </StackPanel>
@@ -100,15 +100,15 @@
                 </materialDesign:Card>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,24,0,0">
-                    <Button x:Name="BtnStart" Content="START" Click="BtnStart_Click" 
+                    <Button x:Name="BtnStart" Content="START" Command="{Binding StartCommand}" 
                             Style="{DynamicResource MaterialDesignRaisedButton}" 
                             Background="#4CAF50" BorderBrush="#4CAF50"
                             Width="140" Height="50" materialDesign:ButtonAssist.CornerRadius="25" Margin="0,0,16,0">
                     </Button>
-                    <Button x:Name="BtnStop" Content="STOP" Click="BtnStop_Click" 
+                    <Button x:Name="BtnStop" Content="STOP" Command="{Binding StopCommand}" 
                             Style="{DynamicResource MaterialDesignRaisedButton}" 
                             Background="#F44336" BorderBrush="#F44336"
-                            Width="140" Height="50" materialDesign:ButtonAssist.CornerRadius="25" IsEnabled="False">
+                            Width="140" Height="50" materialDesign:ButtonAssist.CornerRadius="25">
                     </Button>
                 </StackPanel>
             </StackPanel>
@@ -119,13 +119,14 @@
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="CURRENT RESISTANCE" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold" Margin="0,0,0,8"/>
                         <Viewbox Height="200">
-                            <TextBlock x:Name="TxtCurrentResistance" Text="--" FontWeight="Black" Foreground="White" />
+                            <TextBlock x:Name="TxtCurrentResistance" Text="{Binding ResistancePercent, StringFormat={}{0:F0}%}" 
+                                       FontWeight="Black" Foreground="{Binding ResistanceBrush}" />
                         </Viewbox>
                         
                         <!-- Visual Gauge -->
                         <Grid Margin="48,24,48,0">
-                             <ProgressBar x:Name="ResistanceGauge" Height="20" Minimum="0" Maximum="100" Value="0" 
-                                         Foreground="{Binding ElementName=TxtCurrentResistance, Path=Foreground}"
+                             <ProgressBar x:Name="ResistanceGauge" Height="20" Minimum="0" Maximum="100" Value="{Binding ResistancePercent}" 
+                                         Foreground="{Binding ResistanceBrush}"
                                          Background="#333333" BorderThickness="0"/>
                         </Grid>
 
@@ -134,7 +135,7 @@
                             <StackPanel MinWidth="120">
                                 <TextBlock Text="POWER" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                     <TextBlock x:Name="TxtPower" Text="--" FontSize="48" FontWeight="Bold" Foreground="White"/>
+                                     <TextBlock x:Name="TxtPower" Text="{Binding Power}" FontSize="48" FontWeight="Bold" Foreground="White"/>
                                      <TextBlock Text="w" FontSize="24" Foreground="#888888" VerticalAlignment="Bottom" Margin="4,0,0,8"/>
                                 </StackPanel>
                             </StackPanel>
@@ -147,7 +148,7 @@
         <!-- Bottom Status -->
         <StatusBar Grid.Row="2" Background="Transparent">
             <StatusBarItem>
-                <TextBlock x:Name="TxtLog" Text="Ready to ride." Style="{DynamicResource MaterialDesignCaptionTextBlock}"/>
+                <TextBlock x:Name="TxtLog" Text="{Binding Log}" Style="{DynamicResource MaterialDesignCaptionTextBlock}"/>
             </StatusBarItem>
         </StatusBar>
     </Grid>

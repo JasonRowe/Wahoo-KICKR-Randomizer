@@ -1,43 +1,42 @@
 using System;
 using System.Windows;
+using BikeFitnessApp.ViewModels;
 
 namespace BikeFitnessApp
 {
     public partial class MainWindow : Window
     {
+        private readonly MainViewModel _viewModel;
+
         public MainWindow()
         {
             InitializeComponent();
+            _viewModel = new MainViewModel();
+            this.DataContext = _viewModel;
             ShowSetup();
         }
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             PowerManagement.AllowSleep();
-            // Disconnect service if needed
             base.OnClosing(e);
         }
 
         private void ShowSetup()
         {
-            var setupView = new SetupView();
-            setupView.ConnectionSuccessful += () =>
-            {
-                ShowWorkout();
-            };
-            MainContainer.Children.Clear();
-            MainContainer.Children.Add(setupView);
+            var setupVM = new SetupViewModel(App.BluetoothService);
+            setupVM.ConnectionSuccessful += () => ShowWorkout();
+            _viewModel.CurrentView = setupVM;
         }
 
         private void ShowWorkout()
         {
-            var workoutView = new WorkoutView();
-            workoutView.Disconnected += () =>
+            var workoutVM = new WorkoutViewModel(App.BluetoothService);
+            workoutVM.Disconnected += () =>
             {
                 Dispatcher.Invoke(() => ShowSetup());
             };
-            MainContainer.Children.Clear();
-            MainContainer.Children.Add(workoutView);
+            _viewModel.CurrentView = workoutVM;
         }
     }
 }
