@@ -10,6 +10,7 @@ namespace BikeFitnessApp.ViewModels
         private readonly IBluetoothService _bluetoothService;
         private string _status = "Ready to scan";
         private bool _isScanning;
+        private bool _isConnecting;
 
         public ObservableCollection<DeviceDisplay> Devices { get; } = new ObservableCollection<DeviceDisplay>();
 
@@ -22,14 +23,42 @@ namespace BikeFitnessApp.ViewModels
         public bool IsScanning
         {
             get => _isScanning;
-            set => SetProperty(ref _isScanning, value);
+            set
+            {
+                if (SetProperty(ref _isScanning, value))
+                {
+                    OnPropertyChanged(nameof(CanScan));
+                }
+            }
         }
+
+        public bool IsConnecting
+        {
+            get => _isConnecting;
+            set
+            {
+                if (SetProperty(ref _isConnecting, value))
+                {
+                    OnPropertyChanged(nameof(CanConnect));
+                }
+            }
+        }
+
+        public bool CanScan => !IsScanning && !IsConnecting;
+        public bool CanConnect => !IsConnecting && (SelectedDevice != null || Devices.Count == 1);
 
         private DeviceDisplay? _selectedDevice;
         public DeviceDisplay? SelectedDevice
         {
             get => _selectedDevice;
-            set => SetProperty(ref _selectedDevice, value);
+            set
+            {
+                if (SetProperty(ref _selectedDevice, value))
+                {
+                    OnPropertyChanged(nameof(CanConnect));
+                    System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+                }
+            }
         }
 
         public RelayCommand ScanCommand { get; }
@@ -44,8 +73,8 @@ namespace BikeFitnessApp.ViewModels
             _bluetoothService.DeviceDiscovered += OnDeviceDiscovered;
             _bluetoothService.StatusChanged += OnStatusChanged;
 
-            ScanCommand = new RelayCommand(StartScan);
-            ConnectCommand = new RelayCommand(_ => Connect());
+            ScanCommand = new RelayCommand(StartScan, () => CanScan);
+            ConnectCommand = new RelayCommand(Connect, () => CanConnect);
 
             StartScan();
         }
@@ -67,6 +96,7 @@ namespace BikeFitnessApp.ViewModels
             SelectedDevice = null;
             IsScanning = true;
             _bluetoothService.StartScanning();
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
         }
 
         private async void Connect()
@@ -79,11 +109,23 @@ namespace BikeFitnessApp.ViewModels
 
             if (SelectedDevice == null) return;
             
+            IsConnecting = true;
             IsScanning = false;
-            await _bluetoothService.ConnectAsync(SelectedDevice.Address);
-            if (_bluetoothService.IsConnected)
+            _bluetoothService.StopScanning();
+            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+
+            try
             {
-                ConnectionSuccessful?.Invoke();
+                await _bluetoothService.ConnectAsync(SelectedDevice.Address);
+                if (_bluetoothService.IsConnected)
+                {
+                    ConnectionSuccessful?.Invoke();
+                }
+            }
+            finally
+            {
+                IsConnecting = false;
+                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
             }
         }
 
@@ -103,6 +145,10 @@ namespace BikeFitnessApp.ViewModels
                 {
                     SelectedDevice = device;
                 }
+                
+                // Trigger re-eval of Connect button immediately
+                OnPropertyChanged(nameof(CanConnect));
+                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
             }
 
             // Run on UI thread if available, otherwise run directly (for tests)
