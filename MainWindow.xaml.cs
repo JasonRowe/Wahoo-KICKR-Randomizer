@@ -1,17 +1,21 @@
 using System;
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
 using BikeFitnessApp.ViewModels;
+using BikeFitnessApp.Services;
 
 namespace BikeFitnessApp
 {
     public partial class MainWindow : Window
     {
         private readonly MainViewModel _viewModel;
+        private readonly IServiceProvider _services;
 
-        public MainWindow()
+        public MainWindow(MainViewModel viewModel, IServiceProvider services)
         {
             InitializeComponent();
-            _viewModel = new MainViewModel();
+            _viewModel = viewModel;
+            _services = services;
             this.DataContext = _viewModel;
             ShowSetup();
         }
@@ -24,14 +28,14 @@ namespace BikeFitnessApp
 
         private void ShowSetup()
         {
-            var setupVM = new SetupViewModel(App.BluetoothService);
+            var setupVM = _services.GetRequiredService<SetupViewModel>();
             setupVM.ConnectionSuccessful += () => ShowWorkout();
             _viewModel.CurrentView = setupVM;
         }
 
         private void ShowWorkout()
         {
-            var workoutVM = new WorkoutViewModel(App.BluetoothService);
+            var workoutVM = _services.GetRequiredService<WorkoutViewModel>();
             workoutVM.Disconnected += () =>
             {
                 Dispatcher.Invoke(() => ShowSetup());
