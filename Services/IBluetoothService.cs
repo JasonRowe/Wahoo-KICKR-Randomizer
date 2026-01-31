@@ -24,8 +24,7 @@ namespace BikeFitnessApp.Services
         
         // Command Queueing
         void QueueResistance(double resistance);
-        
-        // Immediate Commands (optional, but good for Init)
+        void QueueGrade(double gradePercent);
         Task<bool> SendInitCommand();
     }
 }

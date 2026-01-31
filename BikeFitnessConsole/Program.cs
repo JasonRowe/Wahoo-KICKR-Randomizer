@@ -13,12 +13,11 @@ namespace BikeFitnessConsole
     class Program
     {
         // UUIDs
-        // Updated WAHOO_SERVICE based on device dump (ee01)
         private static readonly Guid WAHOO_SERVICE = new Guid("a026ee01-0a7d-4ab3-97fa-f1500f9feb8b");
         private static readonly Guid WAHOO_CP = new Guid("a026e005-0a7d-4ab3-97fa-f1500f9feb8b");
         
         private static readonly Guid FTMS_SERVICE = new Guid("00001826-0000-1000-8000-00805f9b34fb");
-        private static readonly Guid FTMS_CP = new Guid("00002ad9-0000-1000-8000-00805f9b34fb");
+        private static readonly Guid FTMS_CP = new Guid("00002ad9-0000-1000-8000-00805f9b34fb"); // Fitness Machine Control Point
 
         private static readonly Guid POWER_SERVICE = new Guid("00001818-0000-1000-8000-00805f9b34fb");
         private static readonly Guid POWER_MEASUREMENT = new Guid("00002A63-0000-1000-8000-00805f9b34fb");
@@ -108,24 +107,44 @@ namespace BikeFitnessConsole
                 Console.WriteLine($"Service: {s.Uuid} ({name})");
             }
 
-            Console.WriteLine("\n--- DEEP SCAN: WAHOO SERVICE ---");
-            var wahooService = allServices.FirstOrDefault(s => s.Uuid == WAHOO_SERVICE);
-            if (wahooService != null)
+            Console.WriteLine("\n--- DEEP SCAN: FTMS SERVICE (PRIMARY) ---");
+            var ftmsService = allServices.FirstOrDefault(s => s.Uuid == FTMS_SERVICE);
+            if (ftmsService != null)
             {
-                var chars = await wahooService.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
+                var chars = await ftmsService.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
                 foreach (var c in chars.Characteristics)
                 {
                     Console.WriteLine($"  Char: {c.Uuid} | Props: {c.CharacteristicProperties}");
-                    if (c.Uuid == WAHOO_CP)
+                    if (c.Uuid == FTMS_CP)
                     {
                         _controlPoint = c;
-                        Console.WriteLine("  >>> FOUND WAHOO CONTROL POINT <<<");
+                        _isFtms = true;
+                        Console.WriteLine("  >>> FOUND FTMS CONTROL POINT <<<");
                     }
                 }
             }
             else
             {
-                Console.WriteLine("  Wahoo Service NOT found.");
+                Console.WriteLine("  FTMS Service NOT found.");
+            }
+
+            if (_controlPoint == null)
+            {
+                Console.WriteLine("\n--- DEEP SCAN: WAHOO SERVICE (LEGACY) ---");
+                var wahooService = allServices.FirstOrDefault(s => s.Uuid == WAHOO_SERVICE);
+                if (wahooService != null)
+                {
+                    var chars = await wahooService.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
+                    foreach (var c in chars.Characteristics)
+                    {
+                        Console.WriteLine($"  Char: {c.Uuid} | Props: {c.CharacteristicProperties}");
+                        if (c.Uuid == WAHOO_CP)
+                        {
+                            _controlPoint = c;
+                            Console.WriteLine("  >>> FOUND WAHOO CONTROL POINT <<<");
+                        }
+                    }
+                }
             }
 
             if (_controlPoint == null)
@@ -149,11 +168,12 @@ namespace BikeFitnessConsole
 
             if (_controlPoint == null)
             {
-                Console.WriteLine("\nCRITICAL: Could not find Control Point (a026e005) in Wahoo or Power services.");
+                Console.WriteLine("\nCRITICAL: Could not find Control Point.");
             }
             else
             {
                 Console.WriteLine($"\nSELECTED CONTROL POINT: {_controlPoint.Uuid}");
+                Console.WriteLine($"PROTOCOL: {(_isFtms ? "FTMS (Standard)" : "WAHOO (Legacy)")}");
                 
                 // CRITICAL FIX: Subscribe to Indications if supported
                 if (_controlPoint.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Indicate))
@@ -193,24 +213,14 @@ namespace BikeFitnessConsole
             // 3. Setup Speed/Cadence Notifications
             await SetupSpeedAndCadence(allServices);
 
-            // 4. Send Init/Unlock
-            // Removed auto-init to match Main App behavior and isolate issues.
-            // if (_controlPoint != null)
-            // {
-            //     Console.WriteLine("\nInitializing (Sending 0x00)...");
-            //     await SendInit();
-            // }
-
             Console.WriteLine("\n=== CONTROLS ===");
-            Console.WriteLine("0-9: Send Resistance (0-90%) OR Level (0-9)");
-            Console.WriteLine("M:   Toggle 0-9 Mode (Current: " + (_useResistanceMode ? "Resistance %" : "Level 0-9") + ")");
-            Console.WriteLine("G:   Test Sim Mode (Grade) [Wahoo 0x43]");
-            Console.WriteLine("I:   Send Init (0x00)");
-            Console.WriteLine("U:   Send Unlock (0x20)");
+            Console.WriteLine("0-9: Send Resistance (0-90%) [Op 0x41]");
+            Console.WriteLine("L:   Send Level (0-9) [Op 0x40]");
+            Console.WriteLine("G:   Set Grade (Simple) [Op 0x43 + 0x02]");
+            Console.WriteLine("H:   Set Grade (Full Physics) [Op 0x43 + Weight/Crr/Cw]");
+            Console.WriteLine("I:   Request Control (0x00)");
+            Console.WriteLine("T:   Test Mode OpCodes (0x40-0x45)");
             Console.WriteLine("P:   Toggle Power Display");
-            Console.WriteLine("C:   Toggle Cadence Display");
-            Console.WriteLine("V:   Toggle Speed/Dist Display");
-            Console.WriteLine("S:   Manual Resistance % Input");
             Console.WriteLine("Q:   Quit");
 
             while (true)
@@ -222,57 +232,53 @@ namespace BikeFitnessConsole
 
                     if (char.IsDigit(key))
                     {
-                        int digit = int.Parse(key.ToString());
-                        if (_useResistanceMode)
+                        int percent = int.Parse(key.ToString()) * 10;
+                        Console.WriteLine($"\n[Command] Resistance {percent}% (0x41)");
+                        await Write(new byte[] { 0x41, (byte)percent });
+                    }
+                    else if (key == 'l' || key == 'L')
+                    {
+                        Console.Write("\nEnter Level (0-9): ");
+                        if (int.TryParse(Console.ReadLine(), out int level))
                         {
-                            int percent = digit * 10;
-                            Console.WriteLine($"\n[Command] Resistance {percent}% (0x41)");
-                            await SendMode41(percent);
-                        }
-                        else
-                        {
-                            Console.WriteLine($"\n[Command] Level {digit} (0x40)");
-                            await SendLevel(digit);
+                            Console.WriteLine($"\n[Command] Level {level} (0x40)");
+                            await Write(new byte[] { 0x40, (byte)level });
                         }
                     }
-                    else if (key == 'm' || key == 'M')
+                    else if (key == 'g' || key == 'G')
                     {
-                        _useResistanceMode = !_useResistanceMode;
-                        Console.WriteLine($"\n[Mode] 0-9 Keys now set to: {(_useResistanceMode ? "Resistance % (0x41)" : "Level 0-9 (0x40)")}");
+                        Console.Write("\nEnter Grade % (-15 to 20): ");
+                        if (double.TryParse(Console.ReadLine(), out double grade))
+                        {
+                            short val = (short)(grade * 100);
+                            byte[] cmd = new byte[] { 0x43, 0x02, (byte)(val & 0xFF), (byte)(val >> 8) };
+                            Console.WriteLine($"\n[Command] Simple Grade {grade}% (0x43 02 ...)");
+                            await Write(cmd);
+                        }
+                    }
+                    else if (key == 'h' || key == 'H')
+                    {
+                        Console.Write("\nEnter Grade % (-15 to 20): ");
+                        if (double.TryParse(Console.ReadLine(), out double grade))
+                        {
+                            Console.WriteLine($"\n[Command] Full Sim Grade {grade}% (0x43 + Physics)");
+                            var cmd = _logic.CreateWahooSimGradeCommand(grade);
+                            await Write(cmd);
+                        }
                     }
                     else if (key == 'i' || key == 'I')
                     {
                         Console.WriteLine($"\n[Command] Init (0x00)");
                         await SendInit();
                     }
-                    else if (key == 'u' || key == 'U')
+                    else if (key == 't' || key == 'T')
                     {
-                        Console.WriteLine($"\n[Command] Unlock (0x20)");
-                        await Write(new byte[] { 0x20 });
-                    }
-                    else if (key == 's' || key == 'S')
-                    {
-                        Console.Write("\nEnter Resistance % (0-100): ");
-                        string? input = Console.ReadLine();
-                        if (int.TryParse(input, out int val))
+                        Console.WriteLine("\n--- TESTING OPCODES 0x40-0x45 ---");
+                        for (byte op = 0x40; op <= 0x45; op++)
                         {
-                            await SendMode41(val);
-                        }
-                    }
-                    else if (key == 'g' || key == 'G')
-                    {
-                        Console.Write("\nEnter Grade % (-15.0 to 20.0): ");
-                        string? input = Console.ReadLine();
-                        if (double.TryParse(input, out double grade))
-                        {
-                            Console.WriteLine($"\n[Command] Wahoo Sim Grade {grade}% (0x43)");
-                            // Use default Weight (85kg), Crr (0.004), Cw (0.6)
-                            var cmd = _logic.CreateWahooSimGradeCommand(grade);
-                            await Write(cmd);
-                            
-                            // IMPORTANT: Switch to Sim Mode (0x42) to activate physics
-                            Console.WriteLine("Switching to Sim Mode (0x42)...");
-                            await Write(new byte[] { 0x42 });
+                            Console.WriteLine($"\nTesting OpCode 0x{op:X2}...");
+                            await Write(new byte[] { op, 0x00 });
+                            await Task.Delay(1000);
                         }
                     }
                     else if (key == 'p' || key == 'P')
@@ -280,30 +286,13 @@ namespace BikeFitnessConsole
                         _showPower = !_showPower;
                         Console.WriteLine($"\n[Display] Power: {(_showPower ? "ON" : "OFF")}");
                     }
-                    else if (key == 'c' || key == 'C')
-                    {
-                        _showCadence = !_showCadence;
-                        Console.WriteLine($"\n[Display] Cadence: {(_showCadence ? "ON" : "OFF")}");
-                    }
-                    else if (key == 'v' || key == 'V')
-                    {
-                        _showSpeed = !_showSpeed;
-                        Console.WriteLine($"\n[Display] Speed/Dist: {(_showSpeed ? "ON" : "OFF")}");
-                    }
                 }
-                await Task.Delay(50); // Small loop delay
+                await Task.Delay(50);
             }
             
             _device.Dispose();
         }
 
-        private static async Task DumpAllCharacteristics(IReadOnlyList<GattDeviceService> services)
-        {
-            // ... (omitted for brevity, not calling it in main loop anymore to keep clean)
-        }
-
-        // Removed old SetupControlPoint to avoid confusion
-        // private static async Task SetupControlPoint...
 
         private static async Task SetupPower(IReadOnlyList<GattDeviceService> services)
         {
@@ -409,23 +398,6 @@ namespace BikeFitnessConsole
                 Console.WriteLine("OK: Subscribed to CSC (Speed/Cadence).");
             }
             else { Console.WriteLine("FAIL: CSC Measurement char missing."); }
-        }
-
-        private static async Task RunSimulation()
-        {
-            Console.WriteLine("Press any key to stop...");
-            int step = 0;
-            while (!Console.KeyAvailable)
-            {
-                double r = _logic.CalculateResistance(WorkoutMode.Hilly, 0.2, 0.8, step);
-                int barLen = (int)(r * 50);
-                Console.WriteLine($"Step {step:D3}: {r:F2} | {new string('#', barLen)}");
-                await Write(_logic.CreateWahooResistanceCommand(r));
-                step++;
-                await Task.Delay(1000);
-            }
-            Console.ReadKey(true);
-            Console.WriteLine("Simulation Stopped.");
         }
 
         private static async Task SendMode41(int percent) => await Write(new byte[] { 0x41, (byte)percent });

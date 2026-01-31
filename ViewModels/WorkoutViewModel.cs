@@ -20,12 +20,35 @@ namespace BikeFitnessApp.ViewModels
         private bool _isWorkoutActive;
         private string _status = "CONNECTED";
         private WorkoutMode _selectedMode = WorkoutMode.Random;
-        private double _minResistance = 0;
-        private double _maxResistance = 7;
+        private double _minResistance = 0; // 0% Grade
+        private double _maxResistance = 5; // 5% Grade
         private Brush _resistanceBrush = Brushes.White;
         private string _log = "Ready to ride.";
+        
+        // Simulation Mode (Default to Grade)
+        private bool _isGradeMode = true;
+        private string _minLabel = "MIN GRADE (%)";
+        private string _maxLabel = "MAX GRADE (%)";
 
-        // New Speed/Distance Properties
+        public bool IsGradeMode
+        {
+            get => _isGradeMode;
+            set => SetProperty(ref _isGradeMode, value);
+        }
+
+        public string MinLabel
+        {
+            get => _minLabel;
+            set => SetProperty(ref _minLabel, value);
+        }
+
+        public string MaxLabel
+        {
+            get => _maxLabel;
+            set => SetProperty(ref _maxLabel, value);
+        }
+
+        // ... Existing Speed/Distance Properties ...
         private string _speedText = "--";
         private string _distanceText = "0.00";
         private string _speedLabel = "MPH";
@@ -103,7 +126,14 @@ namespace BikeFitnessApp.ViewModels
             get => _resistancePercent;
             set
             {
-                if (SetProperty(ref _resistancePercent, value))
+                // Prevent -0.0 display in UI
+                double snappedValue = value;
+                if (snappedValue < 0 && Math.Round(snappedValue, 1) == 0)
+                {
+                    snappedValue = 0;
+                }
+
+                if (SetProperty(ref _resistancePercent, snappedValue))
                 {
                     UpdateResistanceBrush();
                 }
@@ -228,6 +258,7 @@ namespace BikeFitnessApp.ViewModels
 
             _ = InitializeTrainer();
             UpdateUnitLabels();
+            UpdateModeLabels();
         }
 
         public void Cleanup()
@@ -237,6 +268,20 @@ namespace BikeFitnessApp.ViewModels
             _bluetoothService.SpeedValuesUpdated -= OnSpeedValuesUpdated;
             _workoutTimer.Stop();
             PowerManagement.AllowSleep();
+        }
+
+        private void UpdateModeLabels()
+        {
+            if (IsGradeMode)
+            {
+                MinLabel = "Min Grade (%)";
+                MaxLabel = "Max Grade (%)";
+            }
+            else
+            {
+                MinLabel = "Min Resistance (%)";
+                MaxLabel = "Max Resistance (%)";
+            }
         }
 
         private void UpdateUnitLabels()
@@ -320,25 +365,33 @@ namespace BikeFitnessApp.ViewModels
         {
             if (!_bluetoothService.IsConnected) return;
 
-            double min = MinResistance / 100.0;
-            double max = MaxResistance / 100.0;
+            // Always treat Min/Max as Grade % (-10 to 20)
+            double min = MinResistance;
+            double max = MaxResistance;
+            
+            // Logic calculates intermediate grade based on waveform
+            double targetGrade = _logic.CalculateResistance(SelectedMode, min, max, _stepIndex);
+            
+            // Convert that "Grade" to Resistance (0.0 - 1.0)
+            double resistanceFactor = _logic.CalculateResistanceFromGrade(targetGrade);
+            
+            ResistancePercent = targetGrade; 
+            _bluetoothService.QueueResistance(resistanceFactor);
 
-            double resistance = _logic.CalculateResistance(SelectedMode, min, max, _stepIndex);
             _stepIndex++;
-
-            ResistancePercent = resistance * 100;
-            _bluetoothService.QueueResistance(resistance);
         }
 
         private void UpdateResistanceBrush()
         {
-            double min = MinResistance / 100.0;
-            double max = MaxResistance / 100.0;
-            double res = ResistancePercent / 100.0;
+            // Range: -10 to 20
+            const double MinG = -10.0;
+            const double MaxG = 20.0;
+            double res = ResistancePercent;
 
-            double range = max - min;
-            double ratio = range > 0 ? (res - min) / range : 0;
+            double range = MaxG - MinG;
+            double ratio = (res - MinG) / range;
             ratio = Math.Clamp(ratio, 0, 1);
+            
             byte r = 0;
             byte g = 0;
             if (ratio < 0.5) { r = (byte)(ratio * 2 * 255); g = 255; }

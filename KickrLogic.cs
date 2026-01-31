@@ -28,10 +28,16 @@ namespace BikeFitnessApp
         // Calculate resistance based on mode, min, max, and current step index
         public double CalculateResistance(WorkoutMode mode, double min, double max, int stepIndex)
         {
-            // Bounds check
-            if (min > max) min = max;
-            min = Math.Clamp(min, 0, 1.0);
-            max = Math.Clamp(max, 0, 1.0);
+            // Bounds check - ensure min is actually min
+            if (min > max) 
+            {
+                double temp = min;
+                min = max;
+                max = temp;
+            }
+            
+            // NOTE: We removed the 0.0-1.0 clamping here to support Grade inputs (e.g. -15 to 20).
+            // The clamping happens in the translation layer (CalculateResistanceFromGrade) or the final output.
 
             switch (mode)
             {
@@ -330,6 +336,40 @@ namespace BikeFitnessApp
         public double CalculateDistance(uint totalRevs, double circumferenceMeters)
         {
             return totalRevs * circumferenceMeters;
+        }
+
+        // "Fake" Simulation Mode: Maps Grade % to Resistance % (0.0 - 1.0)
+        // Since the device rejects OpCode 0x42 (Sim Mode), we manually calculate brake force.
+        public double CalculateResistanceFromGrade(double gradePercent)
+        {
+            // User Requirements:
+            // -10% Grade (or less) -> 0% Resistance (Full Release)
+            //  0%  Grade           -> 1% Resistance (Near Zero, light friction)
+            //  20% Grade (or more) -> 40% Resistance (Max usable climb)
+
+            const double MinG = -10.0;
+            const double FlatG = 0.0;
+            const double MaxG = 20.0;
+
+            const double MinR = 0.0;
+            const double FlatR = 0.01;
+            const double MaxR = 0.40;
+
+            if (gradePercent <= MinG) return MinR;
+            if (gradePercent >= MaxG) return MaxR;
+
+            if (gradePercent < FlatG)
+            {
+                // Segment 1: Downhill (-10 to 0) maps to (0.0 to 0.01)
+                double ratio = (gradePercent - MinG) / (FlatG - MinG);
+                return MinR + (ratio * (FlatR - MinR));
+            }
+            else
+            {
+                // Segment 2: Uphill (0 to 20) maps to (0.01 to 0.40)
+                double ratio = (gradePercent - FlatG) / (MaxG - FlatG);
+                return FlatR + (ratio * (MaxR - FlatR));
+            }
         }
     }
 }

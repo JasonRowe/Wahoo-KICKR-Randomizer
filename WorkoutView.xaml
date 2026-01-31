@@ -81,19 +81,19 @@
                         <TextBlock Text="INTENSITY RANGE" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,24" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="MIN RESISTANCE" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
+                            <TextBlock Text="{Binding MinLabel}" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
                             <TextBlock Text="{Binding MinResistance, StringFormat={}({0}%)}" 
                                        Style="{DynamicResource MaterialDesignOverlineTextBlock}" Margin="8,0,0,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         </StackPanel>
-                        <Slider x:Name="SliderMin" Minimum="0" Maximum="100" Value="{Binding MinResistance}" TickFrequency="5" IsSnapToTickEnabled="True"
+                        <Slider x:Name="SliderMin" Minimum="-10" Maximum="20" Value="{Binding MinResistance}" TickFrequency="0.5" IsSnapToTickEnabled="True"
                                 Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,24"/>
                         
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="MAX RESISTANCE" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
+                            <TextBlock Text="{Binding MaxLabel}" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
                             <TextBlock Text="{Binding MaxResistance, StringFormat={}({0}%)}" 
                                        Style="{DynamicResource MaterialDesignOverlineTextBlock}" Margin="8,0,0,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         </StackPanel>
-                        <Slider x:Name="SliderMax" Minimum="0" Maximum="100" Value="{Binding MaxResistance}" TickFrequency="5" IsSnapToTickEnabled="True"
+                        <Slider x:Name="SliderMax" Minimum="-10" Maximum="20" Value="{Binding MaxResistance}" TickFrequency="0.5" IsSnapToTickEnabled="True"
                                 Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,24"/>
 
                         <StackPanel Margin="0,0,0,24">
@@ -140,15 +140,15 @@
             <materialDesign:Card Grid.Column="1" Margin="12,0,0,0" UniformCornerRadius="16" Background="#1A1A1A">
                 <Grid>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="CURRENT RESISTANCE" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <TextBlock Text="CURRENT GRADE" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold" Margin="0,0,0,8"/>
                         <Viewbox Height="200">
-                            <TextBlock x:Name="TxtCurrentResistance" Text="{Binding ResistancePercent, StringFormat={}{0:F0}%}" 
+                            <TextBlock x:Name="TxtCurrentResistance" Text="{Binding ResistancePercent, StringFormat={}{0:F1}%}" 
                                        FontWeight="Black" Foreground="{Binding ResistanceBrush}" />
                         </Viewbox>
                         
                         <!-- Visual Gauge -->
                         <Grid Margin="48,24,48,0">
-                             <ProgressBar x:Name="ResistanceGauge" Height="20" Minimum="0" Maximum="100" Value="{Binding ResistancePercent}" 
+                             <ProgressBar x:Name="ResistanceGauge" Height="20" Minimum="-10" Maximum="20" Value="{Binding ResistancePercent}" 
                                          Foreground="{Binding ResistanceBrush}"
                                          Background="#333333" BorderThickness="0"/>
                         </Grid>

@@ -281,6 +281,13 @@ namespace BikeFitnessApp.Services
             _pendingResistance = resistance;
         }
 
+        public void QueueGrade(double gradePercent)
+        {
+            // "Fake" Sim Mode: Convert Grade -> Resistance
+            double resistance = _logic.CalculateResistanceFromGrade(gradePercent);
+            QueueResistance(resistance);
+        }
+
         public async Task<bool> SendInitCommand()
         {
             byte[] initCmd = new byte[] { 0x00 };

@@ -24,27 +24,29 @@ namespace BikeFitnessApp.Tests
         }
 
         [TestMethod]
-        public void TestCalculateResistance_ClampsValues()
+        public void TestCalculateResistance_HandlesOutliers()
         {
             // Arrange
             var logic = new KickrLogic();
 
             // Act
-            double resistanceTooLow = logic.CalculateResistance(-10, 0.05);
-            double resistanceTooHigh = logic.CalculateResistance(.15, 0.25);
-            double resistanceMinMaxSwapped = logic.CalculateResistance(0.8, 0.7);
+            // Now that clamping is removed, these inputs should produce outputs in their respective ranges.
             
-            double resistanceWayTooHigh = logic.CalculateResistance(1.5, 2.0);
-            double resistanceWayTooLow = logic.CalculateResistance(-5.0, -1.0);
+            // "TooLow" input (-10 to 0.05) -> Output between -10 and 0.05
+            double outputLow = logic.CalculateResistance(-10, 0.05);
+            Assert.IsTrue(outputLow >= -10 && outputLow <= 0.05, "Should respect negative input range.");
 
+            // "WayTooHigh" input (1.5 to 2.0) -> Output between 1.5 and 2.0
+            double outputHigh = logic.CalculateResistance(1.5, 2.0);
+            Assert.IsTrue(outputHigh >= 1.5 && outputHigh <= 2.0, "Should respect high input range.");
 
-            // Assert
-            Assert.IsTrue(resistanceTooLow >= 0 && resistanceTooLow <= 0.05, "Resistance should be clamped to a minimum of 0");
-            Assert.IsTrue(resistanceTooHigh >= 0.15 && resistanceTooHigh <= 0.25, "Resistance should be within range");
-            Assert.IsTrue(resistanceMinMaxSwapped >= 0.7 && resistanceMinMaxSwapped <= 0.7, "Min should be clamped to max if min > max.");
-            
-            Assert.IsTrue(resistanceWayTooHigh >= 1.0 && resistanceWayTooHigh <= 1.0, "Resistance should be clamped to a maximum of 1.0");
-            Assert.IsTrue(resistanceWayTooLow >= 0.0 && resistanceWayTooLow <= 0.0, "Resistance should be clamped to a minimum of 0.0");
+            // "WayTooLow" input (-5.0 to -1.0) -> Output between -5.0 and -1.0
+            double outputWayLow = logic.CalculateResistance(-5.0, -1.0);
+            Assert.IsTrue(outputWayLow >= -5.0 && outputWayLow <= -1.0, "Should respect negative-only input range.");
+
+            // "Swapped" (0.8, 0.7) -> Logic swaps to (0.7, 0.8)
+            double outputSwapped = logic.CalculateResistance(0.8, 0.7);
+            Assert.IsTrue(outputSwapped >= 0.7 && outputSwapped <= 0.8, "Should handle min > max by swapping.");
         }
     }
 }

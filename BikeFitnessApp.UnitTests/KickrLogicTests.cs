@@ -223,26 +223,16 @@ namespace BikeFitnessApp.Tests
             Assert.IsTrue(val >= 0.3 && val <= 0.7);
         }
 
-        [TestMethod]
-        public void TestCalculateResistance_Clamping()
-        {
-            var logic = new KickrLogic();
-            // Both above 1.0, should be clamped to 1.0
-            double val = logic.CalculateResistance(1.5, 2.0);
-            Assert.AreEqual(1.0, val);
-            
-            // Both below 0.0, should be clamped to 0.0
-            val = logic.CalculateResistance(-0.5, -0.1);
-            Assert.AreEqual(0.0, val);
-        }
+        // REMOVED TestCalculateResistance_Clamping: Clamping was removed to support negative grades.
 
         [TestMethod]
         public void TestCalculateResistance_MinGreaterThanMax()
         {
             var logic = new KickrLogic();
-            // Min 0.8 > Max 0.2. Code sets min = max (0.2). Result should be 0.2.
+            // Min 0.8 > Max 0.2. Code swaps them -> Min 0.2, Max 0.8.
+            // Random value should be between 0.2 and 0.8.
             double val = logic.CalculateResistance(0.8, 0.2);
-            Assert.AreEqual(0.2, val);
+            Assert.IsTrue(val >= 0.2 && val <= 0.8);
         }
 
         [TestMethod]

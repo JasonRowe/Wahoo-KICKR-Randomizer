@@ -62,6 +62,8 @@ namespace BikeFitnessApp.UnitTests
 
         public void QueueResistance(double resistance) { }
 
+        public void QueueGrade(double gradePercent) { }
+
         public Task<bool> SendInitCommand()
         {
             return Task.FromResult(true);
