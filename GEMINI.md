@@ -14,6 +14,10 @@ The application now operates primarily in "Grade Mode".
     - **20% Grade** -> **40% Resistance** (Capped max resistance to prevent "brick wall" feeling).
     - **Mapping:** Piecewise linear interpolation between these points.
 
+## Environment & Tooling Notes
+- **Shell:** Always use `;` as a statement separator instead of `&&` (e.g., `git add .; git commit ...`). This environment uses Windows PowerShell where `&&` is not supported in the current version.
+- **Diagnostics:** Use the `BikeFitnessConsole` project to test raw Bluetooth commands and OpCodes before integrating into the main WPF app.
+
 ## Findings & Decisions
 
 ### 1. Simulation Mode (Physics)
