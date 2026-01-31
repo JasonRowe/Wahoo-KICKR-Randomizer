@@ -269,6 +269,10 @@ namespace BikeFitnessConsole
                             // Use default Weight (85kg), Crr (0.004), Cw (0.6)
                             var cmd = _logic.CreateWahooSimGradeCommand(grade);
                             await Write(cmd);
+                            
+                            // IMPORTANT: Switch to Sim Mode (0x42) to activate physics
+                            Console.WriteLine("Switching to Sim Mode (0x42)...");
+                            await Write(new byte[] { 0x42 });
                         }
                     }
                     else if (key == 'p' || key == 'P')
