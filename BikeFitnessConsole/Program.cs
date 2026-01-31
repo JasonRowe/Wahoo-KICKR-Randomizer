@@ -154,6 +154,37 @@ namespace BikeFitnessConsole
             else
             {
                 Console.WriteLine($"\nSELECTED CONTROL POINT: {_controlPoint.Uuid}");
+                
+                // CRITICAL FIX: Subscribe to Indications if supported
+                if (_controlPoint.CharacteristicProperties.HasFlag(GattCharacteristicProperties.Indicate))
+                {
+                    Console.WriteLine("Control Point supports INDICATION. Subscribing...");
+                    try
+                    {
+                        var status = await _controlPoint.WriteClientCharacteristicConfigurationDescriptorAsync(
+                            GattClientCharacteristicConfigurationDescriptorValue.Indicate);
+                        
+                        if (status == GattCommunicationStatus.Success)
+                        {
+                            Console.WriteLine("SUCCESS: Subscribed to Control Point Indications.");
+                            _controlPoint.ValueChanged += (s, e) => 
+                            {
+                                var reader = DataReader.FromBuffer(e.CharacteristicValue);
+                                byte[] data = new byte[reader.UnconsumedBufferLength];
+                                reader.ReadBytes(data);
+                                Console.WriteLine($"\n[CP INDICATION] {BitConverter.ToString(data)}");
+                            };
+                        }
+                        else
+                        {
+                            Console.WriteLine($"FAILURE: Could not subscribe to indications. Status: {status}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"EXCEPTION subscribing to indications: {ex.Message}");
+                    }
+                }
             }
 
             // 2. Setup Power Notifications
