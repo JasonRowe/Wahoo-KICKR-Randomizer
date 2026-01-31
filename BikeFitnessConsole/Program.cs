@@ -108,8 +108,53 @@ namespace BikeFitnessConsole
                 Console.WriteLine($"Service: {s.Uuid} ({name})");
             }
 
-            // 1. Setup Control Point
-            await SetupControlPoint(allServices);
+            Console.WriteLine("\n--- DEEP SCAN: WAHOO SERVICE ---");
+            var wahooService = allServices.FirstOrDefault(s => s.Uuid == WAHOO_SERVICE);
+            if (wahooService != null)
+            {
+                var chars = await wahooService.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
+                foreach (var c in chars.Characteristics)
+                {
+                    Console.WriteLine($"  Char: {c.Uuid} | Props: {c.CharacteristicProperties}");
+                    if (c.Uuid == WAHOO_CP)
+                    {
+                        _controlPoint = c;
+                        Console.WriteLine("  >>> FOUND WAHOO CONTROL POINT <<<");
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("  Wahoo Service NOT found.");
+            }
+
+            if (_controlPoint == null)
+            {
+                Console.WriteLine("\n--- DEEP SCAN: POWER SERVICE (Fallback) ---");
+                var pwrService = allServices.FirstOrDefault(s => s.Uuid == POWER_SERVICE);
+                if (pwrService != null)
+                {
+                    var chars = await pwrService.GetCharacteristicsAsync(BluetoothCacheMode.Uncached);
+                    foreach (var c in chars.Characteristics)
+                    {
+                        Console.WriteLine($"  Char: {c.Uuid} | Props: {c.CharacteristicProperties}");
+                        if (c.Uuid == WAHOO_CP) // Checking if the Wahoo CP UUID exists inside Power Service (rare but possible)
+                        {
+                            _controlPoint = c;
+                            Console.WriteLine("  >>> FOUND WAHOO CONTROL POINT (In Power Service) <<<");
+                        }
+                    }
+                }
+            }
+
+            if (_controlPoint == null)
+            {
+                Console.WriteLine("\nCRITICAL: Could not find Control Point (a026e005) in Wahoo or Power services.");
+            }
+            else
+            {
+                Console.WriteLine($"\nSELECTED CONTROL POINT: {_controlPoint.Uuid}");
+            }
 
             // 2. Setup Power Notifications
             await SetupPower(allServices);
@@ -118,17 +163,23 @@ namespace BikeFitnessConsole
             await SetupSpeedAndCadence(allServices);
 
             // 4. Send Init/Unlock
-            Console.WriteLine("\nInitializing (Sending 0x00)...");
-            await SendInit();
+            // Removed auto-init to match Main App behavior and isolate issues.
+            // if (_controlPoint != null)
+            // {
+            //     Console.WriteLine("\nInitializing (Sending 0x00)...");
+            //     await SendInit();
+            // }
 
             Console.WriteLine("\n=== CONTROLS ===");
-            Console.WriteLine("0-9: Send Resistance (0-90%) OR Level (0-9) based on Mode");
+            Console.WriteLine("0-9: Send Resistance (0-90%) OR Level (0-9)");
             Console.WriteLine("M:   Toggle 0-9 Mode (Current: " + (_useResistanceMode ? "Resistance %" : "Level 0-9") + ")");
+            Console.WriteLine("G:   Test Sim Mode (Grade) [Wahoo 0x43]");
+            Console.WriteLine("I:   Send Init (0x00)");
+            Console.WriteLine("U:   Send Unlock (0x20)");
             Console.WriteLine("P:   Toggle Power Display");
             Console.WriteLine("C:   Toggle Cadence Display");
             Console.WriteLine("V:   Toggle Speed/Dist Display");
             Console.WriteLine("S:   Manual Resistance % Input");
-            Console.WriteLine("G:   Test Sim Mode (Grade) - Using: " + (_isFtms ? "FTMS (0x11)" : "WAHOO (0x43)"));
             Console.WriteLine("Q:   Quit");
 
             while (true)
@@ -158,6 +209,16 @@ namespace BikeFitnessConsole
                         _useResistanceMode = !_useResistanceMode;
                         Console.WriteLine($"\n[Mode] 0-9 Keys now set to: {(_useResistanceMode ? "Resistance % (0x41)" : "Level 0-9 (0x40)")}");
                     }
+                    else if (key == 'i' || key == 'I')
+                    {
+                        Console.WriteLine($"\n[Command] Init (0x00)");
+                        await SendInit();
+                    }
+                    else if (key == 'u' || key == 'U')
+                    {
+                        Console.WriteLine($"\n[Command] Unlock (0x20)");
+                        await Write(new byte[] { 0x20 });
+                    }
                     else if (key == 's' || key == 'S')
                     {
                         Console.Write("\nEnter Resistance % (0-100): ");
@@ -169,21 +230,13 @@ namespace BikeFitnessConsole
                     }
                     else if (key == 'g' || key == 'G')
                     {
-                        Console.Write("\nEnter Grade % (-45.0 to 45.0): ");
+                        Console.Write("\nEnter Grade % (-15.0 to 20.0): ");
                         string? input = Console.ReadLine();
                         if (double.TryParse(input, out double grade))
                         {
-                            byte[] cmd;
-                            if (_isFtms)
-                            {
-                                Console.WriteLine($"\n[Command] FTMS Sim Grade {grade}% (0x11)");
-                                cmd = _logic.CreateFtmsSimCommand(grade);
-                            }
-                            else
-                            {
-                                Console.WriteLine($"\n[Command] Wahoo Sim Grade {grade}% (0x43)");
-                                cmd = _logic.CreateWahooSimGradeCommand(grade);
-                            }
+                            Console.WriteLine($"\n[Command] Wahoo Sim Grade {grade}% (0x43)");
+                            // Use default Weight (85kg), Crr (0.004), Cw (0.6)
+                            var cmd = _logic.CreateWahooSimGradeCommand(grade);
                             await Write(cmd);
                         }
                     }
@@ -214,48 +267,8 @@ namespace BikeFitnessConsole
             // ... (omitted for brevity, not calling it in main loop anymore to keep clean)
         }
 
-        private static async Task SetupControlPoint(IReadOnlyList<GattDeviceService> services)
-        {
-            // Try FTMS first, then Wahoo, then Power
-            _controlPoint = null;
-            _isFtms = false;
-
-            // 1. FTMS
-            var ftmsService = services.FirstOrDefault(s => s.Uuid == FTMS_SERVICE);
-            if (ftmsService != null)
-            {
-                var charsResult = await ftmsService.GetCharacteristicsForUuidAsync(FTMS_CP, BluetoothCacheMode.Uncached);
-                if (charsResult.Status == GattCommunicationStatus.Success && charsResult.Characteristics.Count > 0)
-                {
-                    _controlPoint = charsResult.Characteristics[0];
-                    _isFtms = true;
-                    Console.WriteLine($"OK: Control Point found in FTMS Service {ftmsService.Uuid}");
-                    
-                    // Request Control immediately for FTMS
-                    Console.WriteLine("FTMS Detected: Requesting Control (0x00)...");
-                    await SendInit();
-                    return;
-                }
-            }
-
-            // 2. Wahoo / Power
-            var candidates = new[] { WAHOO_SERVICE, POWER_SERVICE };
-            foreach (var uuid in candidates)
-            {
-                var service = services.FirstOrDefault(s => s.Uuid == uuid);
-                if (service != null)
-                {
-                    var charsResult = await service.GetCharacteristicsForUuidAsync(WAHOO_CP, BluetoothCacheMode.Uncached);
-                    if (charsResult.Status == GattCommunicationStatus.Success && charsResult.Characteristics.Count > 0)
-                    {
-                        _controlPoint = charsResult.Characteristics[0];
-                        Console.WriteLine($"OK: Control Point found in Service {service.Uuid}");
-                        return;
-                    }
-                }
-            }
-            Console.WriteLine("FAIL: Control Point characteristic NOT found.");
-        }
+        // Removed old SetupControlPoint to avoid confusion
+        // private static async Task SetupControlPoint...
 
         private static async Task SetupPower(IReadOnlyList<GattDeviceService> services)
         {
@@ -406,7 +419,7 @@ namespace BikeFitnessConsole
                     if (result == GattCommunicationStatus.Success) return;
                     Console.WriteLine($"Write Retry {i+1}: {result}");
                 }
-                catch(Exception ex) { Console.WriteLine($"Write Exception {i+1}: {ex.Message}"); }
+                catch(Exception ex) { Console.WriteLine($"Write Exception {i+1}: {ex}"); }
                 await Task.Delay(250);
             }
             Console.WriteLine("Write FAILED after retries.");
