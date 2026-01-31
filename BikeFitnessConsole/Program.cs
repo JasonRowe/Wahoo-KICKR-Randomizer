@@ -123,6 +123,7 @@ namespace BikeFitnessConsole
             Console.WriteLine("C:   Toggle Cadence Display");
             Console.WriteLine("V:   Toggle Speed/Dist Display");
             Console.WriteLine("S:   Manual Resistance % Input");
+            Console.WriteLine("G:   Test Sim Mode (Grade)");
             Console.WriteLine("Q:   Quit");
 
             while (true)
@@ -159,6 +160,17 @@ namespace BikeFitnessConsole
                         if (int.TryParse(input, out int val))
                         {
                             await SendMode41(val);
+                        }
+                    }
+                    else if (key == 'g' || key == 'G')
+                    {
+                        Console.Write("\nEnter Grade % (-15.0 to 20.0): ");
+                        string? input = Console.ReadLine();
+                        if (double.TryParse(input, out double grade))
+                        {
+                            Console.WriteLine($"\n[Command] Sim Grade {grade}% (0x43)");
+                            var cmd = _logic.CreateWahooSimGradeCommand(grade);
+                            await Write(cmd);
                         }
                     }
                     else if (key == 'p' || key == 'P')

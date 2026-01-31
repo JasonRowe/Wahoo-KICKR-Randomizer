@@ -113,6 +113,45 @@ namespace BikeFitnessApp
             return CreateCommandBytes(opCode, (byte)value);
         }
 
+        public byte[] CreateWahooSimGradeCommand(double gradePercent, double weightKg = 85.0, double crr = 0.004, double cw = 0.6)
+        {
+            // Wahoo Sim Mode: OpCode 0x43
+            // Structure (Hypothetical based on common Wahoo RE): 
+            // Byte 0: 0x43
+            // Byte 1-2: Weight (kg * 100, LE)
+            // Byte 3-4: Crr (val * 10000, LE)
+            // Byte 5-6: Cw (val * 1000, LE)
+            // Byte 7-8: Grade (% * 100, LE)
+            
+            byte opCode = 0x43;
+            
+            ushort weightVal = (ushort)(Math.Clamp(weightKg, 0, 200) * 100);
+            ushort crrVal = (ushort)(Math.Clamp(crr, 0, 0.1) * 10000);
+            ushort cwVal = (ushort)(Math.Clamp(cw, 0, 2.0) * 1000);
+            short gradeVal = (short)(Math.Clamp(gradePercent, -15.0, 20.0) * 100); // Signed for incline/decline
+
+            byte[] command = new byte[9];
+            command[0] = opCode;
+            
+            // Weight
+            command[1] = (byte)(weightVal & 0xFF);
+            command[2] = (byte)(weightVal >> 8);
+
+            // Crr
+            command[3] = (byte)(crrVal & 0xFF);
+            command[4] = (byte)(crrVal >> 8);
+
+            // Cw
+            command[5] = (byte)(cwVal & 0xFF);
+            command[6] = (byte)(cwVal >> 8);
+
+            // Grade
+            command[7] = (byte)(gradeVal & 0xFF);
+            command[8] = (byte)(gradeVal >> 8);
+
+            return command;
+        }
+
         public int ParsePower(byte[] data)
         {
             if (data == null || data.Length < 4) return 0;
