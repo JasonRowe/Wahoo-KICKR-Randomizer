@@ -1,49 +1,43 @@
-# Wahoo KICKR Randomizer
+# BikeFitnessApp: Hack Your Ride
 
-## Overview
-This is a Windows Presentation Foundation (WPF) application designed to add variety to your indoor cycling workouts. It connects to a Wahoo KICKR smart trainer via Bluetooth Low Energy (BLE) and randomizes the resistance level at set intervals (every 30 seconds) within a user-defined range.
+**Turn your smart trainer into a mountain simulator. No subscriptions. Just code and sweat.**
 
-## Features
-- **Bluetooth Connectivity**: Scans for and connects to Wahoo KICKR devices.
-- **Automated Resistance Control**: Changes resistance every 30 seconds.
-- **Customizable Intensity**: User-adjustable sliders for Minimum and Maximum resistance percentages (0-100%).
-- **Visual Feedback**: Large, color-coded display showing the current resistance level (Green = Low, Yellow = Medium, Red = High).
-- **Robust Connection Handling**: Includes retry logic for Bluetooth commands to handle intermittent connection issues.
+![Connect Screen](readme_image_connect.PNG)
+![Workout Screen](readme_image.PNG)
 
-## Prerequisites
-- **Operating System**: Windows 10 or Windows 11.
-- **Hardware**:
-  - PC with Bluetooth 4.0+ (Low Energy) support.
-  - Wahoo KICKR Smart Trainer (KICKR, CORE, SNAP, etc.).
-- **Software**: .NET 6.0 or later (if building from source).
+## The Mission
+We wanted to ride hills on our smart trainer without paying monthly fees. The hardware didn't natively support "Simulation Mode" physics properly.
 
-## How to Use
+**The Solution:** We built our own physics engine. This app translates **Grade** directly into raw brake resistance, giving you realistic climbs (-10 to +20 percent) on hardware that thought it couldn't do it.
 
-1.  **Launch the Application**: Open `BikeFitnessApp.exe`.
-2.  **Scan for Devices**:
-    - Click the **"Scan for KICKR SNAP"** button.
-    - Wait for your device to appear in the list (ensure the trainer is plugged in and awake).
-3.  **Connect**:
-    - Select your device from the list.
-    - Click **"Connect to Selected"**.
-    - Wait for the status to change to "Connected".
-4.  **Configure Workout**:
-    - Adjust the **Min Resistance (%)** slider to your desired easy level.
-    - Adjust the **Max Resistance (%)** slider to your desired hard level.
-5.  **Start Workout**:
-    - Click **"Start Workout"**.
-    - The app will immediately set a random resistance and update it every 30 seconds.
-6.  **Stop**:
-    - Click **"Stop"** to pause the automated changes.
+## Features that Matter
 
-![app screenshot](readme_image_connect.PNG)
+*   **Fake Sim Mode:** We tricked the trainer. You set the Grade, we calculate the physics.
+*   **Gravity Assist:** Downhill actually feels easier. Our custom calibration maps -10 percent Grade to 0 percent Resistance (Coasting).
+*   **Live Telemetry:** Speed, Distance, and Power calculated in real-time from raw Bluetooth packets.
+*   **Adventure Modes:**
+    *   **Hilly:** Smooth rolling sine waves.
+    *   **Mountain:** Steep, jagged peaks.
+    *   **Random:** Pure chaos for the brave.
+*   **Zero-Lag UI:** Built with WPF and MVVM.
 
-![app screenshot](readme_image.PNG)
-## Technical Details
-- **Protocol**: The app communicates using the Wahoo Custom Characteristic UUID `a026e005-0a7d-4ab3-97fa-f1500f9feb8b`.
-- **Resistance Control**: It uses Wahoo OpCode `0x42` to set resistance levels (0-100 integer range).
-- **Error Handling**: Implements exponential backoff retries for `COMException (0x80650081)` errors common with Windows BLE.
+## Under the Hood
+*   **Framework:** .NET 8 (WPF)
+*   **Protocol:** Reverse-engineered Bluetooth Low Energy (BLE) protocols.
+*   **Engineering:** We use a Piecewise Linear Mapping function to translate human-readable Grade into machine-readable Brake Force, bypassing the device's faulty internal physics engine.
 
-## Troubleshooting
-- **Device Not Found**: Ensure Bluetooth is on and no other app (like Zwift or the Wahoo phone app) is currently connected to the trainer. BLE devices usually support only one active controller connection.
-- **Connection Error (0x80650081)**: The app automatically retries commands up to 5 times. If persistent, try restarting the trainer or toggling Bluetooth on your PC.
+## How to Play
+1.  **Launch** BikeFitnessApp.exe.
+2.  **Scan and Connect** to your trainer.
+3.  **Set Your Limits**: Pick your **Max Grade**.
+4.  **Hit Start**: The app takes over. Your job is just to pedal.
+
+## Build It Yourself
+Clone the repo and run:
+```powershell
+dotnet build
+dotnet run
+```
+
+---
+*Built with C# and a lot of sweat.*
