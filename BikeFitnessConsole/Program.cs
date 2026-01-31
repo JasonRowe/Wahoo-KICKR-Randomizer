@@ -17,6 +17,9 @@ namespace BikeFitnessConsole
         private static readonly Guid WAHOO_SERVICE = new Guid("a026ee01-0a7d-4ab3-97fa-f1500f9feb8b");
         private static readonly Guid WAHOO_CP = new Guid("a026e005-0a7d-4ab3-97fa-f1500f9feb8b");
         
+        private static readonly Guid FTMS_SERVICE = new Guid("00001826-0000-1000-8000-00805f9b34fb");
+        private static readonly Guid FTMS_CP = new Guid("00002ad9-0000-1000-8000-00805f9b34fb");
+
         private static readonly Guid POWER_SERVICE = new Guid("00001818-0000-1000-8000-00805f9b34fb");
         private static readonly Guid POWER_MEASUREMENT = new Guid("00002A63-0000-1000-8000-00805f9b34fb");
         
@@ -25,6 +28,7 @@ namespace BikeFitnessConsole
 
         private static BluetoothLEDevice? _device;
         private static GattCharacteristic? _controlPoint;
+        private static bool _isFtms = false; // Track if we are using FTMS
         private static KickrLogic _logic = new KickrLogic();
 
         // Toggles
@@ -100,6 +104,7 @@ namespace BikeFitnessConsole
                 if (s.Uuid == WAHOO_SERVICE) name = "WAHOO CUSTOM";
                 if (s.Uuid == POWER_SERVICE) name = "POWER (0x1818)";
                 if (s.Uuid == SPEED_SERVICE) name = "CSC (0x1816)";
+                if (s.Uuid == FTMS_SERVICE) name = "FTMS (0x1826)";
                 Console.WriteLine($"Service: {s.Uuid} ({name})");
             }
 
@@ -123,7 +128,7 @@ namespace BikeFitnessConsole
             Console.WriteLine("C:   Toggle Cadence Display");
             Console.WriteLine("V:   Toggle Speed/Dist Display");
             Console.WriteLine("S:   Manual Resistance % Input");
-            Console.WriteLine("G:   Test Sim Mode (Grade)");
+            Console.WriteLine("G:   Test Sim Mode (Grade) - Using: " + (_isFtms ? "FTMS (0x11)" : "WAHOO (0x43)"));
             Console.WriteLine("Q:   Quit");
 
             while (true)
@@ -164,12 +169,21 @@ namespace BikeFitnessConsole
                     }
                     else if (key == 'g' || key == 'G')
                     {
-                        Console.Write("\nEnter Grade % (-15.0 to 20.0): ");
+                        Console.Write("\nEnter Grade % (-45.0 to 45.0): ");
                         string? input = Console.ReadLine();
                         if (double.TryParse(input, out double grade))
                         {
-                            Console.WriteLine($"\n[Command] Sim Grade {grade}% (0x43)");
-                            var cmd = _logic.CreateWahooSimGradeCommand(grade);
+                            byte[] cmd;
+                            if (_isFtms)
+                            {
+                                Console.WriteLine($"\n[Command] FTMS Sim Grade {grade}% (0x11)");
+                                cmd = _logic.CreateFtmsSimCommand(grade);
+                            }
+                            else
+                            {
+                                Console.WriteLine($"\n[Command] Wahoo Sim Grade {grade}% (0x43)");
+                                cmd = _logic.CreateWahooSimGradeCommand(grade);
+                            }
                             await Write(cmd);
                         }
                     }
@@ -202,7 +216,29 @@ namespace BikeFitnessConsole
 
         private static async Task SetupControlPoint(IReadOnlyList<GattDeviceService> services)
         {
-            // ... (keep existing)
+            // Try FTMS first, then Wahoo, then Power
+            _controlPoint = null;
+            _isFtms = false;
+
+            // 1. FTMS
+            var ftmsService = services.FirstOrDefault(s => s.Uuid == FTMS_SERVICE);
+            if (ftmsService != null)
+            {
+                var charsResult = await ftmsService.GetCharacteristicsForUuidAsync(FTMS_CP, BluetoothCacheMode.Uncached);
+                if (charsResult.Status == GattCommunicationStatus.Success && charsResult.Characteristics.Count > 0)
+                {
+                    _controlPoint = charsResult.Characteristics[0];
+                    _isFtms = true;
+                    Console.WriteLine($"OK: Control Point found in FTMS Service {ftmsService.Uuid}");
+                    
+                    // Request Control immediately for FTMS
+                    Console.WriteLine("FTMS Detected: Requesting Control (0x00)...");
+                    await SendInit();
+                    return;
+                }
+            }
+
+            // 2. Wahoo / Power
             var candidates = new[] { WAHOO_SERVICE, POWER_SERVICE };
             foreach (var uuid in candidates)
             {

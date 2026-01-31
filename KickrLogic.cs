@@ -152,6 +152,39 @@ namespace BikeFitnessApp
             return command;
         }
 
+        public byte[] CreateFtmsSimCommand(double gradePercent, double crr = 0.004, double cw = 0.51, double windSpeedMps = 0)
+        {
+            // FTMS OpCode 0x11: Set Indoor Bike Simulation Parameters
+            // Payload: OpCode (1) + WindSpeed (2) + Grade (2) + Crr (1) + Cw (1)
+            // Total: 7 Bytes
+            
+            byte opCode = 0x11;
+
+            short windVal = (short)(Math.Clamp(windSpeedMps, -50, 50) * 1000);
+            short gradeVal = (short)(Math.Clamp(gradePercent, -45.0, 45.0) * 100); // 0.01% resolution
+            byte crrVal = (byte)(Math.Clamp(crr, 0, 0.0254) * 10000); // 0.0001 resolution
+            byte cwVal = (byte)(Math.Clamp(cw, 0, 2.54) * 100); // 0.01 resolution (kg/m)
+
+            byte[] command = new byte[7];
+            command[0] = opCode;
+
+            // Wind Speed (Int16, Little Endian)
+            command[1] = (byte)(windVal & 0xFF);
+            command[2] = (byte)(windVal >> 8);
+
+            // Grade (Int16, Little Endian)
+            command[3] = (byte)(gradeVal & 0xFF);
+            command[4] = (byte)(gradeVal >> 8);
+
+            // Crr (UInt8)
+            command[5] = crrVal;
+
+            // Cw (UInt8)
+            command[6] = cwVal;
+
+            return command;
+        }
+
         public int ParsePower(byte[] data)
         {
             if (data == null || data.Length < 4) return 0;
