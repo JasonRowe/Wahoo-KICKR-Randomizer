@@ -1,6 +1,6 @@
 # Biking Fitness app for connecting to Kickr to control resistance
 
-## Important! Before finishing work ensure build works "dotnet build", add new unit tests for any logic, and make sure unit tests pass ("dotnet test")
+## Important! Before finishing work ensure build works "dotnet build", add new unit tests for any logic, and make sure all unit tests pass ("dotnet test")
 
 ### Changes should always be added to git and committed after every valid build / test phase.
 
