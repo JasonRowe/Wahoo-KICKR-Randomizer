@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:converters="clr-namespace:BikeFitnessApp.Converters"
+             xmlns:shared="clr-namespace:BikeFitness.Shared;assembly=BikeFitness.Shared"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1200"
              TextElement.Foreground="{DynamicResource MaterialDesignBody}"
@@ -139,9 +140,10 @@
             <!-- Display Side -->
             <materialDesign:Card Grid.Column="1" Margin="12,0,0,0" UniformCornerRadius="16" Background="#1A1A1A">
                 <Grid>
-                    <Image Source="/Images/displaybackground.png" Stretch="UniformToFill" Opacity="0.5" />
+                    <shared:SimulationCanvas SpeedKph="{Binding SpeedKph}" GradePercent="{Binding ResistancePercent}" Opacity="0.8"/>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="CURRENT GRADE" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <TextBlock Text="CURRENT GRADE" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold" Margin="0,0,0,8"
+                                   Effect="{StaticResource MaterialDesignShadowDepth2}"/>
                         <Viewbox Height="200">
                             <TextBlock x:Name="TxtCurrentResistance" Text="{Binding ResistancePercent, StringFormat={}{0:F1}%}" 
                                        FontWeight="Black" Foreground="{Binding ResistanceBrush}" />

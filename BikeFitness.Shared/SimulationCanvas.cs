@@ -337,11 +337,6 @@ namespace BikeFitness.Shared
                 
                 dc.Pop();
                 dc.Pop();
-
-                // Debug
-                var debugText = $"Speed: {SpeedKph:F1} kph\nGrade: {GradePercent:F1} %\nDist: {_totalDistanceMeters:F1} m";
-                var ft = new FormattedText(debugText, System.Globalization.CultureInfo.InvariantCulture, FlowDirection.LeftToRight, new Typeface("Segoe UI Bold"), 18, Brushes.Black, VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                dc.DrawText(ft, new Point(20, 20));
             }
         }
 
