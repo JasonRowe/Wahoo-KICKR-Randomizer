@@ -161,3 +161,25 @@ A simple WPF project containing:
 *   **"Auto-Drive" Toggle:** A simple timer that simulates a sinusoidal speed/grade pattern to verify long-running stability without user input.
 
 **Benefit:** This allows us to refine the physics (Lerp, transitions) and rendering performance instantly without setting up the bike trainer or wearing workout gear.
+
+## 9. Visual Polish: Sprites & Backgrounds
+To match the aesthetic of `Images\displaybackground.png` (a clean, modern, flat or semi-realistic style), we will implement the following visual layers:
+
+### 9.1. Parallax Background
+*   **Static Layer:** The sky/distant mountains from `displaybackground.png` will serve as the furthest layer.
+*   **Parallax Strategy:**
+    *   **Sky:** Static or moves extremely slowly (1% of bike speed).
+    *   **Mid-Ground (Trees/Hills):** Moves at ~20-30% of bike speed.
+    *   **Foreground (Road/Terrain):** Moves at 100% speed.
+*   **Implementation:** Use `DrawImage` in the `DrawingVisual` loop. We will calculate the source rectangle (texture coordinates) to scroll the image seamlessly (wrapping).
+
+### 9.2. The Bike Sprite
+*   **Asset:** Replace the red rectangle with a high-quality sprite of a cyclist.
+*   **Animation:**
+    *   **Wheel Spin:** If possible, separate the wheels as child sprites and rotate them based on distance traveled.
+    *   **Rider Bob:** Apply a slight vertical sine wave oscillation to the rider's body relative to the bike frame to simulate pedaling effort, faster at higher speeds.
+
+### 9.3. The HUD (Heads-Up Display)
+*   **Overlay:** Render gauges (Speed, Power, RPM) directly on top of the canvas or using WPF controls in the Grid above.
+*   **Style:** Semi-transparent dark backgrounds with bright text (matching the mockup's likely dark-mode or high-contrast fitness app aesthetic).
+

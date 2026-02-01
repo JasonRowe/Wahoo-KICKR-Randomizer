@@ -41,6 +41,16 @@ Create a lightweight WPF application to develop and stress-test the `SimulationC
     - [x] Move `SimulationCanvas` code there.
     - [x] Reference it in both `BikeFitnessApp` and `BikeFitness.Harness`.
 
+### Phase 5: Real Drawing (Milestone 7)
+*   **Objective:** Implement terrain that responds to speed and grade.
+*   **Status:** [~] In Progress
+*   **Tasks:**
+    - [x] Implement distance tracking based on Speed.
+    - [x] Implement angle calculation based on Grade.
+    - [x] Draw scrolling ground line.
+    - [x] Draw rotating bike placeholder.
+    - [ ] Implement infinite terrain generation (Step 2).
+
 ## Architecture Decisions & Notes (ADR)
 *   **2026-02-01: Rendering Engine:** Selected `DrawingVisual` over standard WPF shapes for performance. It bypasses the layout system (Measure/Arrange) which is critical for a 60fps game loop.
 *   **2026-02-01: Loop Timing:** Using `Stopwatch` and `CompositionTarget.Rendering`. We calculate `DeltaTime` to ensure movement is consistent regardless of frame rate variability.

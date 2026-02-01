@@ -4,6 +4,13 @@
     <ProjectReference Include="..\BikeFitness.Shared\BikeFitness.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\Images\*.png">
+      <Link>Images\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
