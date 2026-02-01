@@ -20,6 +20,9 @@ This skill provides best practices, architectural patterns, and library recommen
 2.  **Dependency Injection**: Use DI to manage services and ViewModels. Avoid static singletons for testability.
 3.  **Responsive UI**: Never block the UI thread. Use `async/await` for I/O and heavy computations.
 4.  **Modern Tooling**: Leverage Roslyn source generators (e.g., `CommunityToolkit.Mvvm`) to reduce boilerplate.
+5.  **Build Integrity**: When refactoring code into Shared Projects or Class Libraries, ALWAYS:
+    *   Update the `.csproj` of the consumer projects to exclude the source files if they were previously included via wildcards (e.g., `<Compile Remove="SharedLib\**" />`).
+    *   Run `dotnet clean` followed by `dotnet build` on the *entire solution* to ensure no stale artifacts or duplicate attribute errors remain.
 
 ## Recommended Tech Stack
 

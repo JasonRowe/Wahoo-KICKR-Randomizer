@@ -1,0 +1,45 @@
+﻿<Window x:Class="BikeFitness.Harness.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:BikeFitness.Harness"
+        xmlns:shared="clr-namespace:BikeFitness.Shared;assembly=BikeFitness.Shared"
+        mc:Ignorable="d"
+        Title="Bike Fitness Harness - Simulation Test" Height="600" Width="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Row 0: Canvas -->
+        <Border Grid.Row="0" BorderBrush="Gray" BorderThickness="1" Margin="10">
+            <shared:SimulationCanvas x:Name="SimCanvas" 
+                                    ClipToBounds="True"
+                                    SpeedKph="{Binding ElementName=SliderSpeed, Path=Value}"
+                                    GradePercent="{Binding ElementName=SliderGrade, Path=Value}"/>
+        </Border>
+
+        <!-- Row 1: Controls -->
+        <Border Grid.Row="1" Background="#EEEEEE" Padding="20">
+            <StackPanel>
+                <TextBlock FontWeight="Bold" Margin="0,0,0,10">Simulation Controls</TextBlock>
+                
+                <!-- Speed Control -->
+                <DockPanel Margin="0,5">
+                    <TextBlock Text="Speed (kph):" Width="100" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding ElementName=SliderSpeed, Path=Value, StringFormat=F1}" Width="50" VerticalAlignment="Center" TextAlignment="Right"/>
+                    <Slider x:Name="SliderSpeed" Minimum="0" Maximum="60" Value="25" TickFrequency="1" IsSnapToTickEnabled="True"/>
+                </DockPanel>
+
+                <!-- Grade Control -->
+                <DockPanel Margin="0,5">
+                    <TextBlock Text="Grade (%):" Width="100" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding ElementName=SliderGrade, Path=Value, StringFormat=F1}" Width="50" VerticalAlignment="Center" TextAlignment="Right"/>
+                    <Slider x:Name="SliderGrade" Minimum="-10" Maximum="20" Value="0" TickFrequency="0.5" IsSnapToTickEnabled="True"/>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
