@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <Resource Include="AppIcon.ico" />
+    <Resource Include="Images\displaybackground.png" />
+    <Resource Include="Images\biker_hill_image.png" />
   </ItemGroup>
 
   <ItemGroup>

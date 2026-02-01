@@ -40,9 +40,12 @@ The application now operates primarily in "Grade Mode".
     - [x] Piecewise linear mapping for realistic feel.
     - [x] Unit tests for mapping logic.
 - [x] **UX:** Prevent "-0.0%" display in UI.
+- [x] **UX:** Added static background image to Workout View as a placeholder for future animation.
 
 ## TODOs / Next Steps
 1.  **Cadence Display:**
     -   Investigate CSC Service (`0x1816`) or Crank Data from Power Service (`0x1818`) to display RPM.
 2.  **Workout Profiles:**
     -   Expand "Hilly" and "Mountain" modes to use more complex Grade patterns now that the logic supports it.
+3.  **Animated Background:**
+    -   Plan and implement an animated background that reacts to Grade changes (e.g., parallax scrolling or changing scenery).

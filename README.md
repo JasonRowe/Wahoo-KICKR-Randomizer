@@ -2,8 +2,8 @@
 
 **Turn your smart trainer into a mountain simulator. No subscriptions. Just code and sweat.**
 
-![Connect Screen](readme_image_connect.PNG)
-![Workout Screen](readme_image.PNG)
+![Connect Screen](IMages/readme_image_connect.PNG)
+![Workout Screen](Images/readme_image.PNG)
 
 ## The Mission
 We wanted to ride hills on our smart trainer without paying monthly fees. The hardware didn't natively support "Simulation Mode" physics properly.
