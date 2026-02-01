@@ -183,3 +183,28 @@ To match the aesthetic of `Images\displaybackground.png` (a clean, modern, flat 
 *   **Overlay:** Render gauges (Speed, Power, RPM) directly on top of the canvas or using WPF controls in the Grid above.
 *   **Style:** Semi-transparent dark backgrounds with bright text (matching the mockup's likely dark-mode or high-contrast fitness app aesthetic).
 
+## 10. Phase 8: Advanced Rider Animation (Future)
+
+To increase realism, we will explore replacing the static "sliding" bike with articulated animations.
+
+### 10.1. Wheel Rotation (High Priority)
+*   **Concept:** Separate the bike into three visual components: `Frame + Rider` (Static), `Front Wheel`, `Rear Wheel`.
+*   **Implementation:**
+    *   Load separate `BitmapImage` assets for the frame and wheels.
+    *   In the `DrawFrame` loop, calculate the rotation angle:
+        `Angle = (TotalDistance / WheelCircumference) * 360`
+    *   Draw the wheels first with a `RotateTransform` at their respective hub coordinates relative to the frame.
+    *   Draw the frame on top.
+*   **Feasibility:** High. Requires minimal asset editing (cropping the current sprite) and basic math. Adds significant "road feel" at low cost.
+
+### 10.2. Pedaling Animation (Medium Priority)
+*   **Concept:** A rider that pedals in sync with speed.
+*   **Challenge:** Requires a **Sprite Sheet** (a grid of images showing one full pedal stroke, e.g., 12 frames).
+*   **Implementation:**
+    *   Load the sprite sheet as a single large `BitmapImage`.
+    *   Calculate `CrankPosition` (0.0 to 1.0) based on distance (fixed gear assumption) or eventually cadence.
+    *   Map `CrankPosition` to a specific frame index (e.g., Frame 0 to 11).
+    *   Use `CroppedBitmap` or source-rect `DrawImage` to render only that frame.
+*   **Feasibility:** Medium. The coding is straightforward, but acquiring or creating a smooth 12-frame cycling sprite sheet that matches our art style is the blocker. Without quality assets, this looks "janky" and is worse than a static rider.
+*   **Recommendation:** Defer until a high-quality sprite sheet is available. Stick to "Rider Bob" (vertical sine wave) for now.
+
