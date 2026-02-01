@@ -96,6 +96,7 @@ Update `WorkoutView.xaml` to use a `Grid` layout for layering.
 3.  **Opacity:** Prefer `Brush.Opacity` over `Visual.Opacity`.
 4.  **Hardware Acceleration:** Avoid software-rendering triggers (like `DropShadowEffect` on the moving bike). If shadows are needed, draw them as simple semi-transparent ellipses under the bike.
 5.  **Hit Testing:** Set `IsHitTestVisible="False"` on the `SimulationCanvas` so it doesn't interfere with mouse interaction for the UI controls layered on top.
+6.  **Memory Management:** Monitor memory usage during window resizing and repeated Start/Stop cycles. Ensure `DrawingVisual` objects are properly cleared or reused, and unhook the `CompositionTarget.Rendering` event when the View is unloaded to prevent "zombie" render loops consuming CPU.
 
 ## 6. Acceptance Criteria (User Stories)
 
@@ -145,3 +146,18 @@ The first implementation goal should be:
 2.  Move the line to the left based on speed.
 3.  Modulate the line height based on the current Grade.
 4.  Place a static red rectangle (placeholder bike) that rides the line.
+
+## 8. Development Strategy: Rapid Iteration Harness
+
+To decouple the visual logic from the physical Bluetooth trainer (and the need to pedal), we will create a lightweight "Harness" project.
+
+### 8.1. The `BikeFitness.Harness` App
+A simple WPF project containing:
+*   The `SimulationCanvas` control (shared via a Shared Project or linked file).
+*   Sliders to manually inject:
+    *   **Speed (0 - 60 kph):** To test scrolling smoothness and parallax.
+    *   **Grade (-10% to 20%):** To test slope transitions and bike rotation interpolation.
+    *   **Zoom/Scale:** To test rendering at different viewport sizes.
+*   **"Auto-Drive" Toggle:** A simple timer that simulates a sinusoidal speed/grade pattern to verify long-running stability without user input.
+
+**Benefit:** This allows us to refine the physics (Lerp, transitions) and rendering performance instantly without setting up the bike trainer or wearing workout gear.
