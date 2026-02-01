@@ -2,7 +2,7 @@
 
 **Turn your smart trainer into a mountain simulator. No subscriptions. Just code and sweat.**
 
-![Connect Screen](IMages/readme_image_connect.PNG)
+![Connect Screen](Images/readme_image_connect.PNG)
 ![Workout Screen](Images/readme_image.PNG)
 
 ## The Mission
