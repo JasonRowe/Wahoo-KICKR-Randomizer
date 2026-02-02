@@ -342,34 +342,46 @@ namespace BikeFitnessApp
         // Since the device rejects OpCode 0x42 (Sim Mode), we manually calculate brake force.
         public double CalculateResistanceFromGrade(double gradePercent)
         {
-            // User Requirements:
-            // -10% Grade (or less) -> 0% Resistance (Full Release)
-            //  0%  Grade           -> 1% Resistance (Near Zero, light friction)
-            //  20% Grade (or more) -> 40% Resistance (Max usable climb)
+            // User Requirements (Feb 2026):
+            // -10% Grade -> 0%   Res (Coasting)
+            //  0%  Grade -> 0.5% Res (Flat)
+            //  2%  Grade -> 3%   Res
+            //  5%  Grade -> 9%   Res
+            //  8%  Grade -> 15%  Res
+            //  12% Grade -> 22%  Res
+            //  15% Grade -> 28%  Res
+            //  20% Grade -> 30%  Res (Max)
 
-            const double MinG = -10.0;
-            const double FlatG = 0.0;
-            const double MaxG = 20.0;
-
-            const double MinR = 0.0;
-            const double FlatR = 0.01;
-            const double MaxR = 0.40;
-
-            if (gradePercent <= MinG) return MinR;
-            if (gradePercent >= MaxG) return MaxR;
-
-            if (gradePercent < FlatG)
+            var points = new (double Grade, double Res)[]
             {
-                // Segment 1: Downhill (-10 to 0) maps to (0.0 to 0.01)
-                double ratio = (gradePercent - MinG) / (FlatG - MinG);
-                return MinR + (ratio * (FlatR - MinR));
-            }
-            else
+                (-10.0, 0.000),
+                (0.0,   0.005),
+                (2.0,   0.030),
+                (5.0,   0.090),
+                (8.0,   0.150),
+                (12.0,  0.220),
+                (15.0,  0.280),
+                (20.0,  0.300)
+            };
+
+            if (gradePercent <= points[0].Grade) return points[0].Res;
+            if (gradePercent >= points[points.Length - 1].Grade) return points[points.Length - 1].Res;
+
+            // Find the segment
+            for (int i = 0; i < points.Length - 1; i++)
             {
-                // Segment 2: Uphill (0 to 20) maps to (0.01 to 0.40)
-                double ratio = (gradePercent - FlatG) / (MaxG - FlatG);
-                return FlatR + (ratio * (MaxR - FlatR));
+                var p1 = points[i];
+                var p2 = points[i + 1];
+
+                if (gradePercent >= p1.Grade && gradePercent <= p2.Grade)
+                {
+                    // Linear Interpolation: y = y1 + (x - x1) * (y2 - y1) / (x2 - x1)
+                    double ratio = (gradePercent - p1.Grade) / (p2.Grade - p1.Grade);
+                    return p1.Res + ratio * (p2.Res - p1.Res);
+                }
             }
+
+            return 0; // Fallback
         }
     }
 }
