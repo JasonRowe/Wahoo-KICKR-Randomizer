@@ -7,7 +7,7 @@ using BikeFitnessApp.Services;
 
 namespace BikeFitnessApp.ViewModels
 {
-    public class WorkoutViewModel : ObservableObject
+    public class WorkoutViewModel : ObservableObject, IDisposable
     {
         private readonly IBluetoothService _bluetoothService;
         private readonly KickrLogic _logic = new KickrLogic();
@@ -29,6 +29,22 @@ namespace BikeFitnessApp.ViewModels
         private bool _isGradeMode = true;
         private string _minLabel = "MIN GRADE (%)";
         private string _maxLabel = "MAX GRADE (%)";
+
+        // Simulation Properties for Canvas
+        private double _currentSpeedKph;
+        private double _currentGradePercent;
+
+        public double CurrentSpeedKph
+        {
+            get => _currentSpeedKph;
+            set => SetProperty(ref _currentSpeedKph, value);
+        }
+
+        public double CurrentGradePercent
+        {
+            get => _currentGradePercent;
+            set => SetProperty(ref _currentGradePercent, value);
+        }
 
         public bool IsGradeMode
         {
@@ -135,6 +151,7 @@ namespace BikeFitnessApp.ViewModels
 
                 if (SetProperty(ref _resistancePercent, snappedValue))
                 {
+                    CurrentGradePercent = snappedValue;
                     UpdateResistanceBrush();
                 }
             }
@@ -263,11 +280,17 @@ namespace BikeFitnessApp.ViewModels
 
         public void Cleanup()
         {
+            Dispose();
+        }
+
+        public void Dispose()
+        {
             _bluetoothService.ConnectionLost -= OnConnectionLost;
             _bluetoothService.PowerReceived -= OnPowerReceived;
             _bluetoothService.SpeedValuesUpdated -= OnSpeedValuesUpdated;
             _workoutTimer.Stop();
             PowerManagement.AllowSleep();
+            GC.SuppressFinalize(this);
         }
 
         private void UpdateModeLabels()
@@ -300,6 +323,9 @@ namespace BikeFitnessApp.ViewModels
 
         private void OnSpeedValuesUpdated(double kph, double meters)
         {
+            // Update Canvas Property (Always KPH)
+            CurrentSpeedKph = kph;
+
             // Ensure labels match current setting
             UpdateUnitLabels();
 

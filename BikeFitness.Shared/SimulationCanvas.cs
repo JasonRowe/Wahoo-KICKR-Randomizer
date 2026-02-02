@@ -107,26 +107,42 @@ namespace BikeFitness.Shared
             try
             {
                 var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                
-                _cyclistSprite = LoadBitmap(Path.Combine(baseDir, "Images", "cyclist_sprite.png"));
-                _backgroundLayer = LoadBitmap(Path.Combine(baseDir, "Images", "scenic_background.png"));
+                var imagesDir = Path.Combine(baseDir, "Images");
+                Log($"Loading assets from: {imagesDir}");
+
+                _cyclistSprite = LoadBitmap(Path.Combine(imagesDir, "cyclist_sprite.png"), "Cyclist");
+                _backgroundLayer = LoadBitmap(Path.Combine(imagesDir, "scenic_background.png"), "Background");
             }
             catch (Exception ex)
             {
+                Log($"Failed to load assets: {ex.Message}");
                 Debug.WriteLine($"Failed to load assets: {ex.Message}");
             }
         }
 
-        private BitmapImage? LoadBitmap(string path)
+        private BitmapImage? LoadBitmap(string path, string name)
         {
-            if (!File.Exists(path)) return null;
-            var bi = new BitmapImage();
-            bi.BeginInit();
-            bi.UriSource = new Uri(path, UriKind.Absolute);
-            bi.CacheOption = BitmapCacheOption.OnLoad;
-            bi.EndInit();
-            bi.Freeze();
-            return bi;
+            if (!File.Exists(path)) 
+            {
+                Log($"Asset not found: {name} at {path}");
+                return null;
+            }
+            try 
+            {
+                var bi = new BitmapImage();
+                bi.BeginInit();
+                bi.UriSource = new Uri(path, UriKind.Absolute);
+                bi.CacheOption = BitmapCacheOption.OnLoad;
+                bi.EndInit();
+                bi.Freeze();
+                Log($"Loaded asset: {name}");
+                return bi;
+            }
+            catch (Exception ex)
+            {
+                Log($"Error loading {name}: {ex.Message}");
+                return null;
+            }
         }
 
         private void RecordGradeChange(double newGrade)
@@ -157,28 +173,49 @@ namespace BikeFitness.Shared
 
         private void OnLoaded(object? sender, RoutedEventArgs e)
         {
+            Log("SimulationCanvas OnLoaded");
             LoadAssets();
-            _gameTimer.Start();
+            _gameTimer.Restart(); // Reset timer to avoid huge delta jumps on resume
             _lastTickElapsed = 0;
             CompositionTarget.Rendering += OnRendering;
         }
 
         private void OnUnloaded(object? sender, RoutedEventArgs e)
         {
+            Log("SimulationCanvas OnUnloaded");
             CompositionTarget.Rendering -= OnRendering;
             _gameTimer.Stop();
         }
 
         private void OnRendering(object? sender, EventArgs e)
         {
-            double currentElapsed = _gameTimer.Elapsed.TotalSeconds;
-            double deltaTime = currentElapsed - _lastTickElapsed;
-            _lastTickElapsed = currentElapsed;
+            try
+            {
+                double currentElapsed = _gameTimer.Elapsed.TotalSeconds;
+                double deltaTime = currentElapsed - _lastTickElapsed;
+                _lastTickElapsed = currentElapsed;
 
-            if (deltaTime <= 0) return;
+                // Prevent huge jumps if thread sleeps or debug pause
+                if (deltaTime > 0.1) deltaTime = 0.1; 
+                if (deltaTime <= 0) return;
 
-            Update(deltaTime);
-            DrawFrame();
+                Update(deltaTime);
+                DrawFrame();
+            }
+            catch (Exception ex)
+            {
+                Log($"Error in OnRendering: {ex}");
+            }
+        }
+
+        private void Log(string message)
+        {
+            try
+            {
+                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "simulation_log.txt");
+                File.AppendAllText(path, $"{DateTime.Now:HH:mm:ss.fff}: {message}{Environment.NewLine}");
+            }
+            catch { /* Ignore logging errors */ }
         }
 
         private void Update(double deltaTime)

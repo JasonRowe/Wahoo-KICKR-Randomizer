@@ -8,7 +8,17 @@ namespace BikeFitnessApp.ViewModels
         public object? CurrentView
         {
             get => _currentView;
-            set => SetProperty(ref _currentView, value);
+            set
+            {
+                if (_currentView != value)
+                {
+                    if (_currentView is System.IDisposable disposable)
+                    {
+                        disposable.Dispose();
+                    }
+                    SetProperty(ref _currentView, value);
+                }
+            }
         }
 
         public MainViewModel()

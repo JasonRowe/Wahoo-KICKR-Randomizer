@@ -63,7 +63,7 @@ namespace BikeFitnessApp.Services
 
             _watcher = new BluetoothLEAdvertisementWatcher
             {
-                ScanningMode = BluetoothLEScanningMode.Active
+                ScanningMode = BluetoothLEScanningMode.Passive
             };
             _watcher.Received += Watcher_Received;
             _watcher.Start();
@@ -312,7 +312,7 @@ namespace BikeFitnessApp.Services
                     else
                     {
                         Logger.Log("Retrying resistance command...");
-                        await Task.Delay(500); 
+                        await Task.Delay(2000); 
                         continue; 
                     }
                 }

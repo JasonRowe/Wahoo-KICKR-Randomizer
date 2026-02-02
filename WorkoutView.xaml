@@ -140,7 +140,7 @@
             <!-- Display Side -->
             <materialDesign:Card Grid.Column="1" Margin="12,0,0,0" UniformCornerRadius="16" Background="#1A1A1A">
                 <Grid>
-                    <shared:SimulationCanvas SpeedKph="{Binding SpeedKph}" GradePercent="{Binding ResistancePercent}" Opacity="0.8"/>
+                    <shared:SimulationCanvas SpeedKph="{Binding CurrentSpeedKph}" GradePercent="{Binding CurrentGradePercent}" Opacity="0.8"/>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="CURRENT GRADE" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold" Margin="0,0,0,8"
                                    Effect="{StaticResource MaterialDesignShadowDepth2}"/>
