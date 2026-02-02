@@ -94,13 +94,21 @@ namespace BikeFitness.Shared
             if (d is SimulationCanvas canvas)
             {
                 double newVal = (double)e.NewValue;
-                // If this is the first authoritative update (or we are way off), snap to it.
-                // This fixes the issue where the canvas starts at 0 but the ride is already at 200m.
-                if (Math.Abs(canvas._totalDistanceMeters - newVal) > 50 || canvas._totalDistanceMeters == 0)
+                
+                // Only snap if we are just starting up (visual is near 0 but ride is in progress)
+                // We ignore drift correction because snapping causes terrain geometry gaps and visual jumping.
+                if (canvas._totalDistanceMeters < 5.0 && newVal > 5.0)
                 {
                     canvas._totalDistanceMeters = newVal;
-                    // Also need to ensure terrain history is reset or back-filled if we jumped forward
-                    // For now, let's just let it draw.
+                    
+                    // CRITICAL: Reset terrain history to match new distance to avoid geometry gaps/spikes
+                    canvas._terrainHistory.Clear();
+                    canvas._terrainHistory.Add(new TerrainVertex 
+                    { 
+                        Distance = newVal, 
+                        Height = 0, // Reset height to 0 relative to camera
+                        GradeOut = canvas.GradePercent 
+                    });
                 }
             }
         }
