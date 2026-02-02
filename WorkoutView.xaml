@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:converters="clr-namespace:BikeFitnessApp.Converters"
+             xmlns:shared="clr-namespace:BikeFitness.Shared;assembly=BikeFitness.Shared"
              mc:Ignorable="d" 
              d:DesignHeight="700" d:DesignWidth="1200"
              TextElement.Foreground="{DynamicResource MaterialDesignBody}"
@@ -139,40 +140,35 @@
             <!-- Display Side -->
             <materialDesign:Card Grid.Column="1" Margin="12,0,0,0" UniformCornerRadius="16" Background="#1A1A1A">
                 <Grid>
-                    <Image Source="/Images/displaybackground.png" Stretch="UniformToFill" Opacity="0.5" />
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="CURRENT GRADE" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold" Margin="0,0,0,8"/>
-                        <Viewbox Height="200">
+                    <shared:SimulationCanvas SpeedKph="{Binding CurrentSpeedKph}" GradePercent="{Binding CurrentGradePercent}" Opacity="0.8"/>
+                    <StackPanel VerticalAlignment="Top" Margin="0,32,0,0">
+                        <TextBlock Text="CURRENT GRADE" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold" Margin="0,0,0,8"
+                                   Effect="{StaticResource MaterialDesignShadowDepth2}"/>
+                        <Viewbox Height="120">
                             <TextBlock x:Name="TxtCurrentResistance" Text="{Binding ResistancePercent, StringFormat={}{0:F1}%}" 
                                        FontWeight="Black" Foreground="{Binding ResistanceBrush}" />
                         </Viewbox>
-                        
-                        <!-- Visual Gauge -->
-                        <Grid Margin="48,24,48,0">
-                             <ProgressBar x:Name="ResistanceGauge" Height="20" Minimum="-10" Maximum="20" Value="{Binding ResistancePercent}" 
-                                         Foreground="{Binding ResistanceBrush}"
-                                         Background="#333333" BorderThickness="0"/>
-                        </Grid>
+                    </StackPanel>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20">
-            <!-- Power -->
-            <StackPanel Margin="20,0">
-                <TextBlock Text="Power" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Binding PowerText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-            </StackPanel>
+                    <!-- Telemetry at Bottom -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,32">
+                        <!-- Power -->
+                        <StackPanel Margin="20,0">
+                            <TextBlock Text="Power" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding PowerText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                        </StackPanel>
 
-            <!-- Speed -->
-            <StackPanel Margin="20,0">
-                <TextBlock Text="{Binding SpeedLabel}" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Binding SpeedText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-            </StackPanel>
+                        <!-- Speed -->
+                        <StackPanel Margin="20,0">
+                            <TextBlock Text="{Binding SpeedLabel}" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding SpeedText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                        </StackPanel>
 
-            <!-- Distance -->
-            <StackPanel Margin="20,0">
-                <TextBlock Text="{Binding DistanceLabel}" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Binding DistanceText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-            </StackPanel>
-        </StackPanel>
+                        <!-- Distance -->
+                        <StackPanel Margin="20,0">
+                            <TextBlock Text="{Binding DistanceLabel}" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding DistanceText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                        </StackPanel>
                     </StackPanel>
                 </Grid>
             </materialDesign:Card>

@@ -1,6 +1,7 @@
 # Biking Fitness app for connecting to Kickr to control resistance
 
 ## Important! Before finishing work ensure build works "dotnet build", add new unit tests for any logic, and make sure all unit tests pass ("dotnet test")
+*   **Refactoring Rule:** If modifying or creating Shared Projects/Libraries, ALWAYS run `dotnet clean` and build the **Entire Solution** to verify references and exclude duplicate files from the main project.
 
 ### Changes should always be added to git and committed after every valid build / test phase.
 

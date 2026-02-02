@@ -59,15 +59,24 @@ namespace BikeFitnessApp.Services
 
         public void StartScanning()
         {
-            if (_watcher != null) StopScanning();
-
-            _watcher = new BluetoothLEAdvertisementWatcher
+            try
             {
-                ScanningMode = BluetoothLEScanningMode.Active
-            };
-            _watcher.Received += Watcher_Received;
-            _watcher.Start();
-            UpdateStatus("Scanning for trainers...");
+                if (_watcher != null) StopScanning();
+
+                _watcher = new BluetoothLEAdvertisementWatcher
+                {
+                    ScanningMode = BluetoothLEScanningMode.Passive
+                };
+                _watcher.Received += Watcher_Received;
+                _watcher.Start();
+                UpdateStatus("Scanning for trainers...");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Scanning Error: {ex.Message}");
+                UpdateStatus("Bluetooth Error: Please enable Bluetooth and try again.");
+                _watcher = null;
+            }
         }
 
         public void StopScanning()
@@ -312,7 +321,7 @@ namespace BikeFitnessApp.Services
                     else
                     {
                         Logger.Log("Retrying resistance command...");
-                        await Task.Delay(500); 
+                        await Task.Delay(2000); 
                         continue; 
                     }
                 }

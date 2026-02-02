@@ -13,16 +13,31 @@
 
   <ItemGroup>
     <Compile Remove="BikeFitnessApp.UnitTests\**" />
+    <Compile Remove="BikeFitness.Harness\**" />
+    <Compile Remove="BikeFitness.Shared\**" />
+    <Compile Remove="BikeFitnessConsole\**" />
+    <EmbeddedResource Remove="BikeFitness.Harness\**" />
+    <EmbeddedResource Remove="BikeFitness.Shared\**" />
+    <EmbeddedResource Remove="BikeFitnessConsole\**" />
+    <Page Remove="BikeFitness.Harness\**" />
+    <Page Remove="BikeFitness.Shared\**" />
+    <Page Remove="BikeFitnessConsole\**" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="AppIcon.ico" />
-    <Resource Include="Images\displaybackground.png" />
+    <Content Include="Images\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MaterialDesignThemes" Version="5.3.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="BikeFitness.Shared\BikeFitness.Shared.csproj" />
   </ItemGroup>
 
 </Project>

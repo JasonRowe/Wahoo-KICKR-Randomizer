@@ -29,30 +29,25 @@ namespace BikeFitnessApp.UnitTests
         [TestMethod]
         public void CalculateResistanceFromGrade_ZeroGrade_ShouldBeLowResistance()
         {
-            // User requirement: "maybe 0% grade is near 1% resistance"
-            // Previous logic gave ~13-17%. User finds this too hard?
-            // Let's assert it is within a "Low" range (e.g., 1-5%)
+            // User requirement: 0% Grade -> 0.5% Resistance
             
             double grade = 0.0;
             double resistance = _logic.CalculateResistanceFromGrade(grade);
 
             Console.WriteLine($"0% Grade maps to {resistance*100}% Resistance");
 
-            // Assert it's low (<= 5%)
-            Assert.IsTrue(resistance <= 0.05, $"0% Grade should be fairly easy (<= 5%), but was {resistance*100}%");
-            Assert.IsTrue(resistance >= 0.00, "Resistance cannot be negative");
+            Assert.AreEqual(0.005, resistance, 0.0001, "0% Grade should be exactly 0.5% resistance.");
         }
 
         [TestMethod]
-        public void CalculateResistanceFromGrade_MaxGrade_ShouldBeFortyPercent()
+        public void CalculateResistanceFromGrade_MaxGrade_ShouldBeThirtyPercent()
         {
-            // User requirement: "make sure the max grade is correct 40%"
-            // Max grade on slider is 20.
+            // User requirement: 20% Grade -> 30% Resistance (Capped)
             
             double grade = 20.0;
             double resistance = _logic.CalculateResistanceFromGrade(grade);
 
-            Assert.AreEqual(0.40, resistance, 0.001, "Grade 20% should result in 40% resistance.");
+            Assert.AreEqual(0.30, resistance, 0.001, "Grade 20% should result in 30% resistance.");
         }
 
         [TestMethod]

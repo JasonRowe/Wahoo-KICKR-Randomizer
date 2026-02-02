@@ -8,6 +8,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BikeFitnessApp.UnitTests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BikeFitnessConsole", "BikeFitnessConsole\BikeFitnessConsole.csproj", "{B3573838-138F-42A3-BB20-7FA8B2B1F343}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BikeFitness.Harness", "BikeFitness.Harness\BikeFitness.Harness.csproj", "{13021E91-9FE5-4C57-A64A-FED4EDFBB019}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BikeFitness.Shared", "BikeFitness.Shared\BikeFitness.Shared.csproj", "{4CC5C5F0-6573-4FD2-B91A-05FE69A28CC7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,6 +30,14 @@ Global
 		{B3573838-138F-42A3-BB20-7FA8B2B1F343}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3573838-138F-42A3-BB20-7FA8B2B1F343}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B3573838-138F-42A3-BB20-7FA8B2B1F343}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13021E91-9FE5-4C57-A64A-FED4EDFBB019}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13021E91-9FE5-4C57-A64A-FED4EDFBB019}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13021E91-9FE5-4C57-A64A-FED4EDFBB019}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13021E91-9FE5-4C57-A64A-FED4EDFBB019}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4CC5C5F0-6573-4FD2-B91A-05FE69A28CC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4CC5C5F0-6573-4FD2-B91A-05FE69A28CC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4CC5C5F0-6573-4FD2-B91A-05FE69A28CC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4CC5C5F0-6573-4FD2-B91A-05FE69A28CC7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

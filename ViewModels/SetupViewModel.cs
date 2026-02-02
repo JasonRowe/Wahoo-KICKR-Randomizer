@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace BikeFitnessApp.ViewModels
 {
-    public class SetupViewModel : ObservableObject
+    public class SetupViewModel : ObservableObject, System.IDisposable
     {
         private readonly IBluetoothService _bluetoothService;
         private string _status = "Ready to scan";
@@ -81,6 +81,11 @@ namespace BikeFitnessApp.ViewModels
 
         public void Cleanup()
         {
+            Dispose();
+        }
+
+        public void Dispose()
+        {
             if (IsScanning)
             {
                 _bluetoothService.StopScanning();
@@ -88,14 +93,24 @@ namespace BikeFitnessApp.ViewModels
             }
             _bluetoothService.DeviceDiscovered -= OnDeviceDiscovered;
             _bluetoothService.StatusChanged -= OnStatusChanged;
+            GC.SuppressFinalize(this);
         }
 
         private void StartScan()
         {
             Devices.Clear();
             SelectedDevice = null;
+            
+            // Check for obvious "Not Scanning" status after start attempt
             IsScanning = true;
             _bluetoothService.StartScanning();
+            
+            // If the service immediately reports an error (e.g. "Bluetooth Error..."), stop the spinner
+            if (_bluetoothService.CurrentStatus.Contains("Error"))
+            {
+                IsScanning = false;
+            }
+            
             System.Windows.Input.CommandManager.InvalidateRequerySuggested();
         }
 

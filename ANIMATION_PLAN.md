@@ -161,3 +161,50 @@ A simple WPF project containing:
 *   **"Auto-Drive" Toggle:** A simple timer that simulates a sinusoidal speed/grade pattern to verify long-running stability without user input.
 
 **Benefit:** This allows us to refine the physics (Lerp, transitions) and rendering performance instantly without setting up the bike trainer or wearing workout gear.
+
+## 9. Visual Polish: Sprites & Backgrounds
+To match the aesthetic of `Images\displaybackground.png` (a clean, modern, flat or semi-realistic style), we will implement the following visual layers:
+
+### 9.1. Parallax Background
+*   **Static Layer:** The sky/distant mountains from `displaybackground.png` will serve as the furthest layer.
+*   **Parallax Strategy:**
+    *   **Sky:** Static or moves extremely slowly (1% of bike speed).
+    *   **Mid-Ground (Trees/Hills):** Moves at ~20-30% of bike speed.
+    *   **Foreground (Road/Terrain):** Moves at 100% speed.
+*   **Implementation:** Use `DrawImage` in the `DrawingVisual` loop. We will calculate the source rectangle (texture coordinates) to scroll the image seamlessly (wrapping).
+
+### 9.2. The Bike Sprite
+*   **Asset:** Replace the red rectangle with a high-quality sprite of a cyclist.
+*   **Animation:**
+    *   **Wheel Spin:** If possible, separate the wheels as child sprites and rotate them based on distance traveled.
+    *   **Rider Bob:** Apply a slight vertical sine wave oscillation to the rider's body relative to the bike frame to simulate pedaling effort, faster at higher speeds.
+
+### 9.3. The HUD (Heads-Up Display)
+*   **Overlay:** Render gauges (Speed, Power, RPM) directly on top of the canvas or using WPF controls in the Grid above.
+*   **Style:** Semi-transparent dark backgrounds with bright text (matching the mockup's likely dark-mode or high-contrast fitness app aesthetic).
+
+## 10. Phase 8: Advanced Rider Animation (Future)
+
+To increase realism, we will explore replacing the static "sliding" bike with articulated animations.
+
+### 10.1. Wheel Rotation (High Priority)
+*   **Concept:** Separate the bike into three visual components: `Frame + Rider` (Static), `Front Wheel`, `Rear Wheel`.
+*   **Implementation:**
+    *   Load separate `BitmapImage` assets for the frame and wheels.
+    *   In the `DrawFrame` loop, calculate the rotation angle:
+        `Angle = (TotalDistance / WheelCircumference) * 360`
+    *   Draw the wheels first with a `RotateTransform` at their respective hub coordinates relative to the frame.
+    *   Draw the frame on top.
+*   **Feasibility:** High. Requires minimal asset editing (cropping the current sprite) and basic math. Adds significant "road feel" at low cost.
+
+### 10.2. Pedaling Animation (Medium Priority)
+*   **Concept:** A rider that pedals in sync with speed.
+*   **Challenge:** Requires a **Sprite Sheet** (a grid of images showing one full pedal stroke, e.g., 12 frames).
+*   **Implementation:**
+    *   Load the sprite sheet as a single large `BitmapImage`.
+    *   Calculate `CrankPosition` (0.0 to 1.0) based on distance (fixed gear assumption) or eventually cadence.
+    *   Map `CrankPosition` to a specific frame index (e.g., Frame 0 to 11).
+    *   Use `CroppedBitmap` or source-rect `DrawImage` to render only that frame.
+*   **Feasibility:** Medium. The coding is straightforward, but acquiring or creating a smooth 12-frame cycling sprite sheet that matches our art style is the blocker. Without quality assets, this looks "janky" and is worse than a static rider.
+*   **Recommendation:** Defer until a high-quality sprite sheet is available. Stick to "Rider Bob" (vertical sine wave) for now.
+

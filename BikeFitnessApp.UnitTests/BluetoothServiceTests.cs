@@ -45,6 +45,10 @@ namespace BikeFitnessApp.Tests
             {
                  Assert.Inconclusive("Bluetooth API not supported on this platform.");
             }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                Assert.Inconclusive("Bluetooth hardware not available or accessible.");
+            }
         }
     }
 }
