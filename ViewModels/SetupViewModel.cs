@@ -100,8 +100,17 @@ namespace BikeFitnessApp.ViewModels
         {
             Devices.Clear();
             SelectedDevice = null;
+            
+            // Check for obvious "Not Scanning" status after start attempt
             IsScanning = true;
             _bluetoothService.StartScanning();
+            
+            // If the service immediately reports an error (e.g. "Bluetooth Error..."), stop the spinner
+            if (_bluetoothService.CurrentStatus.Contains("Error"))
+            {
+                IsScanning = false;
+            }
+            
             System.Windows.Input.CommandManager.InvalidateRequerySuggested();
         }
 

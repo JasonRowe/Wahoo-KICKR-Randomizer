@@ -59,15 +59,24 @@ namespace BikeFitnessApp.Services
 
         public void StartScanning()
         {
-            if (_watcher != null) StopScanning();
-
-            _watcher = new BluetoothLEAdvertisementWatcher
+            try
             {
-                ScanningMode = BluetoothLEScanningMode.Passive
-            };
-            _watcher.Received += Watcher_Received;
-            _watcher.Start();
-            UpdateStatus("Scanning for trainers...");
+                if (_watcher != null) StopScanning();
+
+                _watcher = new BluetoothLEAdvertisementWatcher
+                {
+                    ScanningMode = BluetoothLEScanningMode.Passive
+                };
+                _watcher.Received += Watcher_Received;
+                _watcher.Start();
+                UpdateStatus("Scanning for trainers...");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"Scanning Error: {ex.Message}");
+                UpdateStatus("Bluetooth Error: Please enable Bluetooth and try again.");
+                _watcher = null;
+            }
         }
 
         public void StopScanning()
