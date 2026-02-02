@@ -33,6 +33,7 @@ namespace BikeFitnessApp.ViewModels
         // Simulation Properties for Canvas
         private double _currentSpeedKph;
         private double _currentGradePercent;
+        private double _currentDistanceMeters;
 
         public double CurrentSpeedKph
         {
@@ -44,6 +45,12 @@ namespace BikeFitnessApp.ViewModels
         {
             get => _currentGradePercent;
             set => SetProperty(ref _currentGradePercent, value);
+        }
+
+        public double CurrentDistanceMeters
+        {
+            get => _currentDistanceMeters;
+            set => SetProperty(ref _currentDistanceMeters, value);
         }
 
         public bool IsGradeMode
@@ -323,8 +330,9 @@ namespace BikeFitnessApp.ViewModels
 
         private void OnSpeedValuesUpdated(double kph, double meters)
         {
-            // Update Canvas Property (Always KPH)
+            // Update Canvas Properties
             CurrentSpeedKph = kph;
+            CurrentDistanceMeters = meters;
 
             // Ensure labels match current setting
             UpdateUnitLabels();

@@ -69,6 +69,16 @@ namespace BikeFitness.Shared
             set => SetValue(SpeedKphProperty, value);
         }
 
+        public static readonly DependencyProperty SyncedDistanceMetersProperty =
+            DependencyProperty.Register(nameof(SyncedDistanceMeters), typeof(double), typeof(SimulationCanvas),
+                new PropertyMetadata(0.0, OnSyncedDistanceChanged));
+
+        public double SyncedDistanceMeters
+        {
+            get => (double)GetValue(SyncedDistanceMetersProperty);
+            set => SetValue(SyncedDistanceMetersProperty, value);
+        }
+
         public static readonly DependencyProperty GradePercentProperty =
             DependencyProperty.Register(nameof(GradePercent), typeof(double), typeof(SimulationCanvas), 
                 new PropertyMetadata(0.0, OnGradeChanged));
@@ -77,6 +87,22 @@ namespace BikeFitness.Shared
         {
             get => (double)GetValue(GradePercentProperty);
             set => SetValue(GradePercentProperty, value);
+        }
+
+        private static void OnSyncedDistanceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is SimulationCanvas canvas)
+            {
+                double newVal = (double)e.NewValue;
+                // If this is the first authoritative update (or we are way off), snap to it.
+                // This fixes the issue where the canvas starts at 0 but the ride is already at 200m.
+                if (Math.Abs(canvas._totalDistanceMeters - newVal) > 50 || canvas._totalDistanceMeters == 0)
+                {
+                    canvas._totalDistanceMeters = newVal;
+                    // Also need to ensure terrain history is reset or back-filled if we jumped forward
+                    // For now, let's just let it draw.
+                }
+            }
         }
 
         private static void OnGradeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
