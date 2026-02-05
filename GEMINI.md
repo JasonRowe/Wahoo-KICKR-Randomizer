@@ -51,4 +51,5 @@ The application now operates primarily in "Grade Mode".
 3.  **Animated Background:**
     -   Plan and implement an animated background that reacts to Grade changes (e.g., parallax scrolling or changing scenery).
     -   **TODO:** Replace explicit meter markers with environmental objects (shrubs, trees) to mask distance synchronization discrepancies while maintaining the sense of speed.
-    -   **TODO:** Create a custom seamless loop background image. The current mirroring technique (alternating flip) works but creates a "V" shape artifact at the center. We need an asset where the left and right edges blend naturally to allow for true infinite scrolling without mirroring.
+    -   [x] **TODO:** Create a custom seamless loop background image. The current mirroring technique (alternating flip) works but creates a "V" shape artifact at the center. We need an asset where the left and right edges blend naturally to allow for true infinite scrolling without mirroring.
+    -   **TODO:** Implement dynamic biome transitions. Start with Mountain (current), transition to Plain, Desert, and Ocean, then loop back to Mountain. This would require "Connector/Transition" background assets (e.g., Mountain-to-Plain) to bridge the seamless loops of each biome smoothly.
