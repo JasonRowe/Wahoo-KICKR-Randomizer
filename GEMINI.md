@@ -50,3 +50,4 @@ The application now operates primarily in "Grade Mode".
     -   Expand "Hilly" and "Mountain" modes to use more complex Grade patterns now that the logic supports it.
 3.  **Animated Background:**
     -   Plan and implement an animated background that reacts to Grade changes (e.g., parallax scrolling or changing scenery).
+    -   **TODO:** Replace explicit meter markers with environmental objects (shrubs, trees) to mask distance synchronization discrepancies while maintaining the sense of speed.

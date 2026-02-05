@@ -183,6 +183,13 @@ To match the aesthetic of `Images\displaybackground.png` (a clean, modern, flat 
 *   **Overlay:** Render gauges (Speed, Power, RPM) directly on top of the canvas or using WPF controls in the Grid above.
 *   **Style:** Semi-transparent dark backgrounds with bright text (matching the mockup's likely dark-mode or high-contrast fitness app aesthetic).
 
+### 9.4. Environmental Objects (Shrubs/Trees)
+*   **Goal:** Replace the explicit "meter markers" (which expose sync discrepancies) with natural roadside objects.
+*   **Implementation:**
+    *   Load sprites for shrubs, rocks, or trees.
+    *   Place them at random or fixed intervals along the track.
+    *   This provides the "sense of speed" (parallax) without implying a precise odometer reading, making any minor distance drift unnoticeable to the user.
+
 ## 10. Phase 8: Advanced Rider Animation (Future)
 
 To increase realism, we will explore replacing the static "sliding" bike with articulated animations.
