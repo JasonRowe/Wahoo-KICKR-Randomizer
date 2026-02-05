@@ -51,5 +51,7 @@ The application now operates primarily in "Grade Mode".
 3.  **Animated Background:**
     -   Plan and implement an animated background that reacts to Grade changes (e.g., parallax scrolling or changing scenery).
     -   **TODO:** Replace explicit meter markers with environmental objects (shrubs, trees) to mask distance synchronization discrepancies while maintaining the sense of speed.
-    -   [x] **TODO:** Create a custom seamless loop background image. The current mirroring technique (alternating flip) works but creates a "V" shape artifact at the center. We need an asset where the left and right edges blend naturally to allow for true infinite scrolling without mirroring.
-    -   **TODO:** Implement dynamic biome transitions. Start with Mountain (current), transition to Plain, Desert, and Ocean, then loop back to Mountain. This would require "Connector/Transition" background assets (e.g., Mountain-to-Plain) to bridge the seamless loops of each biome smoothly.
+        - [ ] **TODO:** Create a custom seamless loop background image. The current asset still requires the mirroring technique (alternating flip) to hide seams, which creates a "V" shape artifact. We need a true seamless asset where the left and right edges blend naturally.
+        - **TODO:** Implement dynamic biome transitions. Start with Mountain, transition to Plain, Desert, and Ocean, then loop back to Mountain. 
+            - All new biome assets (and the transitions between them) should be generated as **inherently seamless loops** (left edge matches right edge) to avoid using the mirroring technique.
+        - **TODO:** Once true seamless assets are integrated for all biomes, remove the "Mirroring" logic from `SimulationCanvas.cs` and use standard modulo-based infinite scrolling.
