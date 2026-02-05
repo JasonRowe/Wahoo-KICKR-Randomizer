@@ -322,24 +322,28 @@ namespace BikeFitness.Shared
                 // 1. Background
                 dc.DrawRectangle(Brushes.LightSkyBlue, null, new Rect(0, 0, ActualWidth, ActualHeight));
 
-                if (_backgroundLayer != null)
-                {
-                    double bgWidth = _backgroundLayer.PixelWidth;
-                    double bgHeight = ActualHeight;
-
-                    double totalShift = _totalDistanceMeters * 5;
-                    long tileIndex = (long)(totalShift / bgWidth);
-                    double localOffset = totalShift % bgWidth;
-
-                    // Tile 1
-                    bool mirror1 = (tileIndex % 2) != 0;
-                    DrawBackgroundTile(dc, _backgroundLayer, -localOffset, bgWidth + 1, bgHeight, mirror1);
-
-                    // Tile 2
-                    DrawBackgroundTile(dc, _backgroundLayer, -localOffset + bgWidth, bgWidth + 1, bgHeight, !mirror1);
-                }
-
-                // 2. Terrain Setup
+                                if (_backgroundLayer != null)
+                                {
+                                    double bgWidth = _backgroundLayer.PixelWidth;
+                                    double bgHeight = ActualHeight;
+                
+                                    double totalShift = _totalDistanceMeters * 5;
+                                    double localOffset = totalShift % bgWidth;
+                                    long firstTileIndex = (long)(totalShift / bgWidth);
+                
+                                    // Draw enough tiles to fill the entire width of the canvas
+                                    double startX = -localOffset;
+                                    int i = 0;
+                                    while (startX < ActualWidth)
+                                    {
+                                        long currentTileIndex = firstTileIndex + i;
+                                        bool mirror = (currentTileIndex % 2) != 0;
+                                        DrawBackgroundTile(dc, _backgroundLayer, startX, bgWidth + 1, bgHeight, mirror);
+                                        startX += bgWidth;
+                                        i++;
+                                    }
+                                }
+                                // 2. Terrain Setup
                 double bikeScreenX = ActualWidth * 0.3;
                 double bikeWorldDist = _totalDistanceMeters;
                 double bikeWorldHeight = GetHeightAt(bikeWorldDist);

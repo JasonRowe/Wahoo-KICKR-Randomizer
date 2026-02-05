@@ -23,11 +23,11 @@
         </Grid.RowDefinitions>
 
         <!-- Top Bar -->
-        <materialDesign:ColorZone Mode="PrimaryMid" Padding="16" materialDesign:ElevationAssist.Elevation="Dp4">
+        <materialDesign:ColorZone Mode="PrimaryMid" Padding="12" materialDesign:ElevationAssist.Elevation="Dp4">
             <Grid>
                 <StackPanel Orientation="Horizontal">
-                    <materialDesign:PackIcon Kind="BikeFast" Width="32" Height="32" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                    <TextBlock Text="TRAINING SESSION" Style="{DynamicResource MaterialDesignHeadline5TextBlock}" VerticalAlignment="Center" FontWeight="Bold"/>
+                    <materialDesign:PackIcon Kind="BikeFast" Width="28" Height="28" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <TextBlock Text="TRAINING SESSION" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" VerticalAlignment="Center" FontWeight="Bold"/>
                 </StackPanel>
                 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -69,17 +69,17 @@
         </materialDesign:ColorZone>
 
         <!-- Main Content -->
-        <Grid Grid.Row="1" Margin="24">
+        <Grid Grid.Row="1" Margin="12">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>
-                <ColumnDefinition Width="3*"/>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <!-- Controls Side -->
-            <StackPanel Grid.Column="0" Margin="0,0,12,0">
-                <materialDesign:Card Padding="24" materialDesign:ElevationAssist.Elevation="Dp2" UniformCornerRadius="16">
+            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                <materialDesign:Card Padding="16" materialDesign:ElevationAssist.Elevation="Dp2" UniformCornerRadius="16">
                     <StackPanel>
-                        <TextBlock Text="INTENSITY RANGE" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,24" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        <TextBlock Text="INTENSITY RANGE" Style="{DynamicResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,16" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding MinLabel}" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
@@ -87,7 +87,7 @@
                                        Style="{DynamicResource MaterialDesignOverlineTextBlock}" Margin="8,0,0,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         </StackPanel>
                         <Slider x:Name="SliderMin" Minimum="-10" Maximum="20" Value="{Binding MinResistance}" TickFrequency="0.5" IsSnapToTickEnabled="True"
-                                Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,24"/>
+                                Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,16"/>
                         
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding MaxLabel}" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
@@ -95,9 +95,9 @@
                                        Style="{DynamicResource MaterialDesignOverlineTextBlock}" Margin="8,0,0,0" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
                         </StackPanel>
                         <Slider x:Name="SliderMax" Minimum="-10" Maximum="20" Value="{Binding MaxResistance}" TickFrequency="0.5" IsSnapToTickEnabled="True"
-                                Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,24"/>
+                                Style="{DynamicResource MaterialDesignSlider}" Margin="0,0,0,16"/>
 
-                        <StackPanel Margin="0,0,0,24">
+                        <StackPanel Margin="0,0,0,16">
                             <TextBlock Text="WORKOUT MODE" Style="{DynamicResource MaterialDesignOverlineTextBlock}"/>
                             <ComboBox x:Name="ComboWorkoutMode" SelectedIndex="{Binding SelectedModeIndex}" Style="{DynamicResource MaterialDesignOutlinedComboBox}" Margin="0,8,0,0">
                                 <ComboBoxItem Content="Random 🎲"/>
@@ -106,16 +106,16 @@
                             </ComboBox>
                         </StackPanel>
 
-                        <materialDesign:ColorZone Mode="Light" Padding="12" CornerRadius="8" materialDesign:ElevationAssist.Elevation="Dp0">
+                        <materialDesign:ColorZone Mode="Light" Padding="8" CornerRadius="8" materialDesign:ElevationAssist.Elevation="Dp0">
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Style="{DynamicResource MaterialDesignToolButton}" Command="{Binding DecreaseIntervalCommand}" Margin="0,0,8,0">
+                                <Button Style="{DynamicResource MaterialDesignToolButton}" Command="{Binding DecreaseIntervalCommand}" Margin="0,0,4,0">
                                     <materialDesign:PackIcon Kind="ChevronDown" />
                                 </Button>
                                 
-                                <materialDesign:PackIcon Kind="Timer" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="TxtInterval" Text="{Binding IntervalText}" VerticalAlignment="Center" FontWeight="SemiBold" Width="80" TextAlignment="Center"/>
+                                <materialDesign:PackIcon Kind="Timer" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TxtInterval" Text="{Binding IntervalText}" VerticalAlignment="Center" FontWeight="SemiBold" Width="70" TextAlignment="Center"/>
                                 
-                                <Button Style="{DynamicResource MaterialDesignToolButton}" Command="{Binding IncreaseIntervalCommand}" Margin="8,0,0,0">
+                                <Button Style="{DynamicResource MaterialDesignToolButton}" Command="{Binding IncreaseIntervalCommand}" Margin="4,0,0,0">
                                     <materialDesign:PackIcon Kind="ChevronUp" />
                                 </Button>
                             </StackPanel>
@@ -123,56 +123,82 @@
                     </StackPanel>
                 </materialDesign:Card>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,24,0,0">
-                    <Button x:Name="BtnStart" Content="START" Command="{Binding StartCommand}" 
+                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="0,16,0,0">
+                    <Button x:Name="BtnStart" Content="START SESSION" Command="{Binding StartCommand}" 
                             Style="{DynamicResource MaterialDesignRaisedButton}" 
                             Background="#4CAF50" BorderBrush="#4CAF50"
-                            Width="140" Height="50" materialDesign:ButtonAssist.CornerRadius="25" Margin="0,0,16,0">
+                            Width="200" Height="45" materialDesign:ButtonAssist.CornerRadius="22" Margin="0,0,0,12">
                     </Button>
-                    <Button x:Name="BtnStop" Content="STOP" Command="{Binding StopCommand}" 
+                    <Button x:Name="BtnStop" Content="STOP SESSION" Command="{Binding StopCommand}" 
                             Style="{DynamicResource MaterialDesignRaisedButton}" 
                             Background="#F44336" BorderBrush="#F44336"
-                            Width="140" Height="50" materialDesign:ButtonAssist.CornerRadius="25">
+                            Width="200" Height="45" materialDesign:ButtonAssist.CornerRadius="22">
                     </Button>
                 </StackPanel>
             </StackPanel>
 
             <!-- Display Side -->
-            <materialDesign:Card Grid.Column="1" Margin="12,0,0,0" UniformCornerRadius="16" Background="#1A1A1A">
+            <materialDesign:Card Grid.Column="1" Margin="4,0,0,0" UniformCornerRadius="16" Background="#1A1A1A">
                 <Grid>
+                    <!-- Game Canvas -->
                     <shared:SimulationCanvas SpeedKph="{Binding CurrentSpeedKph}" 
                                            GradePercent="{Binding CurrentGradePercent}" 
                                            SyncedDistanceMeters="{Binding CurrentDistanceMeters}"
-                                           Opacity="0.8"/>
-                    <StackPanel VerticalAlignment="Top" Margin="0,32,0,0">
-                        <TextBlock Text="CURRENT GRADE" HorizontalAlignment="Center" Foreground="#AAAAAA" FontWeight="Bold" Margin="0,0,0,8"
-                                   Effect="{StaticResource MaterialDesignShadowDepth2}"/>
-                        <Viewbox Height="120">
-                            <TextBlock x:Name="TxtCurrentResistance" Text="{Binding ResistancePercent, StringFormat={}{0:F1}%}" 
-                                       FontWeight="Black" Foreground="{Binding ResistanceBrush}" />
-                        </Viewbox>
-                    </StackPanel>
+                                           Opacity="1.0"/>
 
-                    <!-- Telemetry at Bottom -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,32">
-                        <!-- Power -->
-                        <StackPanel Margin="20,0">
-                            <TextBlock Text="Power" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding PowerText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
+                    <!-- HUD: Top Left Grade Badge -->
+                    <materialDesign:Card VerticalAlignment="Top" HorizontalAlignment="Left" Margin="24" 
+                                       Background="#E6212121" UniformCornerRadius="12" Padding="16"
+                                       materialDesign:ElevationAssist.Elevation="Dp6">
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="SlopeUphill" Width="32" Height="32" Foreground="Silver" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <StackPanel>
+                                <TextBlock Text="GRADE" Style="{StaticResource MaterialDesignOverlineTextBlock}" Foreground="Silver" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding ResistancePercent, StringFormat={}{0:F1}%}" FontSize="48" FontWeight="Black" Foreground="{Binding ResistanceBrush}"/>
+                            </StackPanel>
                         </StackPanel>
+                    </materialDesign:Card>
 
-                        <!-- Speed -->
-                        <StackPanel Margin="20,0">
-                            <TextBlock Text="{Binding SpeedLabel}" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding SpeedText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-                        </StackPanel>
+                    <!-- HUD: Bottom Telemetry Bar -->
+                    <Grid VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="16,0,16,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Power Panel -->
+                        <materialDesign:Card Grid.Column="0" Margin="8" Background="#E6212121" UniformCornerRadius="16" Padding="12" materialDesign:ElevationAssist.Elevation="Dp4">
+                            <StackPanel>
+                                <TextBlock Text="POWER (WATTS)" Style="{StaticResource MaterialDesignOverlineTextBlock}" Foreground="Silver" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding PowerText}" FontSize="72" FontWeight="Black" Foreground="#2196F3" HorizontalAlignment="Center">
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect BlurRadius="10" Color="#2196F3" Opacity="0.3" ShadowDepth="0"/>
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </StackPanel>
+                        </materialDesign:Card>
 
-                        <!-- Distance -->
-                        <StackPanel Margin="20,0">
-                            <TextBlock Text="{Binding DistanceLabel}" FontSize="16" Foreground="Silver" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding DistanceText}" FontSize="48" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
-                        </StackPanel>
-                    </StackPanel>
+                        <!-- Speed Panel -->
+                        <materialDesign:Card Grid.Column="1" Margin="8" Background="#E6212121" UniformCornerRadius="16" Padding="12" materialDesign:ElevationAssist.Elevation="Dp4">
+                            <StackPanel>
+                                <TextBlock Text="{Binding SpeedLabel}" Style="{StaticResource MaterialDesignOverlineTextBlock}" Foreground="Silver" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding SpeedText}" FontSize="72" FontWeight="Black" Foreground="#4CAF50" HorizontalAlignment="Center">
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect BlurRadius="10" Color="#4CAF50" Opacity="0.3" ShadowDepth="0"/>
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Distance Panel -->
+                        <materialDesign:Card Grid.Column="2" Margin="8" Background="#E6212121" UniformCornerRadius="16" Padding="12" materialDesign:ElevationAssist.Elevation="Dp4">
+                            <StackPanel>
+                                <TextBlock Text="{Binding DistanceLabel}" Style="{StaticResource MaterialDesignOverlineTextBlock}" Foreground="Silver" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding DistanceText}" FontSize="72" FontWeight="Black" Foreground="White" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </materialDesign:Card>
+                    </Grid>
                 </Grid>
             </materialDesign:Card>
         </Grid>
