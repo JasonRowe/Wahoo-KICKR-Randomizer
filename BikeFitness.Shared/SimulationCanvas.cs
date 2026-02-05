@@ -298,6 +298,21 @@ namespace BikeFitness.Shared
             return new Point(screenX, screenY);
         }
 
+        private void DrawBackgroundTile(DrawingContext dc, BitmapImage img, double x, double w, double h, bool mirror)
+        {
+            if (mirror)
+            {
+                // Mirror horizontally around the center of the destination rect
+                dc.PushTransform(new ScaleTransform(-1, 1, x + w / 2.0, 0));
+                dc.DrawImage(img, new Rect(x, 0, w, h));
+                dc.Pop();
+            }
+            else
+            {
+                dc.DrawImage(img, new Rect(x, 0, w, h));
+            }
+        }
+
         private void DrawFrame()
         {
             if (ActualWidth == 0 || ActualHeight == 0) return;
@@ -311,9 +326,17 @@ namespace BikeFitness.Shared
                 {
                     double bgWidth = _backgroundLayer.PixelWidth;
                     double bgHeight = ActualHeight;
-                    double bgOffset = (_totalDistanceMeters * 5) % bgWidth; 
-                    dc.DrawImage(_backgroundLayer, new Rect(-bgOffset, 0, bgWidth, bgHeight));
-                    dc.DrawImage(_backgroundLayer, new Rect(-bgOffset + bgWidth, 0, bgWidth, bgHeight));
+
+                    double totalShift = _totalDistanceMeters * 5;
+                    long tileIndex = (long)(totalShift / bgWidth);
+                    double localOffset = totalShift % bgWidth;
+
+                    // Tile 1
+                    bool mirror1 = (tileIndex % 2) != 0;
+                    DrawBackgroundTile(dc, _backgroundLayer, -localOffset, bgWidth + 1, bgHeight, mirror1);
+
+                    // Tile 2
+                    DrawBackgroundTile(dc, _backgroundLayer, -localOffset + bgWidth, bgWidth + 1, bgHeight, !mirror1);
                 }
 
                 // 2. Terrain Setup
