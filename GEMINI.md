@@ -26,13 +26,14 @@
   - **Mirroring:** Currently uses alternating mirrored tiles (flip) to hide seams in non-seamless assets.
   - **Overlap:** Uses a 1-pixel overlap (`+1` width) to prevent white lines between tiles.
 
+## Completed Tasks
+- [x] **Workout Reporting:** Implemented 1s interval data collection and export to JSON/CSV with automatic timestamped filenames.
+
 ## High-Priority TODOs
 1. **Heart Rate (BLE 0x180D):**
    - Implement `IHeartRateService` for Garmin/standard HRM.
    - Display BPM in `WorkoutView`.
-2. **Workout Reporting:**
-   - Export 1s interval data (Power, Speed, HR, Grade) to **JSON** and **CSV**.
-3. **Animated Background (See `ANIMATION_PLAN.md`):**
+2. **Animated Background (See `ANIMATION_PLAN.md`):**
    - [ ] Implement multi-biome transitions (Mountain -> Plain -> Desert -> Ocean).
    - [ ] Replace mirroring logic in `SimulationCanvas.cs` with modulo-based scrolling once truly seamless assets are available.
    - [ ] Add roadside objects (shrubs/trees) for speed perception.

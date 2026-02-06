@@ -1,9 +1,15 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.Json;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using BikeFitnessApp.Models;
 using BikeFitnessApp.MVVM;
 using BikeFitnessApp.Services;
+using Microsoft.Win32;
 
 namespace BikeFitnessApp.ViewModels
 {
@@ -12,6 +18,7 @@ namespace BikeFitnessApp.ViewModels
         private readonly IBluetoothService _bluetoothService;
         private readonly KickrLogic _logic = new KickrLogic();
         private readonly DispatcherTimer _workoutTimer;
+        private readonly DispatcherTimer _dataTimer;
 
         private int _stepIndex = 0;
         private int _intervalSeconds = 30;
@@ -24,6 +31,9 @@ namespace BikeFitnessApp.ViewModels
         private double _maxResistance = 5; // 5% Grade
         private Brush _resistanceBrush = Brushes.White;
         private string _log = "Ready to ride.";
+
+        private List<WorkoutDataPoint> _sessionData = new List<WorkoutDataPoint>();
+        private DateTime _sessionStartTime;
         
         // Simulation Mode (Default to Grade)
         private bool _isGradeMode = true;
@@ -269,6 +279,10 @@ namespace BikeFitnessApp.ViewModels
             _workoutTimer.Interval = TimeSpan.FromSeconds(_intervalSeconds);
             _workoutTimer.Tick += WorkoutTimer_Tick;
 
+            _dataTimer = new DispatcherTimer();
+            _dataTimer.Interval = TimeSpan.FromSeconds(1);
+            _dataTimer.Tick += DataTimer_Tick;
+
             StartCommand = new RelayCommand(_ => StartWorkout(), _ => CanStart);
             StopCommand = new RelayCommand(_ => StopWorkout(), _ => CanStop);
             IncreaseIntervalCommand = new RelayCommand(_ => IntervalSeconds += 10);
@@ -296,6 +310,7 @@ namespace BikeFitnessApp.ViewModels
             _bluetoothService.PowerReceived -= OnPowerReceived;
             _bluetoothService.SpeedValuesUpdated -= OnSpeedValuesUpdated;
             _workoutTimer.Stop();
+            _dataTimer.Stop();
             PowerManagement.AllowSleep();
             GC.SuppressFinalize(this);
         }
@@ -365,19 +380,29 @@ namespace BikeFitnessApp.ViewModels
 
         private void OnConnectionLost()
         {
+            bool wasActive = IsWorkoutActive;
             IsWorkoutActive = false;
             _workoutTimer.Stop();
+            _dataTimer.Stop();
             PowerManagement.AllowSleep();
             Status = "DISCONNECTED";
             Log = "Status: Device Disconnected.";
             Disconnected?.Invoke();
+
+            if (wasActive)
+            {
+                PromptSaveReport();
+            }
         }
 
         private void StartWorkout()
         {
             _stepIndex = 0;
+            _sessionData.Clear();
+            _sessionStartTime = DateTime.Now;
             IsWorkoutActive = true;
             _workoutTimer.Start();
+            _dataTimer.Start();
             PowerManagement.PreventSleep();
             Status = "WORKOUT ACTIVE";
             Log = "Status: Workout Started";
@@ -390,9 +415,39 @@ namespace BikeFitnessApp.ViewModels
         {
             IsWorkoutActive = false;
             _workoutTimer.Stop();
+            _dataTimer.Stop();
             PowerManagement.AllowSleep();
             Status = "CONNECTED";
             Log = "Status: Workout Stopped";
+
+            PromptSaveReport();
+        }
+
+        private void DataTimer_Tick(object? sender, EventArgs e)
+        {
+            if (!IsWorkoutActive) return;
+
+            var elapsed = (int)(DateTime.Now - _sessionStartTime).TotalSeconds;
+            _sessionData.Add(new WorkoutDataPoint
+            {
+                ElapsedSeconds = elapsed,
+                Power = Power,
+                SpeedKph = CurrentSpeedKph,
+                DistanceMeters = CurrentDistanceMeters,
+                GradePercent = CurrentGradePercent,
+                HeartRate = null // TODO: Add HRM support later
+            });
+        }
+
+        private void PromptSaveReport()
+        {
+            if (_sessionData.Count == 0) return;
+
+            var result = System.Windows.MessageBox.Show("Workout complete! Would you like to save the report?", "Save Report", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                SaveReport();
+            }
         }
 
         private void WorkoutTimer_Tick(object? sender, EventArgs e)
@@ -413,6 +468,79 @@ namespace BikeFitnessApp.ViewModels
             _bluetoothService.QueueResistance(resistanceFactor);
 
             _stepIndex++;
+        }
+
+        private void SaveReport()
+        {
+            if (_sessionData.Count == 0) return;
+
+            var summary = new WorkoutSummary
+            {
+                Date = _sessionStartTime,
+                DurationSeconds = _sessionData.Last().ElapsedSeconds,
+                TotalDistanceMeters = _sessionData.Last().DistanceMeters,
+                AvgPower = _sessionData.Average(d => d.Power),
+                MaxPower = _sessionData.Max(d => d.Power),
+                WorkoutMode = SelectedMode.ToString()
+            };
+
+            var report = new WorkoutReport
+            {
+                Summary = summary,
+                DataPoints = _sessionData
+            };
+
+            var timestamp = _sessionStartTime.ToString("yyyyMMdd_HHmmss");
+            var defaultFileName = $"Workout_{timestamp}";
+
+            var sfd = new SaveFileDialog
+            {
+                FileName = defaultFileName,
+                Filter = "JSON Report (*.json)|*.json|CSV Data (*.csv)|*.csv|All Files (*.*)|*.*",
+                Title = "Save Workout Report"
+            };
+
+            if (sfd.ShowDialog() == true)
+            {
+                try
+                {
+                    string content = "";
+                    if (sfd.FileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        content = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
+                    }
+                    else if (sfd.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+                    {
+                        content = GenerateCsv(report);
+                    }
+                    else
+                    {
+                        // Default to JSON if unknown extension
+                        content = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
+                    }
+
+                    System.IO.File.WriteAllText(sfd.FileName, content);
+                    Log = $"Status: Report saved to {System.IO.Path.GetFileName(sfd.FileName)}";
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Failed to save report: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private string GenerateCsv(WorkoutReport report)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Date,Duration (s),Total Distance (m),Avg Power (W),Max Power (W),Mode");
+            sb.AppendLine($"{report.Summary.Date},{report.Summary.DurationSeconds},{report.Summary.TotalDistanceMeters:F2},{report.Summary.AvgPower:F1},{report.Summary.MaxPower},{report.Summary.WorkoutMode}");
+            sb.AppendLine();
+            sb.AppendLine("Elapsed (s),Power (W),Speed (KPH),Distance (m),Grade (%),Heart Rate");
+            foreach (var dp in report.DataPoints)
+            {
+                sb.AppendLine($"{dp.ElapsedSeconds},{dp.Power},{dp.SpeedKph:F2},{dp.DistanceMeters:F2},{dp.GradePercent:F1},{dp.HeartRate}");
+            }
+            return sb.ToString();
         }
 
         private void UpdateResistanceBrush()
