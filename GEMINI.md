@@ -30,10 +30,13 @@ The application now operates primarily in "Grade Mode".
 *   **Observation:** Users reported that 100% resistance is impossible to pedal.
 *   **Adjustment:** We capped the mapping so that a steep 20% climb equals only 40% actual brake force. This provides a realistic difficulty curve without locking the flywheel.
 
-### 3. Cadence Data (Hardware Limitation)
-*   **Observation:** Attempted to implement cadence display via standard Power Measurement (`0x1818`) and CSC (`0x1816`) services.
-*   **Result:** The hardware (KICKR SNAP) does not set the "Crank Data Present" flag (bit 5) in the Power Measurement characteristic (raw flags `0x14`). Additionally, the CSC service is either not broadcast or does not provide crank updates.
-*   **Conclusion:** Real-time cadence is not supported by this specific trainer's current firmware/hardware configuration. Task removed to prevent redundant exploration.
+### 3. Telemetry & Hardware Limitations
+*   **Cadence:** Attempted implementation via standard Power (`0x1818`) and CSC (`0x1816`) services. 
+    *   *Result:* KICKR SNAP does not broadcast standard crank revolutions (Bit 5 of flags is 0). 
+    *   *Learning:* Wahoo uses "Virtual Cadence" estimated from torque ripples. This is likely exposed only via the proprietary Wahoo Extension characteristic (`a026e001`) or calculated in-app.
+    *   *Decision:* Reverted implementation. Cadence is considered "Not Supported" for this hardware without a separate physical sensor.
+*   **Speed Calculation:** Discovered that standard BLE Power packets (`0x2A63`) use a time unit of **1/2048s**, whereas CSC packets (`0x2A5B`) use **1/1024s**. 
+    *   *Fix:* Updated `KickrLogic` to support variable time constants to ensure accurate KPH.
 
 ## Completed Tasks
 - [x] **Architecture:** Extracted `BluetoothService` and implemented `IBluetoothService`.

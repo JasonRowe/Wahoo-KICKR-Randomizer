@@ -336,21 +336,21 @@ namespace BikeFitnessApp
             return (true, wheelRevs, lastWheelTime);
         }
 
-        public double CalculateSpeed(uint prevRevs, ushort prevTime, uint currRevs, ushort currTime, double circumferenceMeters)
+        public double CalculateSpeed(uint prevRevs, ushort prevTime, uint currRevs, ushort currTime, double circumferenceMeters, double timeUnitDivisor = 1024.0)
         {
             if (currRevs < prevRevs) return 0; // Handle wrap-around if needed, or just ignore simple case
             
             uint revsDiff = currRevs - prevRevs;
             if (revsDiff == 0) return 0;
 
-            // Time unit is 1/1024 seconds
+            // Time unit varies by service (1/1024s for CSC, 1/2048s for Power)
             // Handle wrap-around of time (UInt16)
             int timeDiff = currTime - prevTime;
             if (timeDiff < 0) timeDiff += 65536; // Wrap around adjustment for UInt16
 
             if (timeDiff == 0) return 0;
 
-            double timeSeconds = timeDiff / 1024.0;
+            double timeSeconds = timeDiff / timeUnitDivisor;
             double distanceMeters = revsDiff * circumferenceMeters;
             
             double speedMps = distanceMeters / timeSeconds;
