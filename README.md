@@ -20,6 +20,12 @@ We wanted to ride hills on our smart trainer without paying monthly fees. The ha
     *   **Mountain:** Steep, jagged peaks.
     *   **Random:** Pure chaos for the brave.
 *   **Zero-Lag UI:** Built with WPF and MVVM.
+*   **Workout Intel:** Automatically captures 1s telemetry. Export your pain to **JSON** or **CSV** for post-ride analysis or AI coaching.
+
+## Data & Analysis
+Every ride generates a high-fidelity data log. When you hit **Stop**, the app offers to save a timestamped report.
+*   **JSON:** Structured for the nerds. Perfect for feeding into LLMs or custom analysis tools.
+*   **CSV:** Ready for Excel. Track your Power, Speed, and Grade over time.
 
 ## Under the Hood
 *   **Framework:** .NET 8 (WPF)
