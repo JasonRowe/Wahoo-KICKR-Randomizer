@@ -103,6 +103,7 @@
                                 <ComboBoxItem Content="Random 🎲"/>
                                 <ComboBoxItem Content="Hilly ⛰️"/>
                                 <ComboBoxItem Content="Mountain Climb 🏔️"/>
+                                <ComboBoxItem Content="Pyramid Mode 📈"/>
                             </ComboBox>
                         </StackPanel>
 

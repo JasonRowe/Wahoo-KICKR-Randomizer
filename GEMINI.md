@@ -53,7 +53,8 @@ The application now operates primarily in "Grade Mode".
     -   Display BPM in `WorkoutViewModel` and `WorkoutView`.
     -   *Note:* Garmin watches must have "Broadcast Heart Rate" enabled.
 3.  **Workout Profiles:**
-    -   Expand "Hilly" and "Mountain" modes to use more complex Grade patterns now that the logic supports it.
+    -   [x] Added "Pyramid" mode (Steady increase then decrease over 40 intervals).
+    -   [ ] Expand "Hilly" and "Mountain" modes to use more complex Grade patterns now that the logic supports it.
 4.  **Workout Reporting & AI Analysis:**
     -   Implement session data collection (Power, Speed, Distance, Grade, and Heart Rate once available) at 1-second intervals.
     -   Add a "Save Workout Report" feature using `SaveFileDialog`.

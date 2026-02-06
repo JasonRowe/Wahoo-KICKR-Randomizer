@@ -6,7 +6,8 @@ namespace BikeFitnessApp
     {
         Random,
         Hilly,     // Smooth Sine Wave
-        Mountain   // Steep Triangle Wave
+        Mountain,  // Steep Triangle Wave
+        Pyramid    // Steady increase then decrease
     }
 
     public class KickrLogic
@@ -45,6 +46,8 @@ namespace BikeFitnessApp
                     return CalculateSineWave(min, max, stepIndex);
                 case WorkoutMode.Mountain:
                     return CalculateTriangleWave(min, max, stepIndex);
+                case WorkoutMode.Pyramid:
+                    return CalculatePyramid(min, max, stepIndex);
                 case WorkoutMode.Random:
                 default:
                     return _random.NextDouble() * (max - min) + min;
@@ -55,6 +58,27 @@ namespace BikeFitnessApp
         public double CalculateResistance(double min, double max)
         {
             return CalculateResistance(WorkoutMode.Random, min, max, 0);
+        }
+
+        private double CalculatePyramid(double min, double max, int stepIndex)
+        {
+            // Longer period for Pyramid (40 steps = 20 mins @ 30s intervals)
+            const int period = 40;
+            double range = max - min;
+            int cyclePosition = stepIndex % period;
+            int halfCycle = period / 2;
+
+            double progress;
+            if (cyclePosition < halfCycle)
+            {
+                progress = (double)cyclePosition / halfCycle;
+            }
+            else
+            {
+                progress = 1.0 - ((double)(cyclePosition - halfCycle) / halfCycle);
+            }
+
+            return min + (range * progress);
         }
 
         private double CalculateSineWave(double min, double max, int stepIndex)

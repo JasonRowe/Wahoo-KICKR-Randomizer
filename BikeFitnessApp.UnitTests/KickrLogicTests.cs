@@ -288,5 +288,30 @@ namespace BikeFitnessApp.Tests
             double val15 = logic.CalculateResistance(WorkoutMode.Mountain, min, max, 15);
             Assert.AreEqual(0.5, val15, 0.001);
         }
+
+        [TestMethod]
+        public void TestCalculateResistance_Pyramid()
+        {
+            var logic = new KickrLogic();
+            double min = 0.0;
+            double max = 1.0;
+
+            // Period is 40 steps. Half cycle is 20.
+
+            // Step 0: Start at Min
+            Assert.AreEqual(0.0, logic.CalculateResistance(WorkoutMode.Pyramid, min, max, 0), 0.001);
+
+            // Step 10: Quarter way (0.5)
+            Assert.AreEqual(0.5, logic.CalculateResistance(WorkoutMode.Pyramid, min, max, 10), 0.001);
+
+            // Step 20: Peak (1.0)
+            Assert.AreEqual(1.0, logic.CalculateResistance(WorkoutMode.Pyramid, min, max, 20), 0.001);
+
+            // Step 30: Three-quarters (going down) (0.5)
+            Assert.AreEqual(0.5, logic.CalculateResistance(WorkoutMode.Pyramid, min, max, 30), 0.001);
+            
+            // Step 40: Wrap around (0.0)
+            Assert.AreEqual(0.0, logic.CalculateResistance(WorkoutMode.Pyramid, min, max, 40), 0.001);
+        }
     }
 }
