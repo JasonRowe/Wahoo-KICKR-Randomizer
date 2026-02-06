@@ -30,6 +30,11 @@ The application now operates primarily in "Grade Mode".
 *   **Observation:** Users reported that 100% resistance is impossible to pedal.
 *   **Adjustment:** We capped the mapping so that a steep 20% climb equals only 40% actual brake force. This provides a realistic difficulty curve without locking the flywheel.
 
+### 3. Cadence Data (Hardware Limitation)
+*   **Observation:** Attempted to implement cadence display via standard Power Measurement (`0x1818`) and CSC (`0x1816`) services.
+*   **Result:** The hardware (KICKR SNAP) does not set the "Crank Data Present" flag (bit 5) in the Power Measurement characteristic (raw flags `0x14`). Additionally, the CSC service is either not broadcast or does not provide crank updates.
+*   **Conclusion:** Real-time cadence is not supported by this specific trainer's current firmware/hardware configuration. Task removed to prevent redundant exploration.
+
 ## Completed Tasks
 - [x] **Architecture:** Extracted `BluetoothService` and implemented `IBluetoothService`.
 - [x] **MVVM:** Refactored to ViewModels (`MainViewModel`, `WorkoutViewModel`) and Dependency Injection.
@@ -44,9 +49,7 @@ The application now operates primarily in "Grade Mode".
 - [x] **UX:** Added static background image to Workout View as a placeholder for future animation.
 
 ## TODOs / Next Steps
-1.  **Cadence Display:**
-    -   Investigate CSC Service (`0x1816`) or Crank Data from Power Service (`0x1818`) to display RPM.
-2.  **Heart Rate Monitoring (Garmin Integration):**
+1.  **Heart Rate Monitoring (Garmin Integration):**
     -   Create `IHeartRateService` and `HeartRateService` to handle connection to Heart Rate monitors (Standard BLE Service `0x180D`).
     -   Implement parsing for Heart Rate Measurement characteristic (`0x2A37`).
     -   Update `SetupViewModel` to allow connecting to a second device (HRM).
