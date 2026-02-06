@@ -231,7 +231,7 @@ namespace BikeFitnessApp.Services
                 }
                 else
                 {
-                    kph = _logic.CalculateSpeed(_prevWheelRevs, _prevWheelTime, wheelRevs, wheelTime, AppSettings.WheelCircumference, 2048.0);
+                    kph = _logic.CalculateSpeed(_prevWheelRevs, _prevWheelTime, wheelRevs, wheelTime, AppSettings.WheelCircumference);
                     
                     // We calculate distance based on accumulated revolutions since session start
                     // This handles potential wrapping of wheelRevs (UInt32) better if we just do current - start

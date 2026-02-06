@@ -35,8 +35,9 @@ The application now operates primarily in "Grade Mode".
     *   *Result:* KICKR SNAP does not broadcast standard crank revolutions (Bit 5 of flags is 0). 
     *   *Learning:* Wahoo uses "Virtual Cadence" estimated from torque ripples. This is likely exposed only via the proprietary Wahoo Extension characteristic (`a026e001`) or calculated in-app.
     *   *Decision:* Reverted implementation. Cadence is considered "Not Supported" for this hardware without a separate physical sensor.
-*   **Speed Calculation:** Discovered that standard BLE Power packets (`0x2A63`) use a time unit of **1/2048s**, whereas CSC packets (`0x2A5B`) use **1/1024s**. 
-    *   *Fix:* Updated `KickrLogic` to support variable time constants to ensure accurate KPH.
+*   **Speed Calculation:** Discovered that while some BLE Power packets (`0x2A63`) suggest a time unit of **1/2048s**, CSC packets (`0x2A5B`) use **1/1024s**.
+    *   *Finding:* An experimental attempt to use **2048.0** on the KICKR SNAP caused telemetry to freeze and UI updates to fail.
+    *   *Decision:* Fixed the divisor at **1024.0** to ensure stable telemetry and accurate speed reporting for this hardware. Added a unit test to prevent future changes to this constant.
 
 ## Completed Tasks
 - [x] **Architecture:** Extracted `BluetoothService` and implemented `IBluetoothService`.

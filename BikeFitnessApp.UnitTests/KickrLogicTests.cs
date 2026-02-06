@@ -216,6 +216,24 @@ namespace BikeFitnessApp.Tests
         }
 
         [TestMethod]
+        public void TestCalculateSpeed_VerifyTimingDivisor()
+        {
+            // This test ensures the timing divisor remains 1024.0.
+            // Using 2048.0 was attempted to match some BLE specifications but caused KICKR SNAP telemetry to fail.
+            var logic = new KickrLogic();
+            uint prevRevs = 0;
+            ushort prevTime = 0;
+            uint currRevs = 1;
+            ushort currTime = 1024; // Exactly 1 second if divisor is 1024
+            double circumference = 2.0;
+
+            double speed = logic.CalculateSpeed(prevRevs, prevTime, currRevs, currTime, circumference);
+            
+            // Expected Speed: 1 rev * 2.0m / 1.0s = 2.0 m/s = 7.2 kph
+            Assert.AreEqual(7.2, speed, 0.001, "Speed calculation must use 1/1024s timing divisor.");
+        }
+
+        [TestMethod]
         public void TestCalculateResistance_Bounds()
         {
             var logic = new KickrLogic();

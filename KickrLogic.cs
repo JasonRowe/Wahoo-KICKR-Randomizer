@@ -336,21 +336,25 @@ namespace BikeFitnessApp
             return (true, wheelRevs, lastWheelTime);
         }
 
-        public double CalculateSpeed(uint prevRevs, ushort prevTime, uint currRevs, ushort currTime, double circumferenceMeters, double timeUnitDivisor = 1024.0)
+        public double CalculateSpeed(uint prevRevs, ushort prevTime, uint currRevs, ushort currTime, double circumferenceMeters)
         {
             if (currRevs < prevRevs) return 0; // Handle wrap-around if needed, or just ignore simple case
             
             uint revsDiff = currRevs - prevRevs;
             if (revsDiff == 0) return 0;
 
-            // Time unit varies by service (1/1024s for CSC, 1/2048s for Power)
+            // Time unit is 1/1024 seconds
             // Handle wrap-around of time (UInt16)
             int timeDiff = currTime - prevTime;
             if (timeDiff < 0) timeDiff += 65536; // Wrap around adjustment for UInt16
 
             if (timeDiff == 0) return 0;
 
-            double timeSeconds = timeDiff / timeUnitDivisor;
+            // WARNING: Do not change this to 2048.0. 
+            // Although some BLE specs suggest 1/2048s for wheel data in Power packets (0x2A63),
+            // an experimental attempt to use 2048.0 on the KICKR SNAP caused telemetry to freeze.
+            // Stick to 1024.0 for stability and correct speed reporting on this hardware.
+            double timeSeconds = timeDiff / 1024.0;
             double distanceMeters = revsDiff * circumferenceMeters;
             
             double speedMps = distanceMeters / timeSeconds;
