@@ -46,9 +46,20 @@ The application now operates primarily in "Grade Mode".
 ## TODOs / Next Steps
 1.  **Cadence Display:**
     -   Investigate CSC Service (`0x1816`) or Crank Data from Power Service (`0x1818`) to display RPM.
-2.  **Workout Profiles:**
+2.  **Heart Rate Monitoring (Garmin Integration):**
+    -   Create `IHeartRateService` and `HeartRateService` to handle connection to Heart Rate monitors (Standard BLE Service `0x180D`).
+    -   Implement parsing for Heart Rate Measurement characteristic (`0x2A37`).
+    -   Update `SetupViewModel` to allow connecting to a second device (HRM).
+    -   Display BPM in `WorkoutViewModel` and `WorkoutView`.
+    -   *Note:* Garmin watches must have "Broadcast Heart Rate" enabled.
+3.  **Workout Profiles:**
     -   Expand "Hilly" and "Mountain" modes to use more complex Grade patterns now that the logic supports it.
-3.  **Animated Background:**
+4.  **Workout Reporting & AI Analysis:**
+    -   Implement session data collection (Power, Speed, Distance, Grade, and Heart Rate once available) at 1-second intervals.
+    -   Add a "Save Workout Report" feature using `SaveFileDialog`.
+    -   Export format: **JSON** (structured for AI ingestion) and/or **CSV** (for spreadsheet analysis).
+    -   Include session metadata: Date, Duration, Total Distance, Avg/Max Power, Avg/Max HR.
+5.  **Animated Background:**
     -   Plan and implement an animated background that reacts to Grade changes (e.g., parallax scrolling or changing scenery).
     -   **TODO:** Replace explicit meter markers with environmental objects (shrubs, trees) to mask distance synchronization discrepancies while maintaining the sense of speed.
         - [ ] **TODO:** Create a custom seamless loop background image. The current asset still requires the mirroring technique (alternating flip) to hide seams, which creates a "V" shape artifact. We need a true seamless asset where the left and right edges blend naturally.
@@ -56,3 +67,10 @@ The application now operates primarily in "Grade Mode".
             - All new biome assets (and the transitions between them) should be generated as **inherently seamless loops** (left edge matches right edge) to avoid using the mirroring technique.
             - **Reference Prompt:** "2D side-scrolling game background, [BIOME NAME] biome. Top 60% is sky with [SCENERY DETAILS]. Bottom 40% is [FOREGROUND DETAILS] that transitions into a consistent flat brown dirt road at the very base. Vibrant colors, digital art style. Perfectly seamless horizontal tiling; left and right edges must match exactly. Road position must be identical across all biomes."
         - [ ] **TODO:** Once true seamless assets are integrated for all biomes, remove the "Mirroring" logic from `SimulationCanvas.cs` and use standard modulo-based infinite scrolling.
+
+## Future Suggestions
+*   **Automatic Archiving:** Add a setting to auto-save every completed workout to a `Reports` folder in `Documents`.
+*   **FIT/TCX Export:** Implement export to industry-standard `.fit` or `.tcx` formats to allow users to upload their BikeFitness data to Strava or Garmin Connect.
+*   **AI Insight Button:** A `Analyze Performance` button that summarizes the current session data into a prompt for AI tools to provide training advice.
+*   **RPE Tracking:** Prompt the user for a `Rate of Perceived Exertion` (1-10) and session notes after a workout to include in the report.
+*   **Live Charts:** Integrate a lightweight charting library (like LiveCharts2) to show a real-time power/HR graph during the workout.
