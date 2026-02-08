@@ -134,14 +134,7 @@ namespace BikeFitness.Shared
             public double GradeOut;
         }
 
-        private enum BackgroundTheme
-        {
-            Mountain,
-            Plain,
-            Desert,
-            Ocean,
-            Transition
-        }
+        // BackgroundTheme enum is now public in SimulationMath.cs
 
         private sealed class BackgroundSegment
         {
@@ -691,7 +684,7 @@ namespace BikeFitness.Shared
             }
         }
 
-        private double GetHeightAt(double distance)
+        internal double GetHeightAt(double distance)
         {
             for (int i = _terrainHistory.Count - 1; i >= 0; i--)
             {
@@ -705,7 +698,7 @@ namespace BikeFitness.Shared
             return 0;
         }
 
-        private double GetGradeAt(double distance)
+        internal double GetGradeAt(double distance)
         {
             for (int i = _terrainHistory.Count - 1; i >= 0; i--)
             {
@@ -847,14 +840,7 @@ namespace BikeFitness.Shared
 
         private static string GetBiomeLabelText(BackgroundTheme theme)
         {
-            return theme switch
-            {
-                BackgroundTheme.Mountain => "Entering Mountains",
-                BackgroundTheme.Plain => "Entering Plains",
-                BackgroundTheme.Desert => "Entering Desert",
-                BackgroundTheme.Ocean => "Entering Ocean",
-                _ => "Entering Plains"
-            };
+            return SimulationMath.GetBiomeLabelText(theme);
         }
 
         private static Brush GetTransitionParticleBrush(BackgroundTheme theme)
@@ -1246,18 +1232,9 @@ namespace BikeFitness.Shared
             return Math.Atan(grade / 100.0) * (180.0 / Math.PI);
         }
 
-        private static double Clamp01(double value)
-        {
-            if (value < 0) return 0;
-            if (value > 1) return 1;
-            return value;
-        }
+        private static double Clamp01(double value) => SimulationMath.Clamp01(value);
 
-        private static double SmoothStep(double value)
-        {
-            value = Clamp01(value);
-            return value * value * (3 - (2 * value));
-        }
+        private static double SmoothStep(double value) => SimulationMath.SmoothStep(value);
 
         private void DrawRoadsideObjects(
             DrawingContext dc,
