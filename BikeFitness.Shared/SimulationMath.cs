@@ -1,5 +1,3 @@
-using System.Windows.Media;
-
 namespace BikeFitness.Shared
 {
     /// <summary>
@@ -41,17 +39,5 @@ namespace BikeFitness.Shared
                 _ => "Entering Plains"
             };
         }
-    }
-
-    /// <summary>
-    /// Background biome themes used in simulation rendering.
-    /// </summary>
-    public enum BackgroundTheme
-    {
-        Mountain,
-        Plain,
-        Desert,
-        Ocean,
-        Transition
     }
 }

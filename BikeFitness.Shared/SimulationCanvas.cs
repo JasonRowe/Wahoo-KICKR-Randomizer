@@ -35,7 +35,6 @@ namespace BikeFitness.Shared
         // Pens & Brushes
         private static readonly Brush GrassBrush;
         private static readonly Pen PathPen = new Pen(new SolidColorBrush(Color.FromRgb(160, 135, 100)), 10); // Lighter, tan brown
-        private static readonly Pen MarkerPen = new Pen(Brushes.White, 2);
         private static readonly Pen RoadsideOutlinePen = new Pen(new SolidColorBrush(Color.FromRgb(40, 50, 40)), 1);
         private static readonly RoadsidePalette MountainPalette;
         private static readonly RoadsidePalette PlainPalette;
@@ -66,7 +65,6 @@ namespace BikeFitness.Shared
             GrassBrush = gradient;
 
             PathPen.Freeze();
-            MarkerPen.Freeze();
             RoadsideOutlinePen.Freeze();
 
             var trunk = new SolidColorBrush(Color.FromRgb(95, 75, 55));
@@ -134,25 +132,7 @@ namespace BikeFitness.Shared
             public double GradeOut;
         }
 
-        // BackgroundTheme enum is now public in SimulationMath.cs
-
-        private sealed class BackgroundSegment
-        {
-            public string Name { get; }
-            public BackgroundTheme Theme { get; }
-            public BitmapSource Image { get; }
-            public double LengthMeters { get; }
-            public bool MirrorTiles { get; }
-
-            public BackgroundSegment(string name, BackgroundTheme theme, BitmapSource image, double lengthMeters, bool mirrorTiles)
-            {
-                Name = name;
-                Theme = theme;
-                Image = image;
-                LengthMeters = lengthMeters;
-                MirrorTiles = mirrorTiles;
-            }
-        }
+        // BackgroundSegment and BackgroundTheme are now in separate files
 
         private struct BackgroundSegmentInfo
         {
@@ -197,21 +177,7 @@ namespace BikeFitness.Shared
             public BackgroundTheme Theme;
         }
 
-        private sealed class RoadsidePalette
-        {
-            public Brush Shrub { get; }
-            public Brush Tree { get; }
-            public Brush Rock { get; }
-            public Brush Trunk { get; }
-
-            public RoadsidePalette(Brush shrub, Brush tree, Brush rock, Brush trunk)
-            {
-                Shrub = shrub;
-                Tree = tree;
-                Rock = rock;
-                Trunk = trunk;
-            }
-        }
+        // RoadsidePalette is now in its own file
 
         private readonly List<TerrainVertex> _terrainHistory = new List<TerrainVertex>();
 
@@ -219,13 +185,9 @@ namespace BikeFitness.Shared
         private const double BackgroundPixelsPerMeter = 5.0;
         private const double BiomeSegmentLengthMeters = 600.0;
         private const double TransitionSegmentLengthMeters = 140.0;
-        private const double BackgroundBlendMeters = 0.0;
         private const double BackgroundFadeMeters = 25.0;
         private const double BackgroundTileOverlapPx = 1.0;
-        private const int BackgroundEdgeBlendPixels = 12;
         private const bool UseMirroredBackgroundTiles = true;
-        private const bool ApplyEdgeBlendToBackgrounds = false;
-        private static readonly bool DrawDistanceMarkers = false;
         private const double BiomeFadeOutMeters = 40.0;
         private const double TransitionFadeInTailMeters = 40.0;
         private const double TransitionToBiomeBlendMeters = 40.0;
@@ -247,7 +209,7 @@ namespace BikeFitness.Shared
         private const double RoadsideDespawnBehindMeters = 40.0;
         private const double RoadsideMinSpacingMeters = 6.0;
         private const double RoadsideMaxSpacingMeters = 16.0;
-        private const double ShrubGroundSinkFactor = 0.18;
+        private const double ShrubGroundSinkFactor = 0.30; // Adjusted to lower bushes onto road
 
         private double _backgroundFadeStartDistance = 0.0;
         private BackgroundTheme _currentBiomeTheme = BackgroundTheme.Plain;
@@ -353,15 +315,15 @@ namespace BikeFitness.Shared
 
                 _cyclistSprite = LoadBitmap(Path.Combine(imagesDir, "cyclist_sprite.png"), "Cyclist");
 
-                var mountain = LoadBitmap(Path.Combine(imagesDir, "biome_mountain.png"), "Biome Mountain", ApplyEdgeBlendToBackgrounds);
-                var plain = LoadBitmap(Path.Combine(imagesDir, "biome_plain.png"), "Biome Plain", ApplyEdgeBlendToBackgrounds);
-                var desert = LoadBitmap(Path.Combine(imagesDir, "biome_desert.png"), "Biome Desert", ApplyEdgeBlendToBackgrounds);
-                var ocean = LoadBitmap(Path.Combine(imagesDir, "biome_ocean.png"), "Biome Ocean", ApplyEdgeBlendToBackgrounds);
+                var mountain = LoadBitmap(Path.Combine(imagesDir, "biome_mountain.png"), "Biome Mountain");
+                var plain = LoadBitmap(Path.Combine(imagesDir, "biome_plain.png"), "Biome Plain");
+                var desert = LoadBitmap(Path.Combine(imagesDir, "biome_desert.png"), "Biome Desert");
+                var ocean = LoadBitmap(Path.Combine(imagesDir, "biome_ocean.png"), "Biome Ocean");
 
-                var transitionMountainPlain = LoadBitmap(Path.Combine(imagesDir, "transition_mountain_plain.png"), "Transition Mountain->Plain", ApplyEdgeBlendToBackgrounds);
-                var transitionPlainDesert = LoadBitmap(Path.Combine(imagesDir, "transition_plain_desert.png"), "Transition Plain->Desert", ApplyEdgeBlendToBackgrounds);
-                var transitionDesertOcean = LoadBitmap(Path.Combine(imagesDir, "transition_desert_ocean.png"), "Transition Desert->Ocean", ApplyEdgeBlendToBackgrounds);
-                var transitionOceanMountain = LoadBitmap(Path.Combine(imagesDir, "transition_ocean_mountain.png"), "Transition Ocean->Mountain", ApplyEdgeBlendToBackgrounds);
+                var transitionMountainPlain = LoadBitmap(Path.Combine(imagesDir, "transition_mountain_plain.png"), "Transition Mountain->Plain");
+                var transitionPlainDesert = LoadBitmap(Path.Combine(imagesDir, "transition_plain_desert.png"), "Transition Plain->Desert");
+                var transitionDesertOcean = LoadBitmap(Path.Combine(imagesDir, "transition_desert_ocean.png"), "Transition Desert->Ocean");
+                var transitionOceanMountain = LoadBitmap(Path.Combine(imagesDir, "transition_ocean_mountain.png"), "Transition Ocean->Mountain");
 
                 BuildBackgroundSegments(
                     mountain,
@@ -393,7 +355,7 @@ namespace BikeFitness.Shared
             }
         }
 
-        private BitmapSource? LoadBitmap(string path, string name, bool makeSeamless = false)
+        private BitmapSource? LoadBitmap(string path, string name)
         {
             if (!File.Exists(path)) 
             {
@@ -409,12 +371,7 @@ namespace BikeFitness.Shared
                 bi.EndInit();
                 bi.Freeze();
                 Log($"Loaded asset: {name}");
-                if (!makeSeamless || BackgroundEdgeBlendPixels <= 0)
-                {
-                    return bi;
-                }
-
-                return CreateSeamlessTile(bi, BackgroundEdgeBlendPixels);
+                return bi;
             }
             catch (Exception ex)
             {
@@ -740,15 +697,6 @@ namespace BikeFitness.Shared
                 if (cycleDistance <= nextCursor)
                 {
                     double local = cycleDistance - cursor;
-                    double blend = 0;
-                    if (BackgroundBlendMeters > 0 && segment.LengthMeters > 0)
-                    {
-                        double distanceToEnd = segment.LengthMeters - local;
-                        if (distanceToEnd < BackgroundBlendMeters)
-                        {
-                            blend = 1.0 - (distanceToEnd / BackgroundBlendMeters);
-                        }
-                    }
 
                     var nextSegment = _backgroundSegments[(i + 1) % _backgroundSegments.Count];
                     var previousSegment = _backgroundSegments[(i - 1 + _backgroundSegments.Count) % _backgroundSegments.Count];
@@ -757,7 +705,7 @@ namespace BikeFitness.Shared
                         Segment = segment,
                         NextSegment = nextSegment,
                         PreviousSegment = previousSegment,
-                        BlendToNext = blend,
+                        BlendToNext = 0,
                         LocalDistance = local,
                         SegmentLength = segment.LengthMeters
                     };
@@ -1352,62 +1300,6 @@ namespace BikeFitness.Shared
             }
         }
 
-        private static BitmapSource CreateSeamlessTile(BitmapSource source, int blendWidth)
-        {
-            if (blendWidth <= 0 || source.PixelWidth <= blendWidth * 2)
-            {
-                return source;
-            }
-
-            var formatted = new FormatConvertedBitmap(source, PixelFormats.Pbgra32, null, 0);
-            int width = formatted.PixelWidth;
-            int height = formatted.PixelHeight;
-            int stride = width * 4;
-            byte[] pixels = new byte[height * stride];
-            formatted.CopyPixels(pixels, stride, 0);
-
-            for (int y = 0; y < height; y++)
-            {
-                int row = y * stride;
-                for (int x = 0; x < blendWidth; x++)
-                {
-                    double t = (x + 0.5) / blendWidth;
-                    int leftIndex = row + (x * 4);
-                    int rightIndex = row + ((width - blendWidth + x) * 4);
-
-                    byte bL = pixels[leftIndex];
-                    byte gL = pixels[leftIndex + 1];
-                    byte rL = pixels[leftIndex + 2];
-                    byte aL = pixels[leftIndex + 3];
-
-                    byte bR = pixels[rightIndex];
-                    byte gR = pixels[rightIndex + 1];
-                    byte rR = pixels[rightIndex + 2];
-                    byte aR = pixels[rightIndex + 3];
-
-                    byte b = (byte)((bL * (1 - t)) + (bR * t));
-                    byte g = (byte)((gL * (1 - t)) + (gR * t));
-                    byte r = (byte)((rL * (1 - t)) + (rR * t));
-                    byte a = (byte)((aL * (1 - t)) + (aR * t));
-
-                    pixels[leftIndex] = b;
-                    pixels[leftIndex + 1] = g;
-                    pixels[leftIndex + 2] = r;
-                    pixels[leftIndex + 3] = a;
-
-                    pixels[rightIndex] = b;
-                    pixels[rightIndex + 1] = g;
-                    pixels[rightIndex + 2] = r;
-                    pixels[rightIndex + 3] = a;
-                }
-            }
-
-            var wb = new WriteableBitmap(width, height, formatted.DpiX, formatted.DpiY, PixelFormats.Pbgra32, null);
-            wb.WritePixels(new Int32Rect(0, 0, width, height), pixels, stride, 0);
-            wb.Freeze();
-            return wb;
-        }
-
         private void DrawFrame()
         {
             if (ActualWidth == 0 || ActualHeight == 0) return;
@@ -1482,29 +1374,6 @@ namespace BikeFitness.Shared
                 }
 
                 DrawRoadsideObjects(dc, leftWorldDist, rightWorldDist, bikeWorldDist, bikeWorldHeight, visualCenterY, bikeScreenX, roadsideTheme, RoadsideDrawPass.Background);
-
-                if (DrawDistanceMarkers)
-                {
-                    // 5. Draw Markers
-                    double markerInterval = 10.0;
-                    double firstMarker = Math.Ceiling(leftWorldDist / markerInterval) * markerInterval;
-
-                    for (double d = firstMarker; d <= rightWorldDist; d += markerInterval)
-                    {
-                        Point p = WorldToScreen(d, bikeWorldDist, bikeWorldHeight, visualCenterY, bikeScreenX);
-                        dc.DrawLine(MarkerPen, p, new Point(p.X, p.Y + 10));
-                        
-                        var distText = new FormattedText(
-                            $"{d:F0}m",
-                            System.Globalization.CultureInfo.InvariantCulture,
-                            FlowDirection.LeftToRight,
-                            new Typeface("Segoe UI"),
-                            10,
-                            Brushes.White,
-                            VisualTreeHelper.GetDpi(this).PixelsPerDip);
-                        dc.DrawText(distText, new Point(p.X - 10, p.Y + 12));
-                    }
-                }
 
                 // 6. Draw Bike Sprite
                 dc.PushTransform(new TranslateTransform(bikeScreenX, visualCenterY));
