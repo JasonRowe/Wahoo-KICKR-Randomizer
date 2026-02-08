@@ -7,8 +7,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using BikeFitnessApp.Models;
-using BikeFitnessApp.MVVM;
 using BikeFitnessApp.Services;
+using BikeFitnessApp.MVVM;
 using Microsoft.Win32;
 
 namespace BikeFitnessApp.ViewModels
@@ -496,7 +496,7 @@ namespace BikeFitnessApp.ViewModels
             var sfd = new SaveFileDialog
             {
                 FileName = defaultFileName,
-                Filter = "JSON Report (*.json)|*.json|CSV Data (*.csv)|*.csv|All Files (*.*)|*.*",
+                Filter = "FIT Activity (*.fit)|*.fit|JSON Report (*.json)|*.json|CSV Data (*.csv)|*.csv|All Files (*.*)|*.*",
                 Title = "Save Workout Report"
             };
 
@@ -505,21 +505,26 @@ namespace BikeFitnessApp.ViewModels
                 try
                 {
                     string content = "";
-                    if (sfd.FileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    if (sfd.FileName.EndsWith(".fit", StringComparison.OrdinalIgnoreCase))
+                    {
+                        FitExportService.ExportToFit(report, sfd.FileName);
+                    }
+                    else if (sfd.FileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                     {
                         content = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
+                        System.IO.File.WriteAllText(sfd.FileName, content);
                     }
                     else if (sfd.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
                     {
                         content = GenerateCsv(report);
+                        System.IO.File.WriteAllText(sfd.FileName, content);
                     }
                     else
                     {
                         // Default to JSON if unknown extension
                         content = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
+                        System.IO.File.WriteAllText(sfd.FileName, content);
                     }
-
-                    System.IO.File.WriteAllText(sfd.FileName, content);
                     Log = $"Status: Report saved to {System.IO.Path.GetFileName(sfd.FileName)}";
                 }
                 catch (Exception ex)

@@ -26,9 +26,6 @@
   - **Mirroring:** Currently uses alternating mirrored tiles (flip) to hide seams in non-seamless assets.
   - **Overlap:** Uses a 1-pixel overlap (`+1` width) to prevent white lines between tiles.
 
-## Completed Tasks
-- [x] **Workout Reporting:** Implemented 1s interval data collection and export to JSON/CSV with automatic timestamped filenames.
-
 ## High-Priority TODOs
 1. **Heart Rate (BLE 0x180D):**
    - Implement `IHeartRateService` for Garmin/standard HRM.
