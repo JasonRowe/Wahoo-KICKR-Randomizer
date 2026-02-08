@@ -165,6 +165,7 @@ namespace BikeFitness.Shared
         {
             public BackgroundSegment? Segment;
             public BackgroundSegment? NextSegment;
+            public BackgroundSegment? PreviousSegment;
             public double BlendToNext;
             public double LocalDistance;
             public double SegmentLength;
@@ -232,6 +233,9 @@ namespace BikeFitness.Shared
         private const bool UseMirroredBackgroundTiles = true;
         private const bool ApplyEdgeBlendToBackgrounds = false;
         private static readonly bool DrawDistanceMarkers = false;
+        private const double BiomeFadeOutMeters = 40.0;
+        private const double TransitionFadeInTailMeters = 40.0;
+        private const double TransitionToBiomeBlendMeters = 40.0;
         private const double BiomeLabelDurationSeconds = 1.6;
         private const double BiomeLabelFadeSeconds = 0.35;
         private const double BiomeLabelTopRatio = 0.08;
@@ -754,10 +758,12 @@ namespace BikeFitness.Shared
                     }
 
                     var nextSegment = _backgroundSegments[(i + 1) % _backgroundSegments.Count];
+                    var previousSegment = _backgroundSegments[(i - 1 + _backgroundSegments.Count) % _backgroundSegments.Count];
                     return new BackgroundSegmentInfo
                     {
                         Segment = segment,
                         NextSegment = nextSegment,
+                        PreviousSegment = previousSegment,
                         BlendToNext = blend,
                         LocalDistance = local,
                         SegmentLength = segment.LengthMeters
@@ -771,6 +777,7 @@ namespace BikeFitness.Shared
             {
                 Segment = _backgroundSegments[0],
                 NextSegment = _backgroundSegments.Count > 1 ? _backgroundSegments[1] : _backgroundSegments[0],
+                PreviousSegment = _backgroundSegments.Count > 1 ? _backgroundSegments[_backgroundSegments.Count - 1] : _backgroundSegments[0],
                 BlendToNext = 0,
                 LocalDistance = 0,
                 SegmentLength = _backgroundSegments[0].LengthMeters
@@ -792,12 +799,19 @@ namespace BikeFitness.Shared
                 }
 
                 double progress = Clamp01(info.LocalDistance / info.SegmentLength);
-                return Math.Max(0.25, 1.0 - SmoothStep(progress) * 0.2);
+                return 0.4 + (0.6 * (1.0 - SmoothStep(progress)));
             }
 
-            if (info.NextSegment?.Theme == BackgroundTheme.Transition && BackgroundFadeMeters > 0)
+            if (info.PreviousSegment?.Theme == BackgroundTheme.Transition)
             {
-                double fadeOutMeters = Math.Min(BackgroundFadeMeters, info.SegmentLength);
+                double tailMeters = Math.Max(1.0, TransitionFadeInTailMeters);
+                double tailProgress = Clamp01(info.LocalDistance / tailMeters);
+                return 0.4 * (1.0 - SmoothStep(tailProgress));
+            }
+
+            if (info.NextSegment?.Theme == BackgroundTheme.Transition && BiomeFadeOutMeters > 0)
+            {
+                double fadeOutMeters = Math.Min(BiomeFadeOutMeters, info.SegmentLength);
                 if (fadeOutMeters <= 0)
                 {
                     return 0.0;
@@ -865,11 +879,71 @@ namespace BikeFitness.Shared
 
             double scrollPx = _totalDistanceMeters * BackgroundPixelsPerMeter;
             double segmentOpacity = GetBackgroundOpacity(info);
+            if (info.Segment.Theme == BackgroundTheme.Transition)
+            {
+                double progress = info.SegmentLength > 0 ? Clamp01(info.LocalDistance / info.SegmentLength) : 0.0;
+                double transitionBlend = 0.0;
+                if (info.NextSegment?.Image != null && TransitionToBiomeBlendMeters > 0 && info.SegmentLength > 0)
+                {
+                    double distanceToEnd = info.SegmentLength - info.LocalDistance;
+                    if (distanceToEnd < TransitionToBiomeBlendMeters)
+                    {
+                        transitionBlend = 1.0 - (distanceToEnd / TransitionToBiomeBlendMeters);
+                        transitionBlend = Clamp01(transitionBlend);
+                    }
+                }
+
+                DrawTransitionImage(dc, info.Segment.Image, progress, segmentOpacity * (1.0 - transitionBlend));
+                if (transitionBlend > 0 && info.NextSegment?.Image != null)
+                {
+                    DrawTiledImage(dc, info.NextSegment.Image, scrollPx, info.NextSegment.MirrorTiles, segmentOpacity * transitionBlend);
+                }
+
+                return;
+            }
+
             DrawTiledImage(dc, info.Segment.Image, scrollPx, info.Segment.MirrorTiles, segmentOpacity * (1.0 - info.BlendToNext));
 
             if (info.BlendToNext > 0 && info.NextSegment?.Image != null)
             {
                 DrawTiledImage(dc, info.NextSegment.Image, scrollPx, info.NextSegment.MirrorTiles, segmentOpacity * info.BlendToNext);
+            }
+        }
+
+        private void DrawTransitionImage(DrawingContext dc, BitmapSource img, double progress, double opacity)
+        {
+            if (opacity <= 0)
+            {
+                return;
+            }
+
+            if (img.PixelHeight <= 0 || img.PixelWidth <= 0)
+            {
+                return;
+            }
+
+            double scale = Math.Max(ActualHeight / img.PixelHeight, ActualWidth / img.PixelWidth);
+            if (scale <= 0 || double.IsInfinity(scale) || double.IsNaN(scale))
+            {
+                return;
+            }
+
+            double drawWidth = img.PixelWidth * scale;
+            double drawHeight = img.PixelHeight * scale;
+            double maxScroll = Math.Max(0, drawWidth - ActualWidth);
+            double offsetX = -maxScroll * Clamp01(progress);
+            double offsetY = ActualHeight - drawHeight; // anchor to bottom for road alignment
+
+            if (opacity < 1.0)
+            {
+                dc.PushOpacity(opacity);
+            }
+
+            dc.DrawImage(img, new Rect(offsetX, offsetY, drawWidth, drawHeight));
+
+            if (opacity < 1.0)
+            {
+                dc.Pop();
             }
         }
 
@@ -972,30 +1046,34 @@ namespace BikeFitness.Shared
             }
 
             bool isTransition = info.Segment.Theme == BackgroundTheme.Transition;
-            bool fadeIn = isTransition;
             bool fadeOut = !isTransition && info.NextSegment?.Theme == BackgroundTheme.Transition;
+            bool fadeIn = isTransition || info.PreviousSegment?.Theme == BackgroundTheme.Transition;
 
             if (!fadeIn && !fadeOut)
             {
                 return 1.0;
             }
 
-            double fade = Math.Min(BackgroundFadeMeters, info.SegmentLength / 2.0);
-            if (fade <= 0)
-            {
-                return 1.0;
-            }
-
             double opacity = 1.0;
+
             if (fadeIn)
             {
-                double fadeInMeters = Math.Max(1.0, info.SegmentLength);
-                opacity = Math.Min(opacity, Clamp01(info.LocalDistance / fadeInMeters));
+                double transitionLength = info.SegmentLength;
+                double distanceSinceTransitionStart = info.LocalDistance;
+
+                if (!isTransition && info.PreviousSegment != null)
+                {
+                    transitionLength = info.PreviousSegment.LengthMeters;
+                    distanceSinceTransitionStart = transitionLength + info.LocalDistance;
+                }
+
+                double fadeInMeters = Math.Max(1.0, transitionLength + TransitionFadeInTailMeters);
+                opacity = Math.Min(opacity, Clamp01(distanceSinceTransitionStart / fadeInMeters));
             }
 
             if (fadeOut)
             {
-                double fadeOutMeters = Math.Max(1.0, fade);
+                double fadeOutMeters = Math.Max(1.0, Math.Min(BiomeFadeOutMeters, info.SegmentLength));
                 opacity = Math.Min(opacity, Clamp01((info.SegmentLength - info.LocalDistance) / fadeOutMeters));
             }
 
