@@ -15,6 +15,11 @@ namespace BikeFitnessApp
         public static bool UseMetric { get; set; } = false;
         public static double WheelCircumference { get; set; } = 2.10; // Default 700c
 
+        // Strava Configuration
+        public static string StravaClientId { get; set; } = "203823";
+        public static string StravaClientSecret { get; set; } = ""; // Loaded via environment variable
+        public static string StravaAuthCallbackUrl { get; set; } = "http://localhost:5000/callback/";
+
         public static List<TireSize> StandardTireSizes { get; } = new List<TireSize>
         {
             new TireSize { Name = "700c (Road)", Circumference = 2.10 },

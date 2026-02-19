@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -16,6 +17,7 @@ namespace BikeFitnessApp.ViewModels
     public class WorkoutViewModel : ObservableObject, IDisposable
     {
         private readonly IBluetoothService _bluetoothService;
+        private readonly IStravaService _stravaService;
         private readonly KickrLogic _logic = new KickrLogic();
         private readonly DispatcherTimer _workoutTimer;
         private readonly DispatcherTimer _dataTimer;
@@ -25,6 +27,8 @@ namespace BikeFitnessApp.ViewModels
         private int _power;
         private double _resistancePercent;
         private bool _isWorkoutActive;
+        private bool _showPostWorkoutOptions;
+        private bool _hasWorkoutData;
         private string _status = "CONNECTED";
         private WorkoutMode _selectedMode = WorkoutMode.Random;
         private double _minResistance = 0; // 0% Grade
@@ -214,6 +218,18 @@ namespace BikeFitnessApp.ViewModels
             }
         }
 
+        public bool ShowPostWorkoutOptions
+        {
+            get => _showPostWorkoutOptions;
+            set => SetProperty(ref _showPostWorkoutOptions, value);
+        }
+
+        public bool HasWorkoutData
+        {
+            get => _hasWorkoutData;
+            set => SetProperty(ref _hasWorkoutData, value);
+        }
+
         public bool CanStart => !IsWorkoutActive;
         public bool CanStop => IsWorkoutActive;
 
@@ -265,12 +281,15 @@ namespace BikeFitnessApp.ViewModels
         public ICommand IncreaseIntervalCommand { get; }
         public ICommand DecreaseIntervalCommand { get; }
         public ICommand SelectTireSizeCommand { get; }
+        public ICommand SaveFitCommand { get; }
+        public ICommand UploadStravaCommand { get; }
 
         public event Action? Disconnected;
 
-        public WorkoutViewModel(IBluetoothService bluetoothService)
+        public WorkoutViewModel(IBluetoothService bluetoothService, IStravaService stravaService)
         {
             _bluetoothService = bluetoothService;
+            _stravaService = stravaService;
             _bluetoothService.ConnectionLost += OnConnectionLost;
             _bluetoothService.PowerReceived += OnPowerReceived;
             _bluetoothService.SpeedValuesUpdated += OnSpeedValuesUpdated;
@@ -288,6 +307,8 @@ namespace BikeFitnessApp.ViewModels
             IncreaseIntervalCommand = new RelayCommand(_ => IntervalSeconds += 10);
             DecreaseIntervalCommand = new RelayCommand(_ => { if (IntervalSeconds > 10) IntervalSeconds -= 10; });
             SelectTireSizeCommand = new RelayCommand(param => SelectedTireSize = (TireSize)param!);
+            SaveFitCommand = new RelayCommand(_ => _ = SaveReport());
+            UploadStravaCommand = new RelayCommand(_ => _ = ManualStravaUpload());
 
             // Initialize Settings
             _selectedTireSize = AppSettings.StandardTireSizes.Find(t => Math.Abs(t.Circumference - AppSettings.WheelCircumference) < 0.01) 
@@ -380,7 +401,6 @@ namespace BikeFitnessApp.ViewModels
 
         private void OnConnectionLost()
         {
-            bool wasActive = IsWorkoutActive;
             IsWorkoutActive = false;
             _workoutTimer.Stop();
             _dataTimer.Stop();
@@ -389,9 +409,10 @@ namespace BikeFitnessApp.ViewModels
             Log = "Status: Device Disconnected.";
             Disconnected?.Invoke();
 
-            if (wasActive)
+            if (_sessionData.Count > 0)
             {
-                PromptSaveReport();
+                HasWorkoutData = true;
+                ShowPostWorkoutOptions = true;
             }
         }
 
@@ -401,6 +422,8 @@ namespace BikeFitnessApp.ViewModels
             _sessionData.Clear();
             _sessionStartTime = DateTime.Now;
             IsWorkoutActive = true;
+            ShowPostWorkoutOptions = false;
+            HasWorkoutData = false;
             _workoutTimer.Start();
             _dataTimer.Start();
             PowerManagement.PreventSleep();
@@ -420,7 +443,11 @@ namespace BikeFitnessApp.ViewModels
             Status = "CONNECTED";
             Log = "Status: Workout Stopped";
 
-            PromptSaveReport();
+            if (_sessionData.Count > 0)
+            {
+                HasWorkoutData = true;
+                ShowPostWorkoutOptions = true;
+            }
         }
 
         private void DataTimer_Tick(object? sender, EventArgs e)
@@ -439,14 +466,25 @@ namespace BikeFitnessApp.ViewModels
             });
         }
 
-        private void PromptSaveReport()
+        private async System.Threading.Tasks.Task ManualStravaUpload()
         {
             if (_sessionData.Count == 0) return;
 
-            var result = System.Windows.MessageBox.Show("Workout complete! Would you like to save the report?", "Save Report", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
-            if (result == System.Windows.MessageBoxResult.Yes)
+            // Generate a temporary FIT file for upload
+            var tempPath = Path.Combine(Path.GetTempPath(), $"StravaUpload_{DateTime.Now:yyyyMMdd_HHmmss}.fit");
+            
+            try
             {
-                SaveReport();
+                var report = CreateReport();
+                FitExportService.ExportToFit(report, tempPath);
+                await HandleStravaUpload(tempPath);
+                
+                // Keep the buttons visible but maybe disable upload if successful? 
+                // For now just leave them.
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Failed to prepare Strava upload: {ex.Message}");
             }
         }
 
@@ -470,10 +508,8 @@ namespace BikeFitnessApp.ViewModels
             _stepIndex++;
         }
 
-        private void SaveReport()
+        private WorkoutReport CreateReport()
         {
-            if (_sessionData.Count == 0) return;
-
             var summary = new WorkoutSummary
             {
                 Date = _sessionStartTime,
@@ -484,12 +520,18 @@ namespace BikeFitnessApp.ViewModels
                 WorkoutMode = SelectedMode.ToString()
             };
 
-            var report = new WorkoutReport
+            return new WorkoutReport
             {
                 Summary = summary,
                 DataPoints = _sessionData
             };
+        }
 
+        private async System.Threading.Tasks.Task SaveReport()
+        {
+            if (_sessionData.Count == 0) return;
+
+            var report = CreateReport();
             var timestamp = _sessionStartTime.ToString("yyyyMMdd_HHmmss");
             var defaultFileName = $"Workout_{timestamp}";
 
@@ -504,33 +546,71 @@ namespace BikeFitnessApp.ViewModels
             {
                 try
                 {
-                    string content = "";
                     if (sfd.FileName.EndsWith(".fit", StringComparison.OrdinalIgnoreCase))
                     {
                         FitExportService.ExportToFit(report, sfd.FileName);
                     }
                     else if (sfd.FileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                     {
-                        content = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
+                        var content = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
                         System.IO.File.WriteAllText(sfd.FileName, content);
                     }
                     else if (sfd.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
                     {
-                        content = GenerateCsv(report);
+                        var content = GenerateCsv(report);
                         System.IO.File.WriteAllText(sfd.FileName, content);
                     }
-                    else
-                    {
-                        // Default to JSON if unknown extension
-                        content = JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
-                        System.IO.File.WriteAllText(sfd.FileName, content);
-                    }
+                    
                     Log = $"Status: Report saved to {System.IO.Path.GetFileName(sfd.FileName)}";
+                    ShowPostWorkoutOptions = false;
                 }
                 catch (Exception ex)
                 {
                     System.Windows.MessageBox.Show($"Failed to save report: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 }
+            }
+        }
+
+        private async System.Threading.Tasks.Task HandleStravaUpload(string filePath)
+        {
+            try
+            {
+                if (!_stravaService.IsAuthorized)
+                {
+                    var auth = System.Windows.MessageBox.Show("Strava is not connected. Connect now?", "Connect Strava", System.Windows.MessageBoxButton.YesNo);
+                    if (auth == System.Windows.MessageBoxResult.Yes)
+                    {
+                        bool success = await _stravaService.AuthorizeAsync();
+                        if (!success)
+                        {
+                            System.Windows.MessageBox.Show("Failed to authorize with Strava.");
+                            return;
+                        }
+                    }
+                    else return;
+                }
+
+                Status = "UPLOADING...";
+                Log = "Status: Uploading to Strava...";
+                bool uploaded = await _stravaService.UploadActivityAsync(filePath, $"Indoor Ride - {SelectedMode}");
+                
+                if (uploaded)
+                {
+                    System.Windows.MessageBox.Show("Activity uploaded successfully to Strava!", "Success");
+                    Log = "Status: Strava Upload Complete";
+                    ShowPostWorkoutOptions = false;
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show("Failed to upload to Strava. Check your connection or API configuration.", "Upload Failed");
+                    Log = "Status: Strava Upload Failed";
+                }
+                Status = "CONNECTED";
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Strava error: {ex.Message}");
+                Status = "CONNECTED";
             }
         }
 

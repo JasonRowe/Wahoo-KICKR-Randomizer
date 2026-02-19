@@ -20,5 +20,13 @@ namespace BikeFitnessApp
                 viewModel.Cleanup();
             }
         }
+
+        private void BtnDismiss_Click(object sender, RoutedEventArgs e)
+        {
+            if (this.DataContext is WorkoutViewModel viewModel)
+            {
+                viewModel.ShowPostWorkoutOptions = false;
+            }
+        }
     }
 }

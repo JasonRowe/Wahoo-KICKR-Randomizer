@@ -30,10 +30,6 @@
 1. **Heart Rate (BLE 0x180D):**
    - Implement `IHeartRateService` for Garmin/standard HRM.
    - Display BPM in `WorkoutView`.
-2. **Animated Background (See `ANIMATION_PLAN.md`):**
-   - [ ] Implement multi-biome transitions (Mountain -> Plain -> Desert -> Ocean).
-   - [ ] Replace mirroring logic in `SimulationCanvas.cs` with modulo-based scrolling once truly seamless assets are available.
-   - [ ] Add roadside objects (shrubs/trees) for speed perception.
 
 ## Image Generation Prompts (Nano Banana)
 - **Biome Reference:** "2D side-scrolling game background, [BIOME] biome. Vibrant colors, digital art. Perfectly seamless horizontal tiling; left and right edges must match exactly. Consistent flat brown dirt road at base."

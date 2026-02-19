@@ -1,3 +1,7 @@
 # C#
 [Bb]in/
 [Oo]bj/
+
+# Keys
+*.user
+.env

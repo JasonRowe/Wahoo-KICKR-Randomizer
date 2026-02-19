@@ -26,6 +26,7 @@ namespace BikeFitnessApp
 
             // Services
             services.AddSingleton<IBluetoothService, BluetoothService>();
+            services.AddSingleton<IStravaService, StravaService>();
 
             // ViewModels
             services.AddSingleton<MainViewModel>();
@@ -48,7 +49,8 @@ namespace BikeFitnessApp
             DispatcherUnhandledException += (s, ex) =>
             {
                 Logger.Log($"DISPATCHER UNHANDLED EXCEPTION: {ex.Exception}");
-                ex.Handled = false;
+                MessageBox.Show($"An unexpected error occurred: {ex.Exception.Message}\n\nDetails in BikeFitnessApp.log", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                ex.Handled = true;
             };
 
             base.OnStartup(e);

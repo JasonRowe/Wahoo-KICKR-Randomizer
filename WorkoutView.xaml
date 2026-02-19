@@ -15,6 +15,9 @@
              TextOptions.TextRenderingMode="Auto"
              Background="{DynamicResource MaterialDesignPaper}"
              FontFamily="{materialDesign:MaterialDesignFont}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -200,6 +203,50 @@
                             </StackPanel>
                         </materialDesign:Card>
                     </Grid>
+
+                    <!-- Workout Complete Overlay -->
+                    <materialDesign:Card VerticalAlignment="Center" HorizontalAlignment="Center" 
+                                       Visibility="{Binding ShowPostWorkoutOptions, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                       Background="#CC000000" UniformCornerRadius="24" Padding="32"
+                                       materialDesign:ElevationAssist.Elevation="Dp24"
+                                       MaxWidth="500">
+                        <StackPanel>
+                            <materialDesign:PackIcon Kind="CheckCircleOutline" Width="64" Height="64" Foreground="#4CAF50" HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                            <TextBlock Text="WORKOUT COMPLETE!" Style="{DynamicResource MaterialDesignHeadline4TextBlock}" HorizontalAlignment="Center" FontWeight="Black" Margin="0,0,0,8"/>
+                            <TextBlock Text="Great ride! How would you like to save your progress?" Style="{DynamicResource MaterialDesignSubtitle1TextBlock}" Opacity="0.8" HorizontalAlignment="Center" Margin="0,0,0,32" TextAlignment="Center"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0" Command="{Binding SaveFitCommand}" Margin="8" Height="60"
+                                        Style="{DynamicResource MaterialDesignRaisedButton}" Background="#2196F3" BorderBrush="#2196F3"
+                                        materialDesign:ButtonAssist.CornerRadius="12">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Download" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="DOWNLOAD .FIT" VerticalAlignment="Center" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Grid.Column="1" Command="{Binding UploadStravaCommand}" Margin="8" Height="60"
+                                        Style="{DynamicResource MaterialDesignRaisedButton}" Background="#FC4C02" BorderBrush="#FC4C02"
+                                        materialDesign:ButtonAssist.CornerRadius="12">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="CloudUpload" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="STRAVA UPLOAD" VerticalAlignment="Center" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <Button Content="DISMISS" Margin="0,16,0,0" HorizontalAlignment="Center"
+                                    Style="{DynamicResource MaterialDesignFlatButton}"
+                                    Click="BtnDismiss_Click"
+                                    Visibility="{Binding ShowPostWorkoutOptions, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            </Button>
+                        </StackPanel>
+                    </materialDesign:Card>
                 </Grid>
             </materialDesign:Card>
         </Grid>

@@ -9,13 +9,15 @@ namespace BikeFitnessApp.UnitTests
     public class WorkoutViewModelTests
     {
         private MockBluetoothService _mockBluetoothService = null!;
+        private MockStravaService _mockStravaService = null!;
         private WorkoutViewModel _viewModel = null!;
 
         [TestInitialize]
         public void Setup()
         {
             _mockBluetoothService = new MockBluetoothService();
-            _viewModel = new WorkoutViewModel(_mockBluetoothService);
+            _mockStravaService = new MockStravaService();
+            _viewModel = new WorkoutViewModel(_mockBluetoothService, _mockStravaService);
         }
 
         [TestCleanup]

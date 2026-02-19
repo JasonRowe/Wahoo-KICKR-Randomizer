@@ -504,12 +504,7 @@ namespace BikeFitness.Shared
 
         private void Log(string message)
         {
-            try
-            {
-                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "simulation_log.txt");
-                File.AppendAllText(path, $"{DateTime.Now:HH:mm:ss.fff}: {message}{Environment.NewLine}");
-            }
-            catch { /* Ignore logging errors */ }
+            Debug.WriteLine($"{DateTime.Now:HH:mm:ss.fff}: {message}");
         }
 
         private void Update(double deltaTime)
