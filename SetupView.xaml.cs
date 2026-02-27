@@ -1,4 +1,3 @@
-using System;
 using System.Windows;
 using System.Windows.Controls;
 using BikeFitnessApp.ViewModels;
@@ -17,7 +16,7 @@ namespace BikeFitnessApp
         {
             if (this.DataContext is SetupViewModel viewModel)
             {
-                viewModel.Cleanup();
+                viewModel.Dispose();
             }
         }
     }

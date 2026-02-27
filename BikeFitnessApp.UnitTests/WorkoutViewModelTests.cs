@@ -23,7 +23,7 @@ namespace BikeFitnessApp.UnitTests
         [TestCleanup]
         public void Cleanup()
         {
-            _viewModel.Cleanup();
+            _viewModel.Dispose();
         }
 
         [TestMethod]

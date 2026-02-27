@@ -320,11 +320,6 @@ namespace BikeFitnessApp.ViewModels
             UpdateModeLabels();
         }
 
-        public void Cleanup()
-        {
-            Dispose();
-        }
-
         public void Dispose()
         {
             _bluetoothService.ConnectionLost -= OnConnectionLost;

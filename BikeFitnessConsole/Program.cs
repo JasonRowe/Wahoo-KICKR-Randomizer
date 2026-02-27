@@ -414,11 +414,7 @@ namespace BikeFitnessConsole
             else { Console.WriteLine("FAIL: CSC Measurement char missing."); }
         }
 
-        private static async Task SendMode41(int percent) => await Write(new byte[] { 0x41, (byte)percent });
         private static async Task SendInit() => await Write(new byte[] { 0x00 });
-        private static async Task SendLevel(int level) => await Write(new byte[] { 0x40, (byte)level });
-        private static async Task SendResistance(int percent) => await Write(new byte[] { 0x40, (byte)percent });
-        private static async Task SendErg(int watts) => await Write(new byte[] { 0x42, (byte)(watts & 0xFF), (byte)(watts >> 8) });
 
         private static async Task Write(byte[] cmd)
         {

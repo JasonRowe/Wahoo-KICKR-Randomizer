@@ -79,11 +79,6 @@ namespace BikeFitnessApp.ViewModels
             StartScan();
         }
 
-        public void Cleanup()
-        {
-            Dispose();
-        }
-
         public void Dispose()
         {
             if (IsScanning)
