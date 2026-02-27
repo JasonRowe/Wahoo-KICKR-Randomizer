@@ -273,19 +273,25 @@ namespace BikeFitnessApp
 
         public double CalculateCadence(ushort prevRevs, ushort prevTime, ushort currRevs, ushort currTime)
         {
-            if (currRevs < prevRevs) return 0; // Simple wrap-around handling: ignore negative diffs
-            
-            int revsDiff = currRevs - prevRevs;
+            // Handle ushort wrap-around for cumulative crank revolutions
+            int revsDiff = (currRevs >= prevRevs)
+                ? currRevs - prevRevs
+                : (65536 - prevRevs) + currRevs;
             if (revsDiff == 0) return 0;
 
             // Time unit is 1/1024 seconds
+            // Handle wrap-around of time (UInt16)
             int timeDiff = currTime - prevTime;
-            if (timeDiff < 0) timeDiff += 65536; // Wrap around adjustment for UInt16
+            if (timeDiff < 0) timeDiff += 65536;
 
-            if (timeDiff == 0) return 0;
+            // Guard: ignore suspiciously small time deltas (< ~50ms)
+            if (timeDiff < 50) return 0;
 
             double timeMinutes = (timeDiff / 1024.0) / 60.0;
-            return revsDiff / timeMinutes;
+            double rpm = revsDiff / timeMinutes;
+
+            // Sanity cap: reject readings above 200 RPM as corrupt
+            return rpm > 200.0 ? 0 : rpm;
         }
 
         public (bool hasCrankData, ushort crankRevs, ushort lastCrankTime) ParseCrankDataFromPower(byte[] data)
@@ -338,9 +344,10 @@ namespace BikeFitnessApp
 
         public double CalculateSpeed(uint prevRevs, ushort prevTime, uint currRevs, ushort currTime, double circumferenceMeters)
         {
-            if (currRevs < prevRevs) return 0; // Handle wrap-around if needed, or just ignore simple case
-            
-            uint revsDiff = currRevs - prevRevs;
+            // Handle uint32 wrap-around for cumulative wheel revolutions
+            uint revsDiff = (currRevs >= prevRevs)
+                ? currRevs - prevRevs
+                : (uint)((ulong)uint.MaxValue - prevRevs + currRevs + 1);
             if (revsDiff == 0) return 0;
 
             // Time unit is 1/1024 seconds
@@ -348,7 +355,10 @@ namespace BikeFitnessApp
             int timeDiff = currTime - prevTime;
             if (timeDiff < 0) timeDiff += 65536; // Wrap around adjustment for UInt16
 
-            if (timeDiff == 0) return 0;
+            // Guard: ignore suspiciously small time deltas (< ~50ms)
+            // A burst of buffered BLE packets can produce timeDiff of 1-2 ticks,
+            // which results in speed values of 7000+ kph.
+            if (timeDiff < 50) return 0;
 
             // WARNING: Do not change this to 2048.0. 
             // Although some BLE specs suggest 1/2048s for wheel data in Power packets (0x2A63),
@@ -358,7 +368,10 @@ namespace BikeFitnessApp
             double distanceMeters = revsDiff * circumferenceMeters;
             
             double speedMps = distanceMeters / timeSeconds;
-            return speedMps * 3.6; // Convert to KPH
+            double kph = speedMps * 3.6;
+
+            // Sanity cap: reject readings above 120 kph as corrupt data
+            return kph > 120.0 ? 0 : kph;
         }
 
         public double CalculateDistance(uint totalRevs, double circumferenceMeters)

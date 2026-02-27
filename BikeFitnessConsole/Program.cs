@@ -45,6 +45,7 @@ namespace BikeFitnessConsole
         private static ushort _prevWheelTime = 0;
         private static uint _startWheelRevs = 0; // To calculate session distance
         private static bool _firstWheelData = true;
+        private static double _lastDistKm = 0;
         private const double WheelCircumference = 2.1; // Meters
 
         static async Task Main(string[] args)
@@ -340,8 +341,21 @@ namespace BikeFitnessConsole
                         {
                             kph = _logic.CalculateSpeed(_prevWheelRevs, _prevWheelTime, wheelRevs, wheelTime, WheelCircumference);
                         }
-                        // Distance based on session start
-                        distKm = _logic.CalculateDistance(wheelRevs - _startWheelRevs, WheelCircumference) / 1000.0;
+                        // Distance based on session start (wrap-safe)
+                        long totalRevs = (long)wheelRevs - _startWheelRevs;
+                        if (totalRevs < 0) totalRevs += (long)uint.MaxValue + 1;
+                        double candidateDistKm = _logic.CalculateDistance((uint)totalRevs, WheelCircumference) / 1000.0;
+                        
+                        // Sanity cap: reject if distance jumped more than 1km in a single update (corrupt packet)
+                        if (candidateDistKm - distKm <= 1.0)
+                        {
+                            distKm = candidateDistKm;
+                            _lastDistKm = candidateDistKm;
+                        }
+                        else
+                        {
+                            distKm = _lastDistKm;
+                        }
                         
                         _prevWheelRevs = wheelRevs;
                         _prevWheelTime = wheelTime;

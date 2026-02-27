@@ -34,6 +34,7 @@ namespace BikeFitnessApp.Services
         private ushort _prevWheelTime = 0;
         private uint _startWheelRevs = 0;
         private bool _firstWheelData = true;
+        private double _lastDistMeters = 0;
         
         // Events
         public event Action<DeviceDisplay>? DeviceDiscovered;
@@ -113,6 +114,7 @@ namespace BikeFitnessApp.Services
             _prevWheelRevs = 0;
             _prevWheelTime = 0;
             _startWheelRevs = 0;
+            _lastDistMeters = 0;
 
             try
             {
@@ -220,7 +222,7 @@ namespace BikeFitnessApp.Services
             if (hasWheel)
             {
                 double kph = 0;
-                double distMeters = 0;
+                double distMeters = _lastDistMeters;
 
                 if (_firstWheelData)
                 {
@@ -233,15 +235,18 @@ namespace BikeFitnessApp.Services
                 {
                     kph = _logic.CalculateSpeed(_prevWheelRevs, _prevWheelTime, wheelRevs, wheelTime, AppSettings.WheelCircumference);
                     
-                    // We calculate distance based on accumulated revolutions since session start
-                    // This handles potential wrapping of wheelRevs (UInt32) better if we just do current - start
-                    // But if it wraps, current < start. CalculateDistance handles totalRevs.
-                    // Let's assume standard logic:
-                    
+                    // Distance based on accumulated revolutions since session start (wrap-safe)
                     long totalRevs = (long)wheelRevs - _startWheelRevs;
-                    if (totalRevs < 0) totalRevs += uint.MaxValue; // Handle wrap once? rarely happens for uint32 (4 billion revs)
+                    if (totalRevs < 0) totalRevs += (long)uint.MaxValue + 1;
                     
-                    distMeters = _logic.CalculateDistance((uint)totalRevs, AppSettings.WheelCircumference);
+                    double candidateDist = _logic.CalculateDistance((uint)totalRevs, AppSettings.WheelCircumference);
+                    
+                    // Sanity cap: reject if distance jumped more than 1000m in a single update (corrupt packet)
+                    if (candidateDist - _lastDistMeters <= 1000.0)
+                    {
+                        distMeters = candidateDist;
+                        _lastDistMeters = candidateDist;
+                    }
                     
                     _prevWheelRevs = wheelRevs;
                     _prevWheelTime = wheelTime;

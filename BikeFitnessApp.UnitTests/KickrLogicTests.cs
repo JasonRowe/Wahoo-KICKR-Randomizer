@@ -234,6 +234,83 @@ namespace BikeFitnessApp.Tests
         }
 
         [TestMethod]
+        public void TestCalculateSpeed_RevWrapAround()
+        {
+            var logic = new KickrLogic();
+            // Wheel revs wrap around uint32: prevRevs near max, currRevs near 0
+            uint prevRevs = uint.MaxValue - 4; // 4294967290
+            ushort prevTime = 10000;
+            
+            uint currRevs = 5; // Wrapped around. Actual delta = 10 revs
+            ushort currTime = 11024; // 1024 ticks = 1 second later
+            
+            double circumference = 2.0;
+            
+            // Speed = 10 revs * 2m / 1s = 20 m/s = 72 kph
+            double speed = logic.CalculateSpeed(prevRevs, prevTime, currRevs, currTime, circumference);
+            Assert.AreEqual(72.0, speed, 0.1, "Speed should handle uint32 wrap-around correctly.");
+        }
+
+        [TestMethod]
+        public void TestCalculateSpeed_SanityCapRejectsCorruptData()
+        {
+            var logic = new KickrLogic();
+            uint prevRevs = 100;
+            ushort prevTime = 10000;
+            
+            uint currRevs = 101; // 1 rev
+            ushort currTime = 10100; // Only 100 ticks = ~0.098 seconds
+            
+            double circumference = 2.0;
+            
+            // Speed = 1 rev * 2m / 0.098s = 20.48 m/s = 73.7 kph (valid, under cap)
+            double speed = logic.CalculateSpeed(prevRevs, prevTime, currRevs, currTime, circumference);
+            Assert.IsTrue(speed > 0 && speed <= 120.0, $"Speed {speed} should be valid and under 120 kph cap.");
+            
+            // Now test a scenario that would exceed 120 kph cap
+            currRevs = 110; // 10 revs in 100 ticks => massive speed
+            speed = logic.CalculateSpeed(prevRevs, prevTime, currRevs, currTime, circumference);
+            Assert.AreEqual(0, speed, "Speed above 120 kph should be rejected as corrupt.");
+        }
+
+        [TestMethod]
+        public void TestCalculateSpeed_MinTimeDiffGuard()
+        {
+            var logic = new KickrLogic();
+            uint prevRevs = 100;
+            ushort prevTime = 10000;
+            
+            uint currRevs = 101;
+            ushort currTime = 10002; // Only 2 ticks (~2ms) - too small, likely corrupt
+            
+            double circumference = 2.0;
+            
+            double speed = logic.CalculateSpeed(prevRevs, prevTime, currRevs, currTime, circumference);
+            Assert.AreEqual(0, speed, "Suspiciously small timeDiff (< 50 ticks) should return 0.");
+        }
+
+        [TestMethod]
+        public void TestCalculateCadence_RevWrapAround()
+        {
+            var logic = new KickrLogic();
+            ushort prevRevs = 65530; // Near ushort max
+            ushort prevTime = 10000;
+            
+            ushort currRevs = 5; // Wrapped around. Actual delta = 11 revs
+            ushort currTime = 11024; // 1024 ticks = 1 second later
+            
+            // 11 revs per second = 660 RPM (exceeds 200 RPM cap, should return 0)
+            double rpm = logic.CalculateCadence(prevRevs, prevTime, currRevs, currTime);
+            Assert.AreEqual(0, rpm, "Cadence above 200 RPM should be rejected as corrupt.");
+            
+            // Test valid wrap-around: 1 rev over 1 second = 60 RPM
+            prevRevs = 65535;
+            currRevs = 0; // 1 rev wrapped
+            rpm = logic.CalculateCadence(prevRevs, prevTime, currRevs, currTime);
+            Assert.AreEqual(60.0, rpm, 0.1, "Cadence should handle ushort wrap-around correctly.");
+        }
+
+        [TestMethod]
         public void TestCalculateResistance_Bounds()
         {
             var logic = new KickrLogic();
