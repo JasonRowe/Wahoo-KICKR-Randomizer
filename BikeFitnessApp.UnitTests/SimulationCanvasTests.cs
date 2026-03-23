@@ -9,6 +9,43 @@ namespace BikeFitnessApp.Tests
     [TestClass]
     public class SimulationCanvasTests
     {
+        #region Constructor Tests
+
+        [TestMethod]
+        public void Constructor_WithHistory_InitializesCorrectly()
+        {
+            var history = new List<TerrainVertex>
+            {
+                new TerrainVertex { Distance = 0, Height = 0, GradeOut = 0 },
+                new TerrainVertex { Distance = 100, Height = 10, GradeOut = 5 }
+            };
+
+            var terrain = new TerrainCalculator(history);
+
+            Assert.AreEqual(2, terrain.History.Count);
+            Assert.AreEqual(5.0, terrain.GetGradeAt(100));
+        }
+
+        [TestMethod]
+        public void Constructor_WithNullHistory_InitializesWithDefault()
+        {
+            var terrain = new TerrainCalculator(null!);
+
+            Assert.AreEqual(1, terrain.History.Count);
+            Assert.AreEqual(0.0, terrain.GetGradeAt(0));
+        }
+
+        [TestMethod]
+        public void Constructor_WithEmptyHistory_InitializesWithDefault()
+        {
+            var terrain = new TerrainCalculator(new List<TerrainVertex>());
+
+            Assert.AreEqual(1, terrain.History.Count);
+            Assert.AreEqual(0.0, terrain.GetGradeAt(0));
+        }
+
+        #endregion
+
         #region GetGradeAt Tests
 
         [TestMethod]

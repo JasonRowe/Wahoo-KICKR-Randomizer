@@ -34,6 +34,11 @@ namespace BikeFitnessApp.UnitTests
             SpeedValuesUpdated?.Invoke(kph, meters);
         }
 
+        public void FireConnectionLost()
+        {
+            ConnectionLost?.Invoke();
+        }
+
         public void StartScanning()
         {
             StartScanningCalled = true;
