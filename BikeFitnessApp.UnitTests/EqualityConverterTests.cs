@@ -75,5 +75,12 @@ namespace BikeFitnessApp.UnitTests
             Assert.AreEqual(Binding.DoNothing, result[0]);
             Assert.AreEqual(Binding.DoNothing, result[1]);
         }
+
+        [TestMethod]
+        public void Instance_ReturnsValidInstance()
+        {
+            Assert.IsNotNull(EqualityConverter.Instance);
+            Assert.IsInstanceOfType(EqualityConverter.Instance, typeof(EqualityConverter));
+        }
     }
 }

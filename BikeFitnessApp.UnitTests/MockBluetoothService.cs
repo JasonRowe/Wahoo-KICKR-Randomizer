@@ -14,9 +14,10 @@ namespace BikeFitnessApp.UnitTests
 
         public bool IsScanning { get; private set; }
         public bool IsConnected { get; private set; }
-        public string CurrentStatus { get; private set; } = "Ready";
+        public string CurrentStatus { get; set; } = "Ready";
 
         public bool StartScanningCalled { get; private set; }
+        public bool StopScanningCalled { get; private set; }
         public bool ConnectAsyncCalled { get; private set; }
 
         public void FireDeviceDiscovered(DeviceDisplay device)
@@ -34,6 +35,11 @@ namespace BikeFitnessApp.UnitTests
             SpeedValuesUpdated?.Invoke(kph, meters);
         }
 
+        public void FireConnectionLost()
+        {
+            ConnectionLost?.Invoke();
+        }
+
         public void StartScanning()
         {
             StartScanningCalled = true;
@@ -42,6 +48,7 @@ namespace BikeFitnessApp.UnitTests
 
         public void StopScanning()
         {
+            StopScanningCalled = true;
             IsScanning = false;
         }
 
