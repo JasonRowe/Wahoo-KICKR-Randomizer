@@ -408,5 +408,72 @@ namespace BikeFitnessApp.Tests
             // Step 40: Wrap around (0.0)
             Assert.AreEqual(0.0, logic.CalculateResistance(WorkoutMode.Pyramid, min, max, 40), 0.001);
         }
+
+        [TestMethod]
+        public void TestParseWheelDataFromPower()
+        {
+            var logic = new KickrLogic();
+            // Flags: 0x10 (Wheel Rev Present)
+            // Power: 100W (0x6400)
+            // Wheel Revs: 500 (0xF4010000)
+            // Wheel Time: 2000 (0xD007)
+            byte[] data = new byte[] { 
+                0x10, 0x00, // Flags
+                0x64, 0x00, // Power
+                0xF4, 0x01, 0x00, 0x00, // Wheel Revs
+                0xD0, 0x07  // Wheel Time
+            };
+            
+            var result = logic.ParseWheelDataFromPower(data);
+            Assert.IsTrue(result.hasWheelData);
+            Assert.AreEqual(500u, result.wheelRevs);
+            Assert.AreEqual((ushort)2000, result.lastWheelTime);
+        }
+
+        [TestMethod]
+        public void TestParseWheelDataFromPower_WithTorqueAndPedalBalance()
+        {
+            var logic = new KickrLogic();
+            // Flags: 0x10 (Wheel) | 0x04 (Torque) | 0x01 (Pedal Balance) = 0x15
+            // Power: 100W (0x6400)
+            // Pedal Balance: 50 (0x32)
+            // Torque (2 bytes): 200 (0xC800)
+            // Wheel Revs: 500 (0xF4010000)
+            // Wheel Time: 2000 (0xD007)
+            byte[] data = new byte[] { 
+                0x15, 0x00, // Flags
+                0x64, 0x00, // Power
+                0x32,       // Pedal Balance
+                0xC8, 0x00, // Torque
+                0xF4, 0x01, 0x00, 0x00, // Wheel Revs
+                0xD0, 0x07  // Wheel Time
+            };
+            
+            var result = logic.ParseWheelDataFromPower(data);
+            Assert.IsTrue(result.hasWheelData);
+            Assert.AreEqual(500u, result.wheelRevs);
+            Assert.AreEqual((ushort)2000, result.lastWheelTime);
+        }
+
+        [TestMethod]
+        public void TestCalculateResistanceFromGrade_Bounds()
+        {
+            var logic = new KickrLogic();
+            
+            // Below min (-10%)
+            Assert.AreEqual(0.0, logic.CalculateResistanceFromGrade(-15.0), 0.001);
+            Assert.AreEqual(0.0, logic.CalculateResistanceFromGrade(-10.0), 0.001);
+            
+            // Above max (20%)
+            Assert.AreEqual(0.30, logic.CalculateResistanceFromGrade(25.0), 0.001);
+            Assert.AreEqual(0.30, logic.CalculateResistanceFromGrade(20.0), 0.001);
+
+            // Interpolation point: 0% -> 0.005
+            Assert.AreEqual(0.005, logic.CalculateResistanceFromGrade(0.0), 0.001);
+
+            // Interpolation point: 10% (between 8% and 12%)
+            // 8% -> 0.150, 12% -> 0.220. Midpoint 10% -> (0.150 + 0.220) / 2 = 0.185
+            Assert.AreEqual(0.185, logic.CalculateResistanceFromGrade(10.0), 0.001);
+        }
     }
 }
