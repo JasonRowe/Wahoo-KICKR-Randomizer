@@ -46,5 +46,11 @@ dotnet build
 dotnet run
 ```
 
+## Running Tests and Code Coverage
+To run the automated tests and automatically generate a code coverage report (`coverage.cobertura.xml`), just run the standard test command:
+```powershell
+dotnet test ./BikeFitnessApp.UnitTests
+```
+
 ---
 *Built with C# and a lot of sweat.*
