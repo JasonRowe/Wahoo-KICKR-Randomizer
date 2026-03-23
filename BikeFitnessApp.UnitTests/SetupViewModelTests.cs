@@ -117,5 +117,68 @@ namespace BikeFitnessApp.UnitTests
             Assert.IsFalse(viewModel.CanScan);
             Assert.IsFalse(viewModel.ScanCommand.CanExecute(null));
         }
+
+        [TestMethod]
+        public void Dispose_StopsScanning_AndUnsubscribes()
+        {
+            // Arrange
+            var mockService = new MockBluetoothService();
+            var viewModel = new SetupViewModel(mockService);
+            Assert.IsTrue(viewModel.IsScanning);
+
+            // Act
+            viewModel.Dispose();
+
+            // Assert
+            Assert.IsFalse(viewModel.IsScanning);
+            Assert.IsTrue(mockService.StopScanningCalled);
+        }
+
+        [TestMethod]
+        public void StartScan_StopsSpinner_OnImmediateServiceError()
+        {
+            // Arrange
+            var mockService = new MockBluetoothService();
+            // Force an error status
+            mockService.CurrentStatus = "Bluetooth Error: Hardware failure";
+            
+            var viewModel = new SetupViewModel(mockService);
+            
+            // Act
+            viewModel.ScanCommand.Execute(null);
+
+            // Assert
+            Assert.IsFalse(viewModel.IsScanning, "IsScanning should be false if service reports an error immediately.");
+        }
+
+        [TestMethod]
+        public void StatusProperty_Works()
+        {
+            // Arrange
+            var mockService = new MockBluetoothService();
+            var viewModel = new SetupViewModel(mockService);
+
+            // Act
+            viewModel.Status = "Test Status";
+
+            // Assert
+            Assert.AreEqual("Test Status", viewModel.Status);
+        }
+
+        [TestMethod]
+        public void OnDeviceDiscovered_PreventsDuplicates()
+        {
+            // Arrange
+            var mockService = new MockBluetoothService();
+            var viewModel = new SetupViewModel(mockService);
+            var device = new DeviceDisplay { Name = "Test", Address = 123 };
+
+            // Act
+            mockService.FireDeviceDiscovered(device);
+            mockService.FireDeviceDiscovered(device); // Duplicate
+
+            // Assert
+            Assert.AreEqual(1, viewModel.Devices.Count);
+        }
     }
 }
