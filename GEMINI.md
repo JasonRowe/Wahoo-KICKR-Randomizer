@@ -40,13 +40,13 @@
 
 The goal is to prepare the codebase for a complete switch to Avalonia UI, allowing native execution on Windows, Linux (Ubuntu), and macOS. This preparation must be done and tested on Windows first to ensure no regressions.
 
-### Phase 1: Decoupling `BikeFitness.Shared` from WPF
+### Phase 1: Decoupling `BikeFitness.Shared` from WPF (COMPLETED)
 Currently, `.Shared` depends on WPF's `System.Windows.*` and `System.Windows.Media.*` (specifically `DrawingVisual` and `BitmapSource` in `SimulationCanvas.cs`).
 1. **Goal:** Make `.Shared` a pure UI-agnostic library (e.g., pure `net10.0` without `<UseWPF>true</UseWPF>`).
 2. **Steps:**
-   - Extract the math, physics (`_totalDistanceMeters`, `SpeedKph`, `GradePercent`), and state logic out of `SimulationCanvas` into a pure logic class (e.g., `SimulationEngine`).
-   - Move all UI rendering (`DrawingVisual`, `DrawingContext`, `BitmapSource`, `Pen`, `Brush`) out of `.Shared` and into the main WPF project (`BikeFitnessApp`).
-   - Create an interface or event system so `SimulationEngine` can tell the front-end *what* to draw without knowing *how* to draw it.
+   - [x] Extract the math, physics (`_totalDistanceMeters`, `SpeedKph`, `GradePercent`), and state logic out of `SimulationCanvas` into a pure logic class (e.g., `SimulationEngine`).
+   - [x] Move all UI rendering (`DrawingVisual`, `DrawingContext`, `BitmapSource`, `Pen`, `Brush`) out of `.Shared` and into the main WPF project (`BikeFitnessApp`).
+   - [x] Create an interface or event system so `SimulationEngine` can tell the front-end *what* to draw without knowing *how* to draw it.
 3. **Validation:** Ensure the app still builds and runs, rendering the canvas on Windows exactly as it did before. 
 
 ### Phase 2: Abstracting Bluetooth (`IBluetoothService`)

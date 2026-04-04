@@ -21,7 +21,7 @@ namespace BikeFitnessApp.Tests
             var bitmap = BitmapSource.Create(1, 1, 96, 96, System.Windows.Media.PixelFormats.Bgr32, null, new byte[] { 0, 0, 0, 0 }, 4);
 
             // Act
-            var segment = new BackgroundSegment(name, theme, bitmap, length, mirror);
+            var segment = new BackgroundSegment<BitmapSource>(name, theme, bitmap, length, mirror);
 
             // Assert
             Assert.AreEqual(name, segment.Name);

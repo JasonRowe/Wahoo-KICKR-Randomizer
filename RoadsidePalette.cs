@@ -1,6 +1,6 @@
 using System.Windows.Media;
 
-namespace BikeFitness.Shared
+namespace BikeFitnessApp
 {
     /// <summary>
     /// Color palette for roadside objects in different biomes.

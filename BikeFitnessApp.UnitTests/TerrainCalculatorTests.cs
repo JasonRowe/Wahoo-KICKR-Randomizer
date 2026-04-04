@@ -7,7 +7,7 @@ using System.IO;
 namespace BikeFitnessApp.Tests
 {
     [TestClass]
-    public class SimulationCanvasTests
+    public class TerrainCalculatorTests
     {
         #region Constructor Tests
 

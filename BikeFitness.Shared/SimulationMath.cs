@@ -1,6 +1,36 @@
 namespace BikeFitness.Shared
 {
     /// <summary>
+    /// A simple 2D point structure for simulation logic, independent of UI frameworks.
+    /// </summary>
+    public struct SimulationPoint
+    {
+        public double X;
+        public double Y;
+
+        public SimulationPoint(double x, double y)
+        {
+            X = x;
+            Y = y;
+        }
+    }
+
+    /// <summary>
+    /// A simple 2D vector structure for simulation logic, independent of UI frameworks.
+    /// </summary>
+    public struct SimulationVector
+    {
+        public double X;
+        public double Y;
+
+        public SimulationVector(double x, double y)
+        {
+            X = x;
+            Y = y;
+        }
+    }
+
+    /// <summary>
     /// Pure math and mapping functions extracted from SimulationCanvas for testability.
     /// </summary>
     public static class SimulationMath
