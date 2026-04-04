@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using BikeFitnessApp.Services;
+using BikeFitness.Shared;
+using BikeFitness.Shared.Services;
 
 namespace BikeFitnessApp.UnitTests
 {

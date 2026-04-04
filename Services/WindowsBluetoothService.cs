@@ -4,10 +4,12 @@ using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.Advertisement;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Storage.Streams;
+using BikeFitness.Shared;
+using BikeFitness.Shared.Services;
 
 namespace BikeFitnessApp.Services
 {
-    public class BluetoothService : IBluetoothService
+    public class WindowsBluetoothService : IBluetoothService
     {
         // UUIDs
         private static readonly Guid POWER_SERVICE_UUID = new Guid("00001818-0000-1000-8000-00805f9b34fb");
@@ -44,7 +46,7 @@ namespace BikeFitnessApp.Services
         public bool IsConnected => _device != null && _device.ConnectionStatus == BluetoothConnectionStatus.Connected;
         public string CurrentStatus { get; private set; } = "Ready";
 
-        public BluetoothService()
+        public WindowsBluetoothService()
         {
         }
 

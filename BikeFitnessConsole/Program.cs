@@ -7,6 +7,7 @@ using Windows.Devices.Bluetooth.Advertisement;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Storage.Streams;
 using BikeFitnessApp;
+using BikeFitness.Shared;
 
 namespace BikeFitnessConsole
 {

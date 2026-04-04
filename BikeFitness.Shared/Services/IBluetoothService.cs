@@ -1,7 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using BikeFitness.Shared;
 
-namespace BikeFitnessApp.Services
+namespace BikeFitness.Shared.Services
 {
     public interface IBluetoothService
     {

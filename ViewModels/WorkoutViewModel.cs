@@ -9,6 +9,8 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using BikeFitnessApp.Models;
 using BikeFitnessApp.Services;
+using BikeFitness.Shared;
+using BikeFitness.Shared.Services;
 using BikeFitnessApp.MVVM;
 using Microsoft.Win32;
 

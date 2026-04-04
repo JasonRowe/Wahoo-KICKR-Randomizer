@@ -1,6 +1,6 @@
 using System;
 
-namespace BikeFitnessApp
+namespace BikeFitness.Shared
 {
     public enum WorkoutMode
     {

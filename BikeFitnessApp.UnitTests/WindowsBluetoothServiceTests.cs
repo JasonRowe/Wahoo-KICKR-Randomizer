@@ -1,16 +1,18 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BikeFitnessApp.Services;
+using BikeFitness.Shared.Services;
 
 namespace BikeFitnessApp.Tests
 {
     [TestClass]
-    public class BluetoothServiceTests
+    [TestCategory("Integration")]
+    public class WindowsBluetoothServiceTests
     {
         [TestMethod]
         public void Service_InitialState_IsCorrect()
         {
             // Arrange
-            var service = new BluetoothService();
+            var service = new WindowsBluetoothService();
 
             // Act & Assert
             Assert.IsFalse(service.IsScanning, "Should not be scanning initially");
@@ -26,7 +28,7 @@ namespace BikeFitnessApp.Tests
             // We'll wrap in try-catch to be safe, or just skip if logic is too hardware dependent.
             // For now, let's just ensure the method exists and runs without crashing immediately.
             
-            var service = new BluetoothService();
+            var service = new WindowsBluetoothService();
             try
             {
                 service.StartScanning();

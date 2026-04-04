@@ -1,5 +1,7 @@
 using BikeFitnessApp.MVVM;
 using BikeFitnessApp.Services;
+using BikeFitness.Shared;
+using BikeFitness.Shared.Services;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 

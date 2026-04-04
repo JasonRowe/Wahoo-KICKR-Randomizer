@@ -1,4 +1,4 @@
-namespace BikeFitnessApp
+namespace BikeFitness.Shared
 {
     public class DeviceDisplay
     {

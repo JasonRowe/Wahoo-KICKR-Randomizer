@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using BikeFitnessApp.Services;
+using BikeFitness.Shared.Services;
 using BikeFitnessApp.ViewModels;
 
 namespace BikeFitnessApp
@@ -25,7 +26,7 @@ namespace BikeFitnessApp
             var services = new ServiceCollection();
 
             // Services
-            services.AddSingleton<IBluetoothService, BluetoothService>();
+            services.AddSingleton<IBluetoothService, WindowsBluetoothService>();
             services.AddSingleton<IStravaService, StravaService>();
 
             // ViewModels

@@ -1,6 +1,7 @@
+using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BikeFitnessApp;
-using System;
+using BikeFitness.Shared;
 
 namespace BikeFitnessApp.UnitTests
 {
