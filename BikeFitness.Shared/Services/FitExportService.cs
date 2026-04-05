@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using BikeFitnessApp.Models;
+using BikeFitness.Shared.Models;
 using Dynastream.Fit;
 
-namespace BikeFitnessApp.Services
+namespace BikeFitness.Shared.Services
 {
     /// <summary>
     /// Provides FIT file export functionality for workout data.

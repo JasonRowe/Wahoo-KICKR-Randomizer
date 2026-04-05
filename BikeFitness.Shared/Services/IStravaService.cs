@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace BikeFitnessApp.Services
+namespace BikeFitness.Shared.Services
 {
     public interface IStravaService
     {

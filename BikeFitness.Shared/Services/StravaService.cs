@@ -8,9 +8,9 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using BikeFitnessApp.Models;
+using BikeFitness.Shared.Models;
 
-namespace BikeFitnessApp.Services
+namespace BikeFitness.Shared.Services
 {
     public class StravaService : IStravaService
     {

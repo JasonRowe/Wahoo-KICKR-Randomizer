@@ -1,6 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using BikeFitness.Shared;
+using BikeFitness.Shared.Models;
 
 namespace BikeFitness.Shared.Services
 {

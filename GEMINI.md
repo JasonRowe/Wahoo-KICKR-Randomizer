@@ -19,15 +19,27 @@
 - **Implementation:** `KickrLogic.CalculateResistanceFromGrade` (Piecewise linear interpolation).
 
 ## Current Architecture
-- **UI:** WPF with Material Design.
-- **Patterns:** MVVM (ViewModels in `/ViewModels`), Dependency Injection.
-- **Services:** `IBluetoothService` handles scanning/connection.
-- **Animation:** `SimulationCanvas` (in `.Shared`) uses `DrawingVisual` for high-performance rendering. 
-  - **Mirroring:** Currently uses alternating mirrored tiles (flip) to hide seams in non-seamless assets.
-  - **Overlap:** Uses a 1-pixel overlap (`+1` width) to prevent white lines between tiles.
+- **UI:** Avalonia UI (Cross-platform) & WPF (Legacy Windows-only).
+- **Patterns:** MVVM (Shared ViewModels in `BikeFitness.Shared/ViewModels`), Dependency Injection.
+- **Services:** `IBluetoothService` abstracted in `.Shared`. Implementations: `WindowsBluetoothService` (WPF) and `MockBluetoothService` (Avalonia prototype).
+- **Animation:** `SimulationEngine` (in `.Shared`) provides pure logic. 
+  - **WPF Canvas:** Uses `DrawingVisual` for high-performance rendering.
+  - **Avalonia Canvas:** Uses `Render` override with `DrawingContext` for cross-platform performance.
+  - **Assets:** Uses 1-pixel overlap (`+1` width) to prevent white lines between tiles.
+
+### Linux Port Status (Avalonia)
+The Avalonia port is functional but requires significant polish to match the WPF version's visual quality.
+
+#### Known Issues & Polish Tasks:
+- **HUD Performance:** Real-time HUD updates (Power/Speed) in Avalonia may have slightly higher latency than the WPF version.
+- **Theme Consistency:** Material Design styles in Avalonia (via `Material.Avalonia`) need further tuning to match the exact "look and feel" of the WPF `MaterialDesignThemes`.
+- **Icon Support:** Some icons (using `PathIcon`) may not render with the same scaling/alignment as WPF's `PackIcon`.
+
+---
 
 ## High-Priority TODOs
-1. **Heart Rate (BLE 0x180D):**
+1. **Linux Hardware Support:** Implement `LinuxBluetoothService` using BlueZ/DBus.
+2. **Heart Rate (BLE 0x180D):**
    - Implement `IHeartRateService` for Garmin/standard HRM.
    - Display BPM in `WorkoutView`.
 
@@ -36,31 +48,39 @@
 
 ---
 
-## Linux Port Preparation (Avalonia UI)
-
-The goal is to prepare the codebase for a complete switch to Avalonia UI, allowing native execution on Windows, Linux (Ubuntu), and macOS. This preparation must be done and tested on Windows first to ensure no regressions.
+## Linux Port Progress (Avalonia UI)
 
 ### Phase 1: Decoupling `BikeFitness.Shared` from WPF (COMPLETED)
-Currently, `.Shared` depends on WPF's `System.Windows.*` and `System.Windows.Media.*` (specifically `DrawingVisual` and `BitmapSource` in `SimulationCanvas.cs`).
-1. **Goal:** Make `.Shared` a pure UI-agnostic library (e.g., pure `net10.0` without `<UseWPF>true</UseWPF>`).
-2. **Steps:**
-   - [x] Extract the math, physics (`_totalDistanceMeters`, `SpeedKph`, `GradePercent`), and state logic out of `SimulationCanvas` into a pure logic class (e.g., `SimulationEngine`).
-   - [x] Move all UI rendering (`DrawingVisual`, `DrawingContext`, `BitmapSource`, `Pen`, `Brush`) out of `.Shared` and into the main WPF project (`BikeFitnessApp`).
-   - [x] Create an interface or event system so `SimulationEngine` can tell the front-end *what* to draw without knowing *how* to draw it.
-3. **Validation:** Ensure the app still builds and runs, rendering the canvas on Windows exactly as it did before. 
+- [x] Extract math, physics, and state logic into `SimulationEngine`.
+- [x] Move all UI rendering out of `.Shared`.
+- [x] Create an interface system (`IUserInterfaceService`) for dialogs/UI thread calls.
 
-### Phase 2: Abstracting Bluetooth (`IBluetoothService`)
-Linux uses BlueZ (DBus) while Windows uses `Windows.Devices.Bluetooth`.
-1. **Goal:** Create a clean abstraction so the UI doesn't know which OS's Bluetooth stack it's using.
-2. **Steps:**
-   - Verify `IBluetoothService` has no Windows-specific types in its method signatures.
-   - Rename the existing `BluetoothService` to `WindowsBluetoothService`.
-   - Consider integrating a cross-platform library like `Plugin.BLE` or `InTheHand.BluetoothLE` to replace the Windows-specific implementation entirely, OR plan to write a `LinuxBluetoothService` later. If using a cross-platform package, implement and test it on Windows first.
-3. **Validation:** Connect to the Wahoo KICKR and verify power, speed, and resistance commands still work on Windows.
+### Phase 2: Abstracting Bluetooth (COMPLETED)
+- [x] Verify `IBluetoothService` has no Windows-specific types.
+- [x] Rename original implementation to `WindowsBluetoothService`.
+- [x] Move models like `DeviceDisplay` to `.Shared.Models`.
 
-### Phase 3: The Avalonia Switch
-Once Phases 1 & 2 are complete and tested on Windows, the codebase is structurally ready.
-1. **Create the Project:** Add a new `BikeFitness.Avalonia` project to the solution (`dotnet new avalonia.app`).
-2. **Migrate UI:** Copy `MainWindow.xaml`, `WorkoutView.xaml`, etc. Change namespaces (`xmlns="https://github.com/avaloniaui"`). Swap `MaterialDesignThemes` for `Material.Avalonia`.
-3. **Reimplement Canvas:** Re-create `SimulationCanvas` in the Avalonia project, inheriting from `Avalonia.Controls.Control` and overriding `Render(DrawingContext)`. Tie it to the decoupled `SimulationEngine`.
-4. **Validation:** Run the Avalonia project on Windows. If it works, copy the repository to Ubuntu and run it natively.
+### Phase 3: The Avalonia Switch (COMPLETED)
+- [x] Create `BikeFitness.Avalonia` project (`net10.0`).
+- [x] Port `MainWindow`, `SetupView`, and `WorkoutView` to AXAML.
+- [x] Implement Avalonia-native `SimulationCanvas` using `SimulationEngine`.
+- [x] Migrate all ViewModels to `BikeFitness.Shared` using `CommunityToolkit.Mvvm`.
+- [x] Add `MockBluetoothService` for cross-platform UI testing.
+
+---
+
+## Final Step: Native Linux Support & Verification
+
+### 1. Verification on Linux
+- [ ] Push changes to GitHub and pull to Linux laptop.
+- [ ] Install .NET 10 SDK on Linux.
+- [ ] Run `dotnet run --project BikeFitness.Avalonia` and verify:
+  - UI renders correctly (spacing, colors, icons).
+  - Cyclist and background animation runs smoothly at ~60fps.
+  - Mock workout flow (Connect -> Start -> Stop -> Save) works without crashes.
+
+### 2. Linux Bluetooth Implementation
+- [ ] Create `LinuxBluetoothService.cs` in a new project or folder.
+- [ ] Integrate a library like `Tmds.DBus` or `DotNet.BlueZ` to talk to the Linux Bluetooth stack.
+- [ ] Implement scanning and GATT characteristic communication for the Wahoo KICKR.
+- [ ] Register the Linux service in `App.axaml.cs` when `OperatingSystem.IsLinux()` is true.

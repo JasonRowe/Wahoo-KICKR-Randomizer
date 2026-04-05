@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace BikeFitnessApp
+namespace BikeFitness.Shared
 {
     public class TireSize
     {

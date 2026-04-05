@@ -1,0 +1,174 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:BikeFitness.Shared.ViewModels"
+             xmlns:controls="using:BikeFitness.Avalonia.Controls"
+             xmlns:conv="using:BikeFitness.Avalonia.Converters"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="700"
+             x:Class="BikeFitness.Avalonia.Views.WorkoutView"
+             x:DataType="vm:WorkoutViewModel">
+
+    <UserControl.Resources>
+        <conv:SharedColorToBrushConverter x:Key="SharedColorToBrushConverter" />
+        <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto, *, Auto" Background="#121212">
+        <!-- Top Bar -->
+        <Border Grid.Row="0" Background="#1F1F1F" Padding="12" BorderBrush="#333333" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*, Auto">
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <PathIcon Data="{StaticResource BikeFastIcon}" Foreground="#2196F3" Width="28" Height="28"/>
+                    <TextBlock Text="TRAINING SESSION" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" Foreground="White"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <!-- Simple Settings inline for Avalonia prototype -->
+                    <CheckBox Content="LOG" IsChecked="{Binding IsLoggingEnabled}" Foreground="Silver" FontSize="12" VerticalAlignment="Center"/>
+                    <CheckBox Content="METRIC" IsChecked="{Binding IsMetric}" Foreground="Silver" FontSize="12" VerticalAlignment="Center"/>
+                    
+                    <ComboBox ItemsSource="{Binding TireSizes}" SelectedItem="{Binding SelectedTireSize}" Width="150" FontSize="12">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <Border Background="#2E7D32" CornerRadius="16" Padding="12,4">
+                        <TextBlock Text="{Binding Status}" Foreground="White" FontWeight="SemiBold"/>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" ColumnDefinitions="300, *" Margin="16">
+            <!-- Side Controls -->
+            <StackPanel Spacing="16">
+                <Border Background="#1F1F1F" Padding="20" CornerRadius="12">
+                    <StackPanel Spacing="20">
+                        <TextBlock Text="INTENSITY" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#2196F3"/>
+                        
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                                <TextBlock Text="{Binding MinLabel}" FontSize="12" Foreground="Silver"/>
+                                <TextBlock Text="{Binding MinResistance, StringFormat={}({0:F1}%)}" FontSize="12" Foreground="#2196F3"/>
+                            </StackPanel>
+                            <Slider Minimum="-10" Maximum="20" Value="{Binding MinResistance}" />
+                        </StackPanel>
+                        
+                        <StackPanel Spacing="8">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                                <TextBlock Text="{Binding MaxLabel}" FontSize="12" Foreground="Silver"/>
+                                <TextBlock Text="{Binding MaxResistance, StringFormat={}({0:F1}%)}" FontSize="12" Foreground="#2196F3"/>
+                            </StackPanel>
+                            <Slider Minimum="-10" Maximum="20" Value="{Binding MaxResistance}" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="WORKOUT MODE" FontSize="12" Foreground="Silver"/>
+                            <ComboBox SelectedIndex="{Binding SelectedModeIndex}" HorizontalAlignment="Stretch">
+                                <ComboBoxItem>Random</ComboBoxItem>
+                                <ComboBoxItem>Hilly</ComboBoxItem>
+                                <ComboBoxItem>Mountain</ComboBoxItem>
+                                <ComboBoxItem>Pyramid</ComboBoxItem>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <Border Background="#212121" CornerRadius="8" Padding="8">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+                                <Button Content="-" Command="{Binding DecreaseIntervalCommand}" Width="40" Height="40" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="#333333" Foreground="White" CornerRadius="20"/>
+                                <StackPanel VerticalAlignment="Center" Width="80">
+                                    <TextBlock Text="INTERVAL" FontSize="10" Foreground="Silver" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding IntervalSeconds, StringFormat={}{0}s}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center" Foreground="White"/>
+                                </StackPanel>
+                                <Button Content="+" Command="{Binding IncreaseIntervalCommand}" Width="40" Height="40" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="#333333" Foreground="White" CornerRadius="20"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Button Content="START WORKOUT" Command="{Binding StartCommand}" Width="220" Height="45" HorizontalAlignment="Center" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="#4CAF50" Foreground="White" CornerRadius="22" FontWeight="Bold"/>
+                        <Button Content="STOP WORKOUT" Command="{Binding StopCommand}" Width="220" Height="45" HorizontalAlignment="Center" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Background="#F44336" Foreground="White" CornerRadius="22" FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Simulation -->
+            <Border Grid.Column="1" Margin="16,0,0,0" Background="Black" CornerRadius="12" ClipToBounds="True">
+                <Grid>
+                    <controls:SimulationCanvas SpeedKph="{Binding CurrentSpeedKph}" 
+                                              GradePercent="{Binding CurrentGradePercent}"
+                                              SyncedDistanceMeters="{Binding CurrentDistanceMeters}"/>
+
+                    <!-- HUD -->
+                    <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="24" Padding="16" Background="#CC212121" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="GRADE" FontSize="12" Foreground="Silver" FontWeight="Bold"/>
+                            <TextBlock Text="{Binding ResistancePercent, StringFormat={}{0:F1}%}" FontSize="48" FontWeight="Black" 
+                                     Foreground="{Binding ResistanceColor, Converter={StaticResource SharedColorToBrushConverter}}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Grid VerticalAlignment="Bottom" ColumnDefinitions="*, *, *" Margin="16">
+                        <Border Grid.Column="0" Margin="8" Padding="16" Background="#CC212121" CornerRadius="12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="POWER" FontSize="12" Foreground="Silver" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding PowerText}" FontSize="48" FontWeight="Black" Foreground="#2196F3"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Margin="8" Padding="16" Background="#CC212121" CornerRadius="12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding SpeedLabel}" FontSize="12" Foreground="Silver" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding SpeedText}" FontSize="48" FontWeight="Black" Foreground="#4CAF50"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Margin="8" Padding="16" Background="#CC212121" CornerRadius="12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding DistanceLabel}" FontSize="12" Foreground="Silver" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding DistanceText}" FontSize="48" FontWeight="Black" Foreground="White"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Workout Complete Overlay -->
+                    <Border IsVisible="{Binding ShowPostWorkoutOptions, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            Background="#DD000000" CornerRadius="24" Padding="32"
+                            VerticalAlignment="Center" HorizontalAlignment="Center"
+                            MaxWidth="500">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="WORKOUT COMPLETE!" FontSize="28" FontWeight="Black" HorizontalAlignment="Center" Foreground="White"/>
+                            <TextBlock Text="Great ride! How would you like to save your progress?" FontSize="16" Opacity="0.8" HorizontalAlignment="Center" Foreground="White" TextWrapping="Wrap" TextAlignment="Center"/>
+                            
+                            <Grid ColumnDefinitions="*, *" Margin="0,16,0,0">
+                                <Button Grid.Column="0" Command="{Binding SaveFitCommand}" Margin="8" Height="60"
+                                        Background="#2196F3" Foreground="White" CornerRadius="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <PathIcon Data="{StaticResource DownloadIcon}"/>
+                                        <TextBlock Text="DOWNLOAD" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Grid.Column="1" Command="{Binding UploadStravaCommand}" Margin="8" Height="60"
+                                        Background="#FC4C02" Foreground="White" CornerRadius="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <PathIcon Data="{StaticResource CloudUploadIcon}"/>
+                                        <TextBlock Text="STRAVA" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <Button Content="DISMISS" Command="{Binding DismissPostWorkoutCommand}" 
+                                    HorizontalAlignment="Center" Background="Transparent" Foreground="Silver"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="#1F1F1F" Padding="12,4" BorderBrush="#333333" BorderThickness="0,1,0,0">
+            <TextBlock Text="{Binding Log}" FontSize="11" Foreground="Silver" Opacity="0.6"/>
+        </Border>
+    </Grid>
+</UserControl>

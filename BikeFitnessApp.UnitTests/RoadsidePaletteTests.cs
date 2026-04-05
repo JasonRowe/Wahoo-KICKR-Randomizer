@@ -1,5 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BikeFitnessApp;
+using BikeFitness.Shared;
 using System.Windows.Media;
 
 namespace BikeFitnessApp.Tests

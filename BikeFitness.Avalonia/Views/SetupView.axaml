@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:BikeFitness.Shared.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="BikeFitness.Avalonia.Views.SetupView"
+             x:DataType="vm:SetupViewModel">
+
+    <Grid Background="#212121">
+        <Border Background="#333333" Width="400" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24" CornerRadius="12">
+            <StackPanel Spacing="20">
+                <TextBlock Text="SETUP TRAINER" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#2196F3"/>
+                
+                <ListBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" Height="200" Background="#444444" CornerRadius="8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <PathIcon Data="{StaticResource BluetoothConnectedIcon}" Foreground="#2196F3"/>
+                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="White"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" Opacity="0.7" Foreground="Silver"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
+                    <Button Content="SCAN" Command="{Binding ScanCommand}" Width="120" HorizontalContentAlignment="Center" Background="#444444" Foreground="White"/>
+                    <Button Content="CONNECT" Command="{Binding ConnectCommand}" Width="120" HorizontalContentAlignment="Center" Background="#2196F3" Foreground="White"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

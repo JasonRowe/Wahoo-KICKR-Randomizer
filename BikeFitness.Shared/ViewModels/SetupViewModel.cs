@@ -1,79 +1,69 @@
-using BikeFitnessApp.MVVM;
-using BikeFitnessApp.Services;
-using BikeFitness.Shared;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using BikeFitness.Shared.Services;
+using BikeFitness.Shared.Models;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 
-namespace BikeFitnessApp.ViewModels
+namespace BikeFitness.Shared.ViewModels
 {
-    public class SetupViewModel : ObservableObject, System.IDisposable
+    public partial class SetupViewModel : ObservableObject, System.IDisposable
     {
         private readonly IBluetoothService _bluetoothService;
+        
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanScan))]
         private string _status = "Ready to scan";
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanScan))]
         private bool _isScanning;
+
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanScan))]
+        [NotifyPropertyChangedFor(nameof(CanConnect))]
         private bool _isConnecting;
 
         public ObservableCollection<DeviceDisplay> Devices { get; } = new ObservableCollection<DeviceDisplay>();
 
-        public string Status
-        {
-            get => _status;
-            set => SetProperty(ref _status, value);
-        }
-
-        public bool IsScanning
-        {
-            get => _isScanning;
-            set
-            {
-                if (SetProperty(ref _isScanning, value))
-                {
-                    OnPropertyChanged(nameof(CanScan));
-                }
-            }
-        }
-
-        public bool IsConnecting
-        {
-            get => _isConnecting;
-            set
-            {
-                if (SetProperty(ref _isConnecting, value))
-                {
-                    OnPropertyChanged(nameof(CanConnect));
-                }
-            }
-        }
-
         public bool CanScan => !IsScanning && !IsConnecting;
         public bool CanConnect => !IsConnecting && (SelectedDevice != null || Devices.Count == 1);
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(CanConnect))]
         private DeviceDisplay? _selectedDevice;
-        public DeviceDisplay? SelectedDevice
+
+        partial void OnSelectedDeviceChanged(DeviceDisplay? value)
         {
-            get => _selectedDevice;
-            set
-            {
-                if (SetProperty(ref _selectedDevice, value))
-                {
-                    OnPropertyChanged(nameof(CanConnect));
-                    System.Windows.Input.CommandManager.InvalidateRequerySuggested();
-                }
-            }
+            ScanCommand.NotifyCanExecuteChanged();
+            ConnectCommand.NotifyCanExecuteChanged();
         }
 
-        public RelayCommand ScanCommand { get; }
-        public RelayCommand ConnectCommand { get; }
+        partial void OnIsScanningChanged(bool value)
+        {
+            ScanCommand.NotifyCanExecuteChanged();
+        }
+
+        partial void OnIsConnectingChanged(bool value)
+        {
+            ScanCommand.NotifyCanExecuteChanged();
+            ConnectCommand.NotifyCanExecuteChanged();
+        }
+
+        public IRelayCommand ScanCommand { get; }
+        public IRelayCommand ConnectCommand { get; }
 
         public event System.Action? ConnectionSuccessful;
+
+        // Platform-specific UI thread dispatcher
+        public static System.Action<System.Action>? UIDispatcher { get; set; }
 
         public SetupViewModel(IBluetoothService bluetoothService)
         {
             _bluetoothService = bluetoothService;
             
             _bluetoothService.DeviceDiscovered += OnDeviceDiscovered;
-            _bluetoothService.StatusChanged += OnStatusChanged;
+            _bluetoothService.StatusChanged += (s) => Status = s;
 
             ScanCommand = new RelayCommand(StartScan, () => CanScan);
             ConnectCommand = new RelayCommand(Connect, () => CanConnect);
@@ -89,8 +79,9 @@ namespace BikeFitnessApp.ViewModels
                 IsScanning = false;
             }
             _bluetoothService.DeviceDiscovered -= OnDeviceDiscovered;
-            _bluetoothService.StatusChanged -= OnStatusChanged;
-            GC.SuppressFinalize(this);
+            // Note: anonymous delegate for StatusChanged might cause slight leak if disposed many times, 
+            // but for this app it's fine. 
+            System.GC.SuppressFinalize(this);
         }
 
         private void StartScan()
@@ -98,22 +89,17 @@ namespace BikeFitnessApp.ViewModels
             Devices.Clear();
             SelectedDevice = null;
             
-            // Check for obvious "Not Scanning" status after start attempt
             IsScanning = true;
             _bluetoothService.StartScanning();
             
-            // If the service immediately reports an error (e.g. "Bluetooth Error..."), stop the spinner
             if (_bluetoothService.CurrentStatus.Contains("Error"))
             {
                 IsScanning = false;
             }
-            
-            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
         }
 
         private async void Connect()
         {
-            // If only one device exists and none selected, select it automatically
             if (SelectedDevice == null && Devices.Count == 1)
             {
                 SelectedDevice = Devices[0];
@@ -124,7 +110,6 @@ namespace BikeFitnessApp.ViewModels
             IsConnecting = true;
             IsScanning = false;
             _bluetoothService.StopScanning();
-            System.Windows.Input.CommandManager.InvalidateRequerySuggested();
 
             try
             {
@@ -137,7 +122,6 @@ namespace BikeFitnessApp.ViewModels
             finally
             {
                 IsConnecting = false;
-                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
             }
         }
 
@@ -145,38 +129,28 @@ namespace BikeFitnessApp.ViewModels
         {
             void AddDevice()
             {
-                // Avoid duplicates
                 foreach (var d in Devices)
                 {
                     if (d.Address == device.Address) return;
                 }
                 Devices.Add(device);
                 
-                // Auto-select if it's the first one
                 if (Devices.Count == 1)
                 {
                     SelectedDevice = device;
                 }
                 
-                // Trigger re-eval of Connect button immediately
-                OnPropertyChanged(nameof(CanConnect));
-                System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+                ConnectCommand.NotifyCanExecuteChanged();
             }
 
-            // Run on UI thread if available, otherwise run directly (for tests)
-            if (System.Windows.Application.Current != null)
+            if (UIDispatcher != null)
             {
-                System.Windows.Application.Current.Dispatcher.Invoke(AddDevice);
+                UIDispatcher(AddDevice);
             }
             else
             {
                 AddDevice();
             }
-        }
-
-        private void OnStatusChanged(string status)
-        {
-            Status = status;
         }
     }
 }

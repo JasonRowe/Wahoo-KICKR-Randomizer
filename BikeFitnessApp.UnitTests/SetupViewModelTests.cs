@@ -1,11 +1,9 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BikeFitnessApp.ViewModels;
-using BikeFitnessApp.Services;
-using BikeFitness.Shared;
+using BikeFitness.Shared.ViewModels;
 using BikeFitness.Shared.Services;
+using BikeFitness.Shared.Models;
 using System;
 using System.Threading.Tasks;
-using BikeFitnessApp.UnitTests;
 
 namespace BikeFitnessApp.UnitTests
 {

@@ -1,4 +1,4 @@
-namespace BikeFitnessApp.Models
+namespace BikeFitness.Shared.Models
 {
     public class StravaToken
     {

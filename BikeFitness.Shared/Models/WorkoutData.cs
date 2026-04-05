@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using BikeFitness.Shared;
 
-namespace BikeFitnessApp.Models
+namespace BikeFitness.Shared.Models
 {
     public class WorkoutDataPoint
     {

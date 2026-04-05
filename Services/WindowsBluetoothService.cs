@@ -5,6 +5,7 @@ using Windows.Devices.Bluetooth.Advertisement;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Storage.Streams;
 using BikeFitness.Shared;
+using BikeFitness.Shared.Models;
 using BikeFitness.Shared.Services;
 
 namespace BikeFitnessApp.Services

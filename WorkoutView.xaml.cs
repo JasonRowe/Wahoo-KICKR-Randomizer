@@ -1,31 +1,40 @@
+using System;
 using System.Windows;
 using System.Windows.Controls;
-using BikeFitnessApp.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using BikeFitness.Shared.ViewModels;
 
 namespace BikeFitnessApp
 {
-    public partial class WorkoutView : UserControl
+    public partial class WorkoutView : UserControl, IDisposable
     {
+        private readonly WorkoutViewModel _viewModel;
+
         public WorkoutView()
         {
             InitializeComponent();
-            this.Unloaded += WorkoutView_Unloaded;
+            _viewModel = App.Current.Services.GetRequiredService<WorkoutViewModel>();
+            DataContext = _viewModel;
+
+            _viewModel.Disconnected += OnDisconnected;
         }
 
-        private void WorkoutView_Unloaded(object sender, RoutedEventArgs e)
+        public void Dispose()
         {
-            if (this.DataContext is WorkoutViewModel viewModel)
-            {
-                viewModel.Dispose();
-            }
+            _viewModel.Disconnected -= OnDisconnected;
+            _viewModel.Dispose();
+        }
+
+        private void OnDisconnected()
+        {
+            // Optional: return to setup view
+            // var mainViewModel = App.Current.Services.GetRequiredService<MainViewModel>();
+            // mainViewModel.CurrentView = App.Current.Services.GetRequiredService<SetupViewModel>();
         }
 
         private void BtnDismiss_Click(object sender, RoutedEventArgs e)
         {
-            if (this.DataContext is WorkoutViewModel viewModel)
-            {
-                viewModel.ShowPostWorkoutOptions = false;
-            }
+            _viewModel.ShowPostWorkoutOptions = false;
         }
     }
 }

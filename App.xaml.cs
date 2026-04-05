@@ -1,15 +1,12 @@
 using System;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
-using BikeFitnessApp.Services;
 using BikeFitness.Shared.Services;
-using BikeFitnessApp.ViewModels;
+using BikeFitness.Shared.ViewModels;
+using BikeFitnessApp.Services;
 
 namespace BikeFitnessApp
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
     public partial class App : Application
     {
         public IServiceProvider Services { get; }
@@ -19,6 +16,9 @@ namespace BikeFitnessApp
         public App()
         {
             Services = ConfigureServices();
+            
+            // Register UI Thread Dispatcher for shared ViewModels
+            SetupViewModel.UIDispatcher = (action) => Dispatcher.Invoke(action);
         }
 
         private static IServiceProvider ConfigureServices()
@@ -28,6 +28,7 @@ namespace BikeFitnessApp
             // Services
             services.AddSingleton<IBluetoothService, WindowsBluetoothService>();
             services.AddSingleton<IStravaService, StravaService>();
+            services.AddSingleton<IUserInterfaceService, WpfUserInterfaceService>();
 
             // ViewModels
             services.AddSingleton<MainViewModel>();
@@ -44,12 +45,12 @@ namespace BikeFitnessApp
         {
             AppDomain.CurrentDomain.UnhandledException += (s, ex) =>
             {
-                Logger.Log($"CRITICAL UNHANDLED EXCEPTION: {ex.ExceptionObject}");
+                BikeFitness.Shared.Logger.Log($"CRITICAL UNHANDLED EXCEPTION: {ex.ExceptionObject}");
             };
 
             DispatcherUnhandledException += (s, ex) =>
             {
-                Logger.Log($"DISPATCHER UNHANDLED EXCEPTION: {ex.Exception}");
+                BikeFitness.Shared.Logger.Log($"DISPATCHER UNHANDLED EXCEPTION: {ex.Exception}");
                 MessageBox.Show($"An unexpected error occurred: {ex.Exception.Message}\n\nDetails in BikeFitnessApp.log", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 ex.Handled = true;
             };
