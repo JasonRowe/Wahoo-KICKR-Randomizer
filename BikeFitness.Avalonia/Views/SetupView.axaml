@@ -3,33 +3,54 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:BikeFitness.Shared.ViewModels"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             xmlns:material="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
+             xmlns:assist="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
+             xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="700"
              x:Class="BikeFitness.Avalonia.Views.SetupView"
-             x:DataType="vm:SetupViewModel">
+             x:DataType="vm:SetupViewModel"
+             Background="{DynamicResource MaterialDesignPaper}">
 
-    <Grid Background="#212121">
-        <Border Background="#333333" Width="400" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24" CornerRadius="12">
-            <StackPanel Spacing="20">
-                <TextBlock Text="SETUP TRAINER" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center" Foreground="#2196F3"/>
+    <Grid>
+        <material:Card VerticalAlignment="Center" HorizontalAlignment="Center" Width="600" Padding="32" assist:ShadowAssist.ShadowDepth="Depth3">
+            <Grid RowDefinitions="Auto, Auto, 250, Auto">
                 
-                <ListBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" Height="200" Background="#444444" CornerRadius="8">
+                <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,16">
+                    <avalonia:MaterialIcon Kind="Bike" Width="64" Height="64" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                    <TextBlock Text="Smart Trainer Setup" Classes="Headline4" Margin="0,16,0,0" HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,24">
+                    <ProgressBar IsIndeterminate="True" Width="24" Height="24" Theme="{StaticResource MaterialCircularProgressBar}" Margin="0,0,12,0" />
+                    <TextBlock Text="Searching for your fitness machine..." Classes="Subtitle1" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                </StackPanel>
+                    
+                <ListBox Grid.Row="2" Margin="0,0,0,24" 
+                         ItemsSource="{Binding Devices}"
+                         SelectedItem="{Binding SelectedDevice}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <PathIcon Data="{StaticResource BluetoothConnectedIcon}" Foreground="#2196F3"/>
-                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Foreground="White"/>
+                            <StackPanel Orientation="Horizontal" Spacing="16" Margin="8,4">
+                                <avalonia:MaterialIcon Kind="Bluetooth" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Classes="Body1"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
 
-                <TextBlock Text="{Binding Status}" HorizontalAlignment="Center" Opacity="0.7" Foreground="Silver"/>
-
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="20">
-                    <Button Content="SCAN" Command="{Binding ScanCommand}" Width="120" HorizontalContentAlignment="Center" Background="#444444" Foreground="White"/>
-                    <Button Content="CONNECT" Command="{Binding ConnectCommand}" Width="120" HorizontalContentAlignment="Center" Background="#2196F3" Foreground="White"/>
+                <StackPanel Grid.Row="3" Spacing="12">
+                    <TextBlock Text="{Binding Status, StringFormat={}Status: {0}}" HorizontalAlignment="Center" Classes="Caption"/>
+                    
+                    <Button Content="CONNECT AND RIDE" Command="{Binding ConnectCommand}"  
+                            Height="56" Width="320" HorizontalAlignment="Center"
+                            Classes="Primary Raised"
+                            CornerRadius="28"/>
+                    
+                    <Button Content="RESCAN" Command="{Binding ScanCommand}" 
+                            HorizontalAlignment="Center"
+                            Classes="Flat" />
                 </StackPanel>
-            </StackPanel>
-        </Border>
+            </Grid>
+        </material:Card>
     </Grid>
 </UserControl>
