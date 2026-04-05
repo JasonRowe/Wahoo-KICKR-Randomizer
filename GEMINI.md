@@ -19,48 +19,82 @@
 - **Implementation:** `KickrLogic.CalculateResistanceFromGrade` (Piecewise linear interpolation).
 
 ## Current Architecture
-- **UI:** WPF with Material Design.
-- **Patterns:** MVVM (ViewModels in `/ViewModels`), Dependency Injection.
-- **Services:** `IBluetoothService` handles scanning/connection.
-- **Animation:** `SimulationCanvas` (in `.Shared`) uses `DrawingVisual` for high-performance rendering. 
-  - **Mirroring:** Currently uses alternating mirrored tiles (flip) to hide seams in non-seamless assets.
-  - **Overlap:** Uses a 1-pixel overlap (`+1` width) to prevent white lines between tiles.
+- **UI:** Avalonia UI (Cross-platform) & WPF (Legacy Windows-only).
+- **Patterns:** MVVM (Shared ViewModels in `BikeFitness.Shared/ViewModels`), Dependency Injection.
+- **Services:** `IBluetoothService` abstracted in `.Shared`. Implementations: `WindowsBluetoothService` (WPF) and `MockBluetoothService` (Avalonia prototype).
+- **Animation:** `SimulationEngine` (in `.Shared`) provides pure logic. 
+  - **WPF Canvas:** Uses `DrawingVisual` for high-performance rendering.
+  - **Avalonia Canvas:** Uses `Render` override with `DrawingContext` for cross-platform performance.
+  - **Assets:** Uses 1-pixel overlap (`+1` width) to prevent white lines between tiles.
+
+### Linux Port Status (Avalonia)
+The Avalonia port is functional and matches the WPF version's visual quality on Linux.
+
+#### Known Issues & Minor Tweaks:
+- **HUD Performance:** Real-time HUD updates (Power/Speed) in Avalonia may have slightly higher latency than the WPF version.
+- **Theme Consistency:** Material Design styles in Avalonia (via `Material.Avalonia`) need further tuning to match the exact "look and feel" of the WPF `MaterialDesignThemes`.
+
+---
 
 ## High-Priority TODOs
 1. **Heart Rate (BLE 0x180D):**
    - Implement `IHeartRateService` for Garmin/standard HRM.
    - Display BPM in `WorkoutView`.
+2. **MacOS Support:**
+   - Implement `MacOSBluetoothService` (Pending hardware purchase for testing).
+3. **AI Assistant Mode:**
+   - Integrate an AI service (e.g., OpenAI/Gemini) to allow voice-activated workout adjustments.
+   - Design a "Bike Command" prompt structure to allow the AI to modify `KickrLogic` or switch `WorkoutMode` in real-time.
+   - Requires extensive UI/UX and safety planning.
 
 ## Image Generation Prompts (Nano Banana)
 - **Biome Reference:** "2D side-scrolling game background, [BIOME] biome. Vibrant colors, digital art. Perfectly seamless horizontal tiling; left and right edges must match exactly. Consistent flat brown dirt road at base."
 
 ---
 
-## Linux Port Preparation (Avalonia UI)
+## Linux Port Progress (Avalonia UI)
 
-The goal is to prepare the codebase for a complete switch to Avalonia UI, allowing native execution on Windows, Linux (Ubuntu), and macOS. This preparation must be done and tested on Windows first to ensure no regressions.
+### Phase 1: Decoupling `BikeFitness.Shared` from WPF (COMPLETED)
+- [x] Extract math, physics, and state logic into `SimulationEngine`.
+- [x] Move all UI rendering out of `.Shared`.
+- [x] Create an interface system (`IUserInterfaceService`) for dialogs/UI thread calls.
 
-### Phase 1: Decoupling `BikeFitness.Shared` from WPF
-Currently, `.Shared` depends on WPF's `System.Windows.*` and `System.Windows.Media.*` (specifically `DrawingVisual` and `BitmapSource` in `SimulationCanvas.cs`).
-1. **Goal:** Make `.Shared` a pure UI-agnostic library (e.g., pure `net10.0` without `<UseWPF>true</UseWPF>`).
-2. **Steps:**
-   - Extract the math, physics (`_totalDistanceMeters`, `SpeedKph`, `GradePercent`), and state logic out of `SimulationCanvas` into a pure logic class (e.g., `SimulationEngine`).
-   - Move all UI rendering (`DrawingVisual`, `DrawingContext`, `BitmapSource`, `Pen`, `Brush`) out of `.Shared` and into the main WPF project (`BikeFitnessApp`).
-   - Create an interface or event system so `SimulationEngine` can tell the front-end *what* to draw without knowing *how* to draw it.
-3. **Validation:** Ensure the app still builds and runs, rendering the canvas on Windows exactly as it did before. 
+### Phase 2: Abstracting Bluetooth (COMPLETED)
+- [x] Verify `IBluetoothService` has no Windows-specific types.
+- [x] Rename original implementation to `WindowsBluetoothService`.
+- [x] Move models like `DeviceDisplay` to `.Shared.Models`.
 
-### Phase 2: Abstracting Bluetooth (`IBluetoothService`)
-Linux uses BlueZ (DBus) while Windows uses `Windows.Devices.Bluetooth`.
-1. **Goal:** Create a clean abstraction so the UI doesn't know which OS's Bluetooth stack it's using.
-2. **Steps:**
-   - Verify `IBluetoothService` has no Windows-specific types in its method signatures.
-   - Rename the existing `BluetoothService` to `WindowsBluetoothService`.
-   - Consider integrating a cross-platform library like `Plugin.BLE` or `InTheHand.BluetoothLE` to replace the Windows-specific implementation entirely, OR plan to write a `LinuxBluetoothService` later. If using a cross-platform package, implement and test it on Windows first.
-3. **Validation:** Connect to the Wahoo KICKR and verify power, speed, and resistance commands still work on Windows.
+### Phase 3: The Avalonia Switch (COMPLETED)
+- [x] Create `BikeFitness.Avalonia` project (`net10.0`).
+- [x] Port `MainWindow`, `SetupView`, and `WorkoutView` to AXAML.
+- [x] Implement Avalonia-native `SimulationCanvas` using `SimulationEngine`.
+- [x] Migrate all ViewModels to `BikeFitness.Shared` using `CommunityToolkit.Mvvm`.
+- [x] Add `MockBluetoothService` for cross-platform UI testing.
 
-### Phase 3: The Avalonia Switch
-Once Phases 1 & 2 are complete and tested on Windows, the codebase is structurally ready.
-1. **Create the Project:** Add a new `BikeFitness.Avalonia` project to the solution (`dotnet new avalonia.app`).
-2. **Migrate UI:** Copy `MainWindow.xaml`, `WorkoutView.xaml`, etc. Change namespaces (`xmlns="https://github.com/avaloniaui"`). Swap `MaterialDesignThemes` for `Material.Avalonia`.
-3. **Reimplement Canvas:** Re-create `SimulationCanvas` in the Avalonia project, inheriting from `Avalonia.Controls.Control` and overriding `Render(DrawingContext)`. Tie it to the decoupled `SimulationEngine`.
-4. **Validation:** Run the Avalonia project on Windows. If it works, copy the repository to Ubuntu and run it natively.
+---
+
+## Phase 4: Server-Side Strava Integration (Planned)
+
+### 1. Server-Side Setup
+- [ ] Create a script (PHP/Node.js) at `jasonrowe.com/misc/stravaconnect` to:
+  - Securely store the `STRAVA_CLIENT_SECRET`.
+  - Act as the `redirect_uri` for Strava OAuth.
+  - Exchange the temporary `code` for `access_token` and `refresh_token`.
+  - **(Optional) Database Integration:** Implement a small DB to store Refresh Tokens mapped to a unique UserID/DeviceID to allow multi-user "syncing" across devices.
+  - Return tokens to the desktop app via a secure local callback or direct response.
+
+### 2. Client-Side Refactoring
+- [ ] Update `AppSettings.cs` to point to the new server-side Auth URL.
+- [ ] Refactor `StravaService.cs` to:
+  - Remove local `STRAVA_CLIENT_SECRET` dependencies.
+  - Use the jasonrowe.com endpoint for token exchange and refresh operations.
+  - Handle the new OAuth flow without needing local environment variables.
+- [ ] Verify both WPF and Avalonia versions work with the new flow.
+
+---
+
+### Phase 5: Cross-Platform Testing & CI (Planned)
+- [ ] Create `BikeFitness.Shared.UnitTests` project targeting `net10.0` (no Windows dependency).
+- [ ] Migrate existing platform-agnostic tests from `BikeFitnessApp.UnitTests` to the shared project.
+- [ ] Implement `LinuxBluetoothService` tests (potentially using mocks for BlueZ/DBus).
+- [ ] Ensure `dotnet test` can run fully on Linux.

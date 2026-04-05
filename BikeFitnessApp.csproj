@@ -15,12 +15,15 @@
     <Compile Remove="BikeFitnessApp.UnitTests\**" />
     <Compile Remove="BikeFitness.Harness\**" />
     <Compile Remove="BikeFitness.Shared\**" />
+    <Compile Remove="BikeFitness.Avalonia\**" />
     <Compile Remove="BikeFitnessConsole\**" />
     <EmbeddedResource Remove="BikeFitness.Harness\**" />
     <EmbeddedResource Remove="BikeFitness.Shared\**" />
+    <EmbeddedResource Remove="BikeFitness.Avalonia\**" />
     <EmbeddedResource Remove="BikeFitnessConsole\**" />
     <Page Remove="BikeFitness.Harness\**" />
     <Page Remove="BikeFitness.Shared\**" />
+    <Page Remove="BikeFitness.Avalonia\**" />
     <Page Remove="BikeFitnessConsole\**" />
   </ItemGroup>
 

@@ -1,6 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BikeFitnessApp.ViewModels;
-using BikeFitnessApp.Services;
+using BikeFitness.Shared.ViewModels;
+using BikeFitness.Shared.Services;
+using BikeFitness.Shared;
 using System.Linq;
 
 namespace BikeFitnessApp.UnitTests
@@ -10,6 +11,7 @@ namespace BikeFitnessApp.UnitTests
     {
         private MockBluetoothService _mockBluetoothService = null!;
         private MockStravaService _mockStravaService = null!;
+        private MockUserInterfaceService _mockUIService = null!;
         private WorkoutViewModel _viewModel = null!;
 
         [TestInitialize]
@@ -17,7 +19,8 @@ namespace BikeFitnessApp.UnitTests
         {
             _mockBluetoothService = new MockBluetoothService();
             _mockStravaService = new MockStravaService();
-            _viewModel = new WorkoutViewModel(_mockBluetoothService, _mockStravaService);
+            _mockUIService = new MockUserInterfaceService();
+            _viewModel = new WorkoutViewModel(_mockBluetoothService, _mockStravaService, _mockUIService);
         }
 
         [TestCleanup]

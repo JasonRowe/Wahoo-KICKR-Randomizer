@@ -4,8 +4,9 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BikeFitness.Harness"
-        xmlns:shared="clr-namespace:BikeFitness.Shared;assembly=BikeFitness.Shared"
-        mc:Ignorable="d"
+        xmlns:shared="clr-namespace:BikeFitnessApp;assembly=BikeFitnessApp"
+        mc:Ignorable="d" 
+
         Title="Bike Fitness Harness - Simulation Test" Height="600" Width="800">
     <Grid>
         <Grid.RowDefinitions>

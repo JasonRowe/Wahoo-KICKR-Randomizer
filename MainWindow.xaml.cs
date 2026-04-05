@@ -1,8 +1,8 @@
 using System;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
-using BikeFitnessApp.ViewModels;
-using BikeFitnessApp.Services;
+using BikeFitness.Shared.ViewModels;
+using BikeFitness.Shared.Services;
 
 namespace BikeFitnessApp
 {

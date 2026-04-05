@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BikeFitnessApp.Models;
-using BikeFitnessApp.Services;
+using BikeFitness.Shared.Models;
+using BikeFitness.Shared.Services;
 
 namespace BikeFitnessApp.UnitTests
 {

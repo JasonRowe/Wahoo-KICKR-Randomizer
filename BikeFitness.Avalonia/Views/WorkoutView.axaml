@@ -1,0 +1,189 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:BikeFitness.Shared.ViewModels"
+             xmlns:controls="using:BikeFitness.Avalonia.Controls"
+             xmlns:conv="using:BikeFitness.Avalonia.Converters"
+             xmlns:material="clr-namespace:Material.Styles.Controls;assembly=Material.Styles"
+             xmlns:assist="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
+             xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="700"
+             x:Class="BikeFitness.Avalonia.Views.WorkoutView"
+             x:DataType="vm:WorkoutViewModel"
+             Background="{DynamicResource MaterialDesignPaper}">
+
+    <UserControl.Resources>
+        <conv:SharedColorToBrushConverter x:Key="SharedColorToBrushConverter" />
+        <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="Auto, *, Auto">
+        <!-- Top Bar -->
+        <material:ColorZone Grid.Row="0" Mode="PrimaryMid" Padding="12" assist:ShadowAssist.ShadowDepth="Depth2">
+            <Grid ColumnDefinitions="*, Auto">
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <avalonia:MaterialIcon Kind="Bike" Foreground="{DynamicResource PrimaryHueMidForegroundBrush}" Width="28" Height="28"/>
+                    <TextBlock Text="TRAINING SESSION" Classes="Headline6" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidForegroundBrush}"/>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <CheckBox Content="LOG" IsChecked="{Binding IsLoggingEnabled}" Foreground="{DynamicResource PrimaryHueMidForegroundBrush}" Classes="Accent"/>
+                    <CheckBox Content="METRIC" IsChecked="{Binding IsMetric}" Foreground="{DynamicResource PrimaryHueMidForegroundBrush}" Classes="Accent"/>
+                    
+                    <ComboBox ItemsSource="{Binding TireSizes}" SelectedItem="{Binding SelectedTireSize}" Width="150" Theme="{StaticResource MaterialOutlineComboBox}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <Border Background="{DynamicResource SecondaryHueMidBrush}" CornerRadius="16" Padding="12,4">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <avalonia:MaterialIcon Kind="BluetoothConnected" Width="18" Height="18" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryHueMidForegroundBrush}"/>
+                            <TextBlock Text="{Binding Status}" Foreground="{DynamicResource SecondaryHueMidForegroundBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </material:ColorZone>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" ColumnDefinitions="320, *" Margin="16">
+            <!-- Side Controls -->
+            <StackPanel Spacing="16">
+                <material:Card Padding="20" assist:ShadowAssist.ShadowDepth="Depth1">
+                    <StackPanel Spacing="20">
+                        <TextBlock Text="INTENSITY" Classes="Subtitle1" FontWeight="Bold" HorizontalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                        
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*, Auto">
+                                <TextBlock Text="{Binding MinLabel}" Classes="Caption" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding MinResistance, StringFormat={}({0:F1}%)}" Classes="Caption" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            </Grid>
+                            <Slider Minimum="-10" Maximum="20" Value="{Binding MinResistance}" />
+                        </StackPanel>
+                        
+                        <StackPanel Spacing="8">
+                            <Grid ColumnDefinitions="*, Auto">
+                                <TextBlock Text="{Binding MaxLabel}" Classes="Caption" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                                <TextBlock Grid.Column="1" Text="{Binding MaxResistance, StringFormat={}({0:F1}%)}" Classes="Caption" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            </Grid>
+                            <Slider Minimum="-10" Maximum="20" Value="{Binding MaxResistance}" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="WORKOUT MODE" Classes="Caption" Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                            <ComboBox SelectedIndex="{Binding SelectedModeIndex}" HorizontalAlignment="Stretch" Theme="{StaticResource MaterialOutlineComboBox}">
+                                <ComboBoxItem>Random</ComboBoxItem>
+                                <ComboBoxItem>Hilly</ComboBoxItem>
+                                <ComboBoxItem>Mountain</ComboBoxItem>
+                                <ComboBoxItem>Pyramid</ComboBoxItem>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <material:Card Background="{DynamicResource MaterialDesignCardBackground}" Padding="8" assist:ShadowAssist.ShadowDepth="Depth0">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+                                <Button Content="-" Command="{Binding DecreaseIntervalCommand}" Width="40" Height="40" 
+                                        Classes="Flat" CornerRadius="20"/>
+                                <StackPanel VerticalAlignment="Center" Width="80">
+                                    <TextBlock Text="INTERVAL" Classes="Caption" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding IntervalSeconds, StringFormat={}{0}s}" Classes="Headline6" HorizontalAlignment="Center"/>
+                                </StackPanel>
+                                <Button Content="+" Command="{Binding IncreaseIntervalCommand}" Width="40" Height="40" 
+                                        Classes="Flat" CornerRadius="20"/>
+                            </StackPanel>
+                        </material:Card>
+
+                        <Button Content="START WORKOUT" Command="{Binding StartCommand}" Width="240" Height="48" 
+                                Classes="Primary Raised" CornerRadius="24" FontWeight="Bold"/>
+                        
+                        <Button Content="STOP WORKOUT" Command="{Binding StopCommand}" Width="240" Height="48" 
+                                Classes="Accent Raised" CornerRadius="24" FontWeight="Bold"/>
+                    </StackPanel>
+                </material:Card>
+            </StackPanel>
+
+            <!-- Simulation -->
+            <material:Card Grid.Column="1" Margin="16,0,0,0" Padding="0" ClipToBounds="True" Background="Black">
+                <Grid>
+                    <controls:SimulationCanvas SpeedKph="{Binding CurrentSpeedKph}" 
+                                              GradePercent="{Binding CurrentGradePercent}"
+                                              SyncedDistanceMeters="{Binding CurrentDistanceMeters}"/>
+
+                    <!-- HUD -->
+                    <material:Card VerticalAlignment="Top" HorizontalAlignment="Left" Margin="24" Padding="16" 
+                                   Background="#CC212121" assist:ShadowAssist.ShadowDepth="Depth2">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <avalonia:MaterialIcon Kind="SlopeUphill" Width="32" Height="32" Foreground="Silver" VerticalAlignment="Center"/>
+                            <StackPanel>
+                                <TextBlock Text="GRADE" Classes="Caption" Foreground="Silver" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding ResistancePercent, StringFormat={}{0:F1}%}" Classes="Headline2" FontWeight="Black" 
+                                         Foreground="{Binding ResistanceColor, Converter={StaticResource SharedColorToBrushConverter}}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </material:Card>
+
+                    <Grid VerticalAlignment="Bottom" ColumnDefinitions="*, *, *" Margin="16">
+                        <material:Card Grid.Column="0" Margin="8" Padding="16" Background="#CC212121">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="POWER" Classes="Caption" Foreground="Silver" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding PowerText}" Classes="Headline3" FontWeight="Black" Foreground="{DynamicResource PrimaryHueMidBrush}"/>
+                            </StackPanel>
+                        </material:Card>
+                        <material:Card Grid.Column="1" Margin="8" Padding="16" Background="#CC212121">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding SpeedLabel}" Classes="Caption" Foreground="Silver" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding SpeedText}" Classes="Headline3" FontWeight="Black" Foreground="#4CAF50"/>
+                            </StackPanel>
+                        </material:Card>
+                        <material:Card Grid.Column="2" Margin="8" Padding="16" Background="#CC212121">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding DistanceLabel}" Classes="Caption" Foreground="Silver" HorizontalAlignment="Center" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding DistanceText}" Classes="Headline3" FontWeight="Black" Foreground="White"/>
+                            </StackPanel>
+                        </material:Card>
+                    </Grid>
+
+                    <!-- Workout Complete Overlay -->
+                    <material:Card IsVisible="{Binding ShowPostWorkoutOptions, Converter={StaticResource BooleanToVisibilityConverter}}"
+                            Background="#DD000000" Padding="32"
+                            VerticalAlignment="Center" HorizontalAlignment="Center"
+                            MaxWidth="550" assist:ShadowAssist.ShadowDepth="Depth5">
+                        <StackPanel Spacing="16">
+                            <TextBlock Text="WORKOUT COMPLETE!" Classes="Headline4" FontWeight="Black" HorizontalAlignment="Center" Foreground="White"/>
+                            <TextBlock Text="Great ride! How would you like to save your progress?" Classes="Subtitle1" Opacity="0.8" HorizontalAlignment="Center" Foreground="White" TextWrapping="Wrap" TextAlignment="Center"/>
+                            
+                            <Grid ColumnDefinitions="*, *" Margin="0,16,0,0">
+                                <Button Grid.Column="0" Command="{Binding SaveFitCommand}" Margin="8" Height="64"
+                                        Classes="Primary Raised" CornerRadius="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <avalonia:MaterialIcon Kind="FileDownload" Width="24" Height="24"/>
+                                        <TextBlock Text="DOWNLOAD" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Grid.Column="1" Command="{Binding UploadStravaCommand}" Margin="8" Height="64"
+                                        Background="#FC4C02" Foreground="White" Classes="Raised" CornerRadius="12">
+                                    <StackPanel Orientation="Horizontal" Spacing="12">
+                                        <avalonia:MaterialIcon Kind="CloudUpload" Width="24" Height="24"/>
+                                        <TextBlock Text="STRAVA" FontWeight="Bold" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+
+                            <Button Content="DISMISS" Command="{Binding DismissPostWorkoutCommand}" 
+                                    HorizontalAlignment="Center" Classes="Flat" Foreground="Silver"/>
+                        </StackPanel>
+                    </material:Card>
+                </Grid>
+            </material:Card>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="{DynamicResource MaterialDesignCardBackground}" Padding="12,4" BorderBrush="{DynamicResource MaterialDesignDivider}" BorderThickness="0,1,0,0">
+            <TextBlock Text="{Binding Log}" Classes="Caption" Opacity="0.6"/>
+        </Border>
+    </Grid>
+</UserControl>

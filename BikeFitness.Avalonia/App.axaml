@@ -1,0 +1,20 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="BikeFitness.Avalonia.App"
+             xmlns:local="using:BikeFitness.Avalonia"
+             xmlns:themes="clr-namespace:Material.Styles.Themes;assembly=Material.Styles"
+             xmlns:materialIcons="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             RequestedThemeVariant="Default">
+
+    <Application.Resources>
+    </Application.Resources>
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+  
+    <Application.Styles>
+        <themes:MaterialTheme PrimaryColor="Blue" SecondaryColor="Amber" BaseTheme="Light" />
+        <materialIcons:MaterialIconStyles />
+    </Application.Styles>
+</Application>

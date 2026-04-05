@@ -1,5 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BikeFitnessApp.Models;
+using BikeFitness.Shared.Models;
 using System;
 using System.Collections.Generic;
 

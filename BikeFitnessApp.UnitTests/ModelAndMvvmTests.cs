@@ -1,6 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BikeFitnessApp.Models;
-using BikeFitnessApp.MVVM;
+using BikeFitness.Shared.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System.ComponentModel;
 
 namespace BikeFitnessApp.UnitTests
