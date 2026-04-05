@@ -7,6 +7,9 @@ using Avalonia.Threading;
 using Avalonia.Platform.Storage;
 using BikeFitness.Shared.Services;
 
+using MsBox.Avalonia;
+using MsBox.Avalonia.Enums;
+
 namespace BikeFitness.Avalonia.Services
 {
     public class AvaloniaUserInterfaceService : IUserInterfaceService
@@ -52,18 +55,34 @@ namespace BikeFitness.Avalonia.Services
 
         public async Task ShowMessageAsync(string title, string message)
         {
-            // Simple message box using a built-in Avalonia way or custom.
-            // For now, we'll just log or use a simple dialog if available.
-            // Avalonia doesn't have a built-in MessageBox like WPF, so we might need a library like MessageBox.Avalonia
-            // but for now let's just use Console for prototype or a simple Window.
-            System.Diagnostics.Debug.WriteLine($"DIALOG [{title}]: {message}");
-            await Task.CompletedTask;
+            var box = MessageBoxManager.GetMessageBoxStandard(title, message, ButtonEnum.Ok);
+            var window = GetMainWindow();
+            if (window != null)
+            {
+                await box.ShowWindowDialogAsync(window);
+            }
+            else
+            {
+                await box.ShowAsync();
+            }
         }
 
-        public Task<bool> ShowConfirmAsync(string title, string message)
+        public async Task<bool> ShowConfirmAsync(string title, string message)
         {
-            System.Diagnostics.Debug.WriteLine($"CONFIRM [{title}]: {message}");
-            return Task.FromResult(true); // Default to yes for prototype
+            var box = MessageBoxManager.GetMessageBoxStandard(title, message, ButtonEnum.YesNo);
+            var window = GetMainWindow();
+            
+            ButtonResult result;
+            if (window != null)
+            {
+                result = await box.ShowWindowDialogAsync(window);
+            }
+            else
+            {
+                result = await box.ShowAsync();
+            }
+            
+            return result == ButtonResult.Yes;
         }
 
         public void InvokeOnUIThread(Action action)

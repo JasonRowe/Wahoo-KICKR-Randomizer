@@ -114,7 +114,18 @@ namespace BikeFitness.Shared.Services
             listener.Start();
 
             // Open browser
-            Process.Start(new ProcessStartInfo(authUri) { UseShellExecute = true });
+            if (OperatingSystem.IsWindows())
+            {
+                Process.Start(new ProcessStartInfo(authUri) { UseShellExecute = true });
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                Process.Start("xdg-open", authUri);
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                Process.Start("open", authUri);
+            }
 
             // Wait for callback
             var context = await listener.GetContextAsync();

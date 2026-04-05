@@ -28,20 +28,24 @@
   - **Assets:** Uses 1-pixel overlap (`+1` width) to prevent white lines between tiles.
 
 ### Linux Port Status (Avalonia)
-The Avalonia port is functional but requires significant polish to match the WPF version's visual quality.
+The Avalonia port is functional and matches the WPF version's visual quality on Linux.
 
-#### Known Issues & Polish Tasks:
+#### Known Issues & Minor Tweaks:
 - **HUD Performance:** Real-time HUD updates (Power/Speed) in Avalonia may have slightly higher latency than the WPF version.
 - **Theme Consistency:** Material Design styles in Avalonia (via `Material.Avalonia`) need further tuning to match the exact "look and feel" of the WPF `MaterialDesignThemes`.
-- **Icon Support:** Some icons (using `PathIcon`) may not render with the same scaling/alignment as WPF's `PackIcon`.
 
 ---
 
 ## High-Priority TODOs
-1. **Linux Hardware Support:** Implement `LinuxBluetoothService` using BlueZ/DBus.
-2. **Heart Rate (BLE 0x180D):**
+1. **Heart Rate (BLE 0x180D):**
    - Implement `IHeartRateService` for Garmin/standard HRM.
    - Display BPM in `WorkoutView`.
+2. **MacOS Support:**
+   - Implement `MacOSBluetoothService` (Pending hardware purchase for testing).
+3. **AI Assistant Mode:**
+   - Integrate an AI service (e.g., OpenAI/Gemini) to allow voice-activated workout adjustments.
+   - Design a "Bike Command" prompt structure to allow the AI to modify `KickrLogic` or switch `WorkoutMode` in real-time.
+   - Requires extensive UI/UX and safety planning.
 
 ## Image Generation Prompts (Nano Banana)
 - **Biome Reference:** "2D side-scrolling game background, [BIOME] biome. Vibrant colors, digital art. Perfectly seamless horizontal tiling; left and right edges must match exactly. Consistent flat brown dirt road at base."
@@ -69,18 +73,28 @@ The Avalonia port is functional but requires significant polish to match the WPF
 
 ---
 
-## Final Step: Native Linux Support & Verification
+## Phase 4: Server-Side Strava Integration (Planned)
 
-### 1. Verification on Linux
-- [ ] Push changes to GitHub and pull to Linux laptop.
-- [ ] Install .NET 10 SDK on Linux.
-- [ ] Run `dotnet run --project BikeFitness.Avalonia` and verify:
-  - UI renders correctly (spacing, colors, icons).
-  - Cyclist and background animation runs smoothly at ~60fps.
-  - Mock workout flow (Connect -> Start -> Stop -> Save) works without crashes.
+### 1. Server-Side Setup
+- [ ] Create a script (PHP/Node.js) at `jasonrowe.com/misc/stravaconnect` to:
+  - Securely store the `STRAVA_CLIENT_SECRET`.
+  - Act as the `redirect_uri` for Strava OAuth.
+  - Exchange the temporary `code` for `access_token` and `refresh_token`.
+  - **(Optional) Database Integration:** Implement a small DB to store Refresh Tokens mapped to a unique UserID/DeviceID to allow multi-user "syncing" across devices.
+  - Return tokens to the desktop app via a secure local callback or direct response.
 
-### 2. Linux Bluetooth Implementation
-- [ ] Create `LinuxBluetoothService.cs` in a new project or folder.
-- [ ] Integrate a library like `Tmds.DBus` or `DotNet.BlueZ` to talk to the Linux Bluetooth stack.
-- [ ] Implement scanning and GATT characteristic communication for the Wahoo KICKR.
-- [ ] Register the Linux service in `App.axaml.cs` when `OperatingSystem.IsLinux()` is true.
+### 2. Client-Side Refactoring
+- [ ] Update `AppSettings.cs` to point to the new server-side Auth URL.
+- [ ] Refactor `StravaService.cs` to:
+  - Remove local `STRAVA_CLIENT_SECRET` dependencies.
+  - Use the jasonrowe.com endpoint for token exchange and refresh operations.
+  - Handle the new OAuth flow without needing local environment variables.
+- [ ] Verify both WPF and Avalonia versions work with the new flow.
+
+---
+
+### Phase 5: Cross-Platform Testing & CI (Planned)
+- [ ] Create `BikeFitness.Shared.UnitTests` project targeting `net10.0` (no Windows dependency).
+- [ ] Migrate existing platform-agnostic tests from `BikeFitnessApp.UnitTests` to the shared project.
+- [ ] Implement `LinuxBluetoothService` tests (potentially using mocks for BlueZ/DBus).
+- [ ] Ensure `dotnet test` can run fully on Linux.

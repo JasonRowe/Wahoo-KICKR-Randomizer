@@ -40,7 +40,10 @@
                     </ComboBox>
 
                     <Border Background="{DynamicResource SecondaryHueMidBrush}" CornerRadius="16" Padding="12,4">
-                        <TextBlock Text="{Binding Status}" Foreground="{DynamicResource SecondaryHueMidForegroundBrush}" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <avalonia:MaterialIcon Kind="BluetoothConnected" Width="18" Height="18" VerticalAlignment="Center" Foreground="{DynamicResource SecondaryHueMidForegroundBrush}"/>
+                            <TextBlock Text="{Binding Status}" Foreground="{DynamicResource SecondaryHueMidForegroundBrush}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
             </Grid>
@@ -112,10 +115,13 @@
                     <!-- HUD -->
                     <material:Card VerticalAlignment="Top" HorizontalAlignment="Left" Margin="24" Padding="16" 
                                    Background="#CC212121" assist:ShadowAssist.ShadowDepth="Depth2">
-                        <StackPanel>
-                            <TextBlock Text="GRADE" Classes="Caption" Foreground="Silver" FontWeight="Bold"/>
-                            <TextBlock Text="{Binding ResistancePercent, StringFormat={}{0:F1}%}" Classes="Headline2" FontWeight="Black" 
-                                     Foreground="{Binding ResistanceColor, Converter={StaticResource SharedColorToBrushConverter}}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <avalonia:MaterialIcon Kind="SlopeUphill" Width="32" Height="32" Foreground="Silver" VerticalAlignment="Center"/>
+                            <StackPanel>
+                                <TextBlock Text="GRADE" Classes="Caption" Foreground="Silver" FontWeight="Bold"/>
+                                <TextBlock Text="{Binding ResistancePercent, StringFormat={}{0:F1}%}" Classes="Headline2" FontWeight="Black" 
+                                         Foreground="{Binding ResistanceColor, Converter={StaticResource SharedColorToBrushConverter}}"/>
+                            </StackPanel>
                         </StackPanel>
                     </material:Card>
 

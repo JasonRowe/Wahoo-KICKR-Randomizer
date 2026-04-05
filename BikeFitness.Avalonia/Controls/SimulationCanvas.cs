@@ -126,16 +126,10 @@ namespace BikeFitness.Avalonia.Controls
                 if (dt > 0.1) dt = 0.1;
                 if (dt > 0)
                 {
-                    // Smoothly pull local engine distance towards the truth (SyncedDistanceMeters)
-                    if (Math.Abs(_engine.TotalDistanceMeters - SyncedDistanceMeters) > 50.0)
+                    // Align with WPF logic: Only hard-reset if we are at start and get first real distance
+                    if (_engine.TotalDistanceMeters < 5.0 && SyncedDistanceMeters > 5.0)
                     {
-                        _engine.TotalDistanceMeters = SyncedDistanceMeters;
-                    }
-                    else
-                    {
-                        // Reduced pull strength significantly to prevent "thrusting" motion
-                        double diff = SyncedDistanceMeters - _engine.TotalDistanceMeters;
-                        _engine.TotalDistanceMeters += diff * 0.005; 
+                        _engine.Reset(SyncedDistanceMeters);
                     }
 
                     _engine.Update(dt);

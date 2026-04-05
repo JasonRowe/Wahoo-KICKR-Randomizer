@@ -55,21 +55,20 @@ namespace BikeFitness.Avalonia
             var services = new ServiceCollection();
 
             // Services
-            // For now we'll use a Mock Bluetooth service on non-Windows or just provide the interface
-            // On Linux we'll eventually use a LinuxBluetoothService
             if (OperatingSystem.IsWindows())
             {
-                // We'd need to reference the WPF project or move WindowsBluetoothService to a separate project.
-                // For now let's just use a dummy or skip if we can't reference WPF.
-                // Actually, WPF project depends on Shared, but Shared cannot depend on WPF.
-                // BikeFitness.Avalonia can depend on Shared.
-                // To use WindowsBluetoothService in Avalonia, we should move it to a project that can be shared.
-                // For now, let's assume we'll use a Cross-Platform service or just skip for the prototype.
+                // Windows specific registration if we had a cross-platform reference
+                services.AddSingleton<IBluetoothService, BikeFitness.Shared.Services.MockBluetoothService>();
+            }
+            else if (OperatingSystem.IsLinux())
+            {
+                services.AddSingleton<IBluetoothService, LinuxBluetoothService>();
+            }
+            else
+            {
+                services.AddSingleton<IBluetoothService, BikeFitness.Shared.Services.MockBluetoothService>();
             }
 
-            // For the prototype, we'll just register the interface with a mock if we have one, or nothing.
-            // Let's check if we have MockBluetoothService.
-            services.AddSingleton<IBluetoothService, BikeFitness.Shared.Services.MockBluetoothService>();
             services.AddSingleton<IStravaService, BikeFitness.Shared.Services.StravaService>();
             services.AddSingleton<IUserInterfaceService, AvaloniaUserInterfaceService>();
 

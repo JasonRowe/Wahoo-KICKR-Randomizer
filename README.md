@@ -10,6 +10,14 @@ We wanted to ride hills on our smart trainer without paying monthly fees. The ha
 
 **The Solution:** We built our own physics engine. This app translates **Grade** directly into raw brake resistance, giving you realistic climbs (-10 to +20 percent) on hardware that thought it couldn't do it.
 
+## Platform Support
+
+| Platform | Status | UI Framework | Bluetooth |
+| :--- | :--- | :--- | :--- |
+| **Windows** | ✅ Stable | WPF / Avalonia | WinRT BLE |
+| **Linux** | ✅ Functional | Avalonia UI | BlueZ (DBus) |
+| **MacOS** | 🚧 Planned | Avalonia UI | Pending |
+
 ## Features that Matter
 
 *   **Fake Sim Mode:** We tricked the trainer. You set the Grade, we calculate the physics.
@@ -19,7 +27,7 @@ We wanted to ride hills on our smart trainer without paying monthly fees. The ha
     *   **Hilly:** Smooth rolling sine waves.
     *   **Mountain:** Steep, jagged peaks.
     *   **Random:** Pure chaos for the brave.
-*   **Zero-Lag UI:** Built with WPF and MVVM.
+*   **Cross-Platform UI:** High-performance rendering on both Windows (WPF/Avalonia) and Linux (Avalonia).
 *   **Workout Intel:** Automatically captures 1s telemetry. Export to **FIT** (Strava), **JSON**, or **CSV**.
 
 ## Data & Analysis
@@ -29,25 +37,38 @@ Every ride generates a high-fidelity data log. When you hit **Stop**, the app of
 *   **CSV:** Ready for Excel. Track your Power, Speed, and Grade over time.
 
 ## Under the Hood
-*   **Framework:** .NET 8 (WPF)
-*   **Protocol:** Reverse-engineered Bluetooth Low Energy (BLE) protocols.
+*   **Framework:** .NET 10
+*   **UI:** WPF (Legacy Windows) & Avalonia UI (Cross-platform)
+*   **Protocol:** Reverse-engineered Bluetooth Low Energy (BLE) protocols for Wahoo KICKR and FTMS.
 *   **Engineering:** We use a Piecewise Linear Mapping function to translate human-readable Grade into machine-readable Brake Force, bypassing the device's faulty internal physics engine.
 
 ## How to Play
-1.  **Launch** BikeFitnessApp.exe.
+
+### Windows (Original WPF)
+1.  **Launch** `BikeFitnessApp.exe`.
 2.  **Scan and Connect** to your trainer.
 3.  **Set Your Limits**: Pick your **Max Grade**.
-4.  **Hit Start**: The app takes over. Your job is just to pedal.
+4.  **Hit Start**: The app takes over.
+
+### Linux (Avalonia)
+1.  Ensure `bluez` and `dbus` are installed and running.
+2.  Run the Avalonia build:
+    ```bash
+    dotnet run --project BikeFitness.Avalonia
+    ```
 
 ## Build It Yourself
-Clone the repo and run:
-```powershell
-dotnet build
-dotnet run
+Clone the repo and build the solution:
+```bash
+# To build everything
+dotnet build BikeFitnessApp.sln
+
+# To build only the cross-platform Avalonia app
+dotnet build BikeFitness.Avalonia/BikeFitness.Avalonia.csproj
 ```
 
 ## Running Tests and Code Coverage
-To run the automated tests and automatically generate a code coverage report (`coverage.cobertura.xml`), just run the standard test command:
+To run the automated tests (currently Windows-targeted):
 ```powershell
 dotnet test ./BikeFitnessApp.UnitTests
 ```
