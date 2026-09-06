@@ -16,7 +16,7 @@ We wanted to ride hills on our smart trainer without paying monthly fees. The ha
 | :--- | :--- | :--- | :--- |
 | **Windows** | ✅ Stable | WPF / Avalonia | WinRT BLE |
 | **Linux** | ✅ Functional | Avalonia UI | BlueZ (DBus) |
-| **MacOS** | 🚧 Planned | Avalonia UI | Pending |
+| **macOS** | 🚧 Planned | Avalonia UI | Pending |
 
 ## Features that Matter
 
@@ -42,6 +42,16 @@ Every ride generates a high-fidelity data log. When you hit **Stop**, the app of
 *   **Protocol:** Reverse-engineered Bluetooth Low Energy (BLE) protocols for Wahoo KICKR and FTMS.
 *   **Engineering:** We use a Piecewise Linear Mapping function to translate human-readable Grade into machine-readable Brake Force, bypassing the device's faulty internal physics engine.
 
+## Project Layout
+| Project | Purpose |
+| :--- | :--- |
+| `BikeFitnessApp` | Original Windows WPF app (the full experience). |
+| `BikeFitness.Avalonia` | Cross-platform UI (Windows + Linux, macOS planned). |
+| `BikeFitness.Shared` | Physics engine, telemetry, and shared services. |
+| `BikeFitness.Harness` | Lightweight WPF harness for testing the shared core. |
+| `BikeFitnessConsole` | Headless console app for BLE scanning/debugging. |
+| `BikeFitnessApp.UnitTests` | Automated tests. |
+
 ## How to Play
 
 ### Windows (Original WPF)
@@ -56,6 +66,11 @@ Every ride generates a high-fidelity data log. When you hit **Stop**, the app of
     ```bash
     dotnet run --project BikeFitness.Avalonia
     ```
+
+## Prerequisites
+*   **.NET 10 SDK** — required to build all projects.
+*   **Windows** — the WPF app targets `net10.0-windows` and must be built on Windows.
+*   **Linux** — `bluez` and `dbus` for Bluetooth (see [Linux (Avalonia)](#linux-avalonia)).
 
 ## Build It Yourself
 Clone the repo and build the solution:
