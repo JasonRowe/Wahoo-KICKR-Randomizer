@@ -60,6 +60,7 @@ namespace BikeFitness.Avalonia.Services
 
         public async void StartScanning()
         {
+            if (IsScanning) return;
             try
             {
                 if (_adapter == null)
@@ -75,7 +76,16 @@ namespace BikeFitness.Avalonia.Services
                 }
 
                 _adapter.DeviceFound += Adapter_DeviceFound;
-                await _adapter.StartDiscoveryAsync();
+                try
+                {
+                    await _adapter.StartDiscoveryAsync();
+                }
+                catch (Exception ex) when (ex.Message.Contains("InProgress"))
+                {
+                    // Discovery is already running (e.g. BlueZ auto-discovery or a
+                    // prior session). That's fine — keep going.
+                    Logger.Log("Discovery already in progress; continuing scan.");
+                }
                 IsScanning = true;
                 UpdateStatus("Scanning for trainers...");
             }
@@ -176,23 +186,33 @@ namespace BikeFitness.Avalonia.Services
 
                 UpdateStatus("Connected. Discovering services...");
 
-                // Wait for services to be resolved
-                int retry = 0;
-                while (!(await _device.GetServicesResolvedAsync()) && retry < 20)
+                // Resolve GATT services. BlueZ flips ServicesResolved=true once it
+                // finishes discovering the device's service database. Log every
+                // attempt; if it never resolves (stale/half-open link), retry the
+                // connection once before giving up.
+                bool servicesResolved = await WaitForServicesResolvedAsync(_device);
+
+                if (!servicesResolved)
                 {
-                    await Task.Delay(500);
-                    retry++;
+                    Logger.Log("Services never resolved; disconnecting and retrying connection once.");
+                    UpdateStatus("Services not resolved; reconnecting...");
+                    try { await _device.DisconnectAsync(); } catch (Exception ex) { Logger.Log($"Retry-disconnect failed: {ex.Message}"); }
+                    await Task.Delay(1000);
+                    try { await _device.ConnectAsync(); } catch (Exception ex) { Logger.Log($"Reconnect failed: {ex.Message}"); }
+                    servicesResolved = await WaitForServicesResolvedAsync(_device);
                 }
 
-                var services = await _device.GetServicesAsync();
-                
-                // 2. Find Control Point
+                // Find Control Point + Power Measurement across all services.
                 _controlPoint = null;
                 _powerChar = null;
 
+                var services = await _device.GetServicesAsync();
+                int serviceCount = 0;
                 foreach (var service in services)
                 {
+                    serviceCount++;
                     string serviceUuid = await service.GetUUIDAsync();
+                    Logger.Log($"Service {serviceCount}: {serviceUuid}");
                     var characteristics = await service.GetCharacteristicsAsync();
 
                     foreach (var ch in characteristics)
@@ -212,6 +232,8 @@ namespace BikeFitness.Avalonia.Services
                         }
                     }
                 }
+
+                Logger.Log($"Service discovery done. resolved={servicesResolved}, serviceCount={serviceCount}, controlPoint={_controlPoint != null}, powerChar={_powerChar != null}");
 
                 if (_controlPoint == null)
                 {
@@ -234,6 +256,18 @@ namespace BikeFitness.Avalonia.Services
                 UpdateStatus($"Connection Error: {ex.Message}");
                 Logger.Log($"Connection Exception: {ex}");
             }
+        }
+
+        private async Task<bool> WaitForServicesResolvedAsync(Device device)
+        {
+            for (int attempt = 0; attempt < 20; attempt++)
+            {
+                bool resolved = await device.GetServicesResolvedAsync();
+                Logger.Log($"GetServicesResolvedAsync attempt {attempt}: {resolved}");
+                if (resolved) return true;
+                await Task.Delay(500);
+            }
+            return false;
         }
 
         private async Task SubscribeToPowerAsync()
