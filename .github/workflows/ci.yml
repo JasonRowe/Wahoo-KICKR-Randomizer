@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Build & Test (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build solution
+        run: dotnet build --configuration Release
+
+      - name: Test (shared logic)
+        run: dotnet test BikeFitness.Shared.Tests/BikeFitness.Shared.Tests.csproj --configuration Release
+
+      - name: Test (WPF)
+        run: dotnet test BikeFitnessApp.UnitTests/BikeFitnessApp.UnitTests.csproj --configuration Release
+
+      - name: Publish win-x64
+        run: dotnet publish BikeFitnessApp.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/win-x64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bikefitness-win-x64
+          path: artifacts/win-x64
+
+  linux:
+    name: Build & Test (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test (shared logic)
+        run: dotnet test BikeFitness.Shared.Tests/BikeFitness.Shared.Tests.csproj --configuration Release
+
+      - name: Publish linux-x64
+        run: dotnet publish BikeFitness.Avalonia/BikeFitness.Avalonia.csproj --configuration Release --runtime linux-x64 --self-contained true --output artifacts/linux-x64
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bikefitness-linux-x64
+          path: artifacts/linux-x64
