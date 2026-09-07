@@ -97,5 +97,26 @@ CI (GitHub Actions) runs both suites on every PR and push to `main`, runs the sh
 logic tests on both Windows and Linux runners, and publishes self-contained
 `win-x64` and `linux-x64` builds as workflow artifacts.
 
+## Nightly builds & update-and-ride
+
+Every push to `main` publishes a rolling "nightly" release with self-contained builds:
+
+* `bikefitness-win-x64.zip` — WPF app (Windows)
+* `bikefitness-linux-x64.zip` — Avalonia app (Linux)
+
+Update and ride on a laptop with the matching script from `scripts/`:
+
+**Linux:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/JasonRowe/Wahoo-KICKR-Randomizer/main/scripts/update-and-ride.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/JasonRowe/Wahoo-KICKR-Randomizer/main/scripts/update-and-ride.ps1 | iex
+```
+
+Override the install folder with the `BIKEFITNESS_INSTALL_DIR` environment variable.
+
 ---
 *Built with C# and a lot of sweat.*
