@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows:
+    name: Build Windows (win-x64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish
+        run: dotnet publish BikeFitnessApp.csproj --configuration Release --runtime win-x64 --self-contained true --output publish
+
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path publish\* -DestinationPath bikefitness-win-x64.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bikefitness-win-x64
+          path: bikefitness-win-x64.zip
+
+  build-linux:
+    name: Build Linux (linux-x64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish
+        run: dotnet publish BikeFitness.Avalonia/BikeFitness.Avalonia.csproj --configuration Release --runtime linux-x64 --self-contained true --output publish
+
+      - name: Zip
+        run: (cd publish && zip -r ../bikefitness-linux-x64.zip .)
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bikefitness-linux-x64
+          path: bikefitness-linux-x64.zip
+
+  release:
+    name: Publish rolling release
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: 'bikefitness-*'
+          merge-multiple: true
+          path: dist
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: nightly
+          name: Nightly build
+          prerelease: true
+          overwrite_files: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/bikefitness-win-x64.zip
+            dist/bikefitness-linux-x64.zip
