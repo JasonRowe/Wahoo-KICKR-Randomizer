@@ -10,6 +10,7 @@ namespace BikeFitnessApp
     {
         private readonly MainViewModel _viewModel;
         private readonly IServiceProvider _services;
+        private bool _disconnectOnClose;
 
         public MainWindow(MainViewModel viewModel, IServiceProvider services)
         {
@@ -20,9 +21,25 @@ namespace BikeFitnessApp
             ShowSetup();
         }
 
-        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        protected override async void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            PowerManagement.AllowSleep();
+            if (!_disconnectOnClose)
+            {
+                e.Cancel = true;
+                _disconnectOnClose = true;
+
+                PowerManagement.AllowSleep();
+
+                var bluetooth = _services.GetService<IBluetoothService>();
+                if (bluetooth != null && bluetooth.IsConnected)
+                {
+                    try { await bluetooth.DisconnectAsync(); } catch { }
+                }
+
+                Close();
+                return;
+            }
+
             base.OnClosing(e);
         }
 
