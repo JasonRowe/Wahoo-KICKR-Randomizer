@@ -83,10 +83,19 @@ dotnet build BikeFitness.Avalonia/BikeFitness.Avalonia.csproj
 ```
 
 ## Running Tests and Code Coverage
-To run the automated tests (currently Windows-targeted):
-```powershell
-dotnet test ./BikeFitnessApp.UnitTests
-```
+
+* **Cross-platform logic tests** (Windows and Linux):
+  ```bash
+  dotnet test BikeFitness.Shared.Tests/BikeFitness.Shared.Tests.csproj
+  ```
+* **Windows/WPF tests** (Windows only):
+  ```powershell
+  dotnet test ./BikeFitnessApp.UnitTests
+  ```
+
+CI (GitHub Actions) runs both suites on every PR and push to `main`, runs the shared
+logic tests on both Windows and Linux runners, and publishes self-contained
+`win-x64` and `linux-x64` builds as workflow artifacts.
 
 ---
 *Built with C# and a lot of sweat.*
