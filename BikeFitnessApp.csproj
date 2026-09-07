@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <Compile Remove="BikeFitnessApp.UnitTests\**" />
+    <Compile Remove="BikeFitness.Shared.Tests\**" />
     <Compile Remove="BikeFitness.Harness\**" />
     <Compile Remove="BikeFitness.Shared\**" />
     <Compile Remove="BikeFitness.Avalonia\**" />
