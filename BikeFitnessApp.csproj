@@ -18,10 +18,12 @@
     <Compile Remove="BikeFitness.Shared\**" />
     <Compile Remove="BikeFitness.Avalonia\**" />
     <Compile Remove="BikeFitnessConsole\**" />
+    <Compile Remove="tools\**" />
     <EmbeddedResource Remove="BikeFitness.Harness\**" />
     <EmbeddedResource Remove="BikeFitness.Shared\**" />
     <EmbeddedResource Remove="BikeFitness.Avalonia\**" />
     <EmbeddedResource Remove="BikeFitnessConsole\**" />
+    <EmbeddedResource Remove="tools\**" />
     <Page Remove="BikeFitness.Harness\**" />
     <Page Remove="BikeFitness.Shared\**" />
     <Page Remove="BikeFitness.Avalonia\**" />

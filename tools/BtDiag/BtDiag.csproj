@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Linux.Bluetooth" Version="5.67.1" />
+    <!-- Match the app's explicit Tmds.DBus to avoid the vulnerable 0.20.0 transitive -->
+    <PackageReference Include="Tmds.DBus" Version="0.91.1" />
+  </ItemGroup>
+
+</Project>

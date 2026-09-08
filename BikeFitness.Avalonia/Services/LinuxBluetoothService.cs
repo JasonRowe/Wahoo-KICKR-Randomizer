@@ -17,6 +17,10 @@ namespace BikeFitness.Avalonia.Services
         private static readonly string WAHOO_CONTROL_POINT_UUID = "a026e005-0a7d-4ab3-97fa-f1500f9feb8b";
         private static readonly string POWER_MEASUREMENT_UUID = "00002A63-0000-1000-8000-00805f9b34fb";
 
+        // BlueZ needs 6-20s+ to finish GATT discovery on the KICKR; 45s gives
+        // generous headroom before we fail loudly.
+        private static readonly TimeSpan SERVICES_RESOLVED_TIMEOUT = TimeSpan.FromSeconds(45);
+
         // Internal State
         private Adapter? _adapter;
         private Device? _device;
@@ -184,22 +188,33 @@ namespace BikeFitness.Avalonia.Services
                     }
                 });
 
-                UpdateStatus("Connected. Discovering services...");
+                UpdateStatus("Connected. Discovering trainer services...");
 
-                // Resolve GATT services. BlueZ flips ServicesResolved=true once it
-                // finishes discovering the device's service database. Log every
-                // attempt; if it never resolves (stale/half-open link), retry the
-                // connection once before giving up.
-                bool servicesResolved = await WaitForServicesResolvedAsync(_device);
-
-                if (!servicesResolved)
+                // BlueZ flips ServicesResolved=true only after the full GATT
+                // discovery completes — on the KICKR that's ~6-20s after
+                // connect (wire-level ATT discovery is fast; the D-Bus property
+                // lags). WaitForPropertyValueAsync is event-based: it subscribes
+                // to the PropertiesChanged signal and checks the current value
+                // first, so nothing is missed. On timeout it throws
+                // TimeoutException, which the outer catch reports as
+                // Connection Error.
+                Logger.Log($"Waiting for ServicesResolved (event-based, {SERVICES_RESOLVED_TIMEOUT.TotalSeconds:F0}s)...");
+                try
                 {
-                    Logger.Log("Services never resolved; disconnecting and retrying connection once.");
-                    UpdateStatus("Services not resolved; reconnecting...");
-                    try { await _device.DisconnectAsync(); } catch (Exception ex) { Logger.Log($"Retry-disconnect failed: {ex.Message}"); }
-                    await Task.Delay(1000);
-                    try { await _device.ConnectAsync(); } catch (Exception ex) { Logger.Log($"Reconnect failed: {ex.Message}"); }
-                    servicesResolved = await WaitForServicesResolvedAsync(_device);
+                    await _device.WaitForPropertyValueAsync<bool>("ServicesResolved", true, SERVICES_RESOLVED_TIMEOUT);
+                    Logger.Log("ServicesResolved event-based wait completed.");
+                }
+                catch (Exception ex)
+                {
+                    // Timeout or D-Bus error: fail loudly and clean up so the
+                    // user can hit Connect again without stale state.
+                    Logger.Log($"ServicesResolved wait failed: {ex.GetType().Name}: {ex.Message}");
+                    if (_deviceWatcher != null) { _deviceWatcher.Dispose(); _deviceWatcher = null; }
+                    try { await _device.DisconnectAsync(); } catch (Exception dcEx) { Logger.Log($"Cleanup disconnect failed: {dcEx.Message}"); }
+                    _device = null;
+                    _isLoopRunning = false;
+                    UpdateStatus("Connection failed — Bluetooth service discovery timed out. Power-cycle the trainer and reconnect.");
+                    return;
                 }
 
                 // Find Control Point + Power Measurement across all services.
@@ -233,17 +248,31 @@ namespace BikeFitness.Avalonia.Services
                     }
                 }
 
-                Logger.Log($"Service discovery done. resolved={servicesResolved}, serviceCount={serviceCount}, controlPoint={_controlPoint != null}, powerChar={_powerChar != null}");
+                Logger.Log($"Service discovery done. serviceCount={serviceCount}, controlPoint={_controlPoint != null}, powerChar={_powerChar != null}");
 
-                if (_controlPoint == null)
+                if (_controlPoint == null || _powerChar == null)
                 {
-                    UpdateStatus("Control Point NOT found.");
+                    // Connected at the link level, but the trainer's GATT services
+                    // weren't readable, so we can neither control resistance nor
+                    // receive telemetry. Fail loudly instead of pretending we're
+                    // "Connected and Ready".
+                    string detail = serviceCount == 0
+                        ? "Bluetooth GATT service discovery failed (no services readable)"
+                        : "the trainer's services were incomplete";
+                    Logger.Log($"Connection unusable: serviceCount={serviceCount}, controlPoint={_controlPoint != null}, powerChar={_powerChar != null}");
+
+                    // Dispose the connection-loss watcher first so its
+                    // "Device Disconnected" callback doesn't overwrite our error.
+                    if (_deviceWatcher != null) { _deviceWatcher.Dispose(); _deviceWatcher = null; }
+                    try { await _device.DisconnectAsync(); } catch (Exception ex) { Logger.Log($"Cleanup disconnect failed: {ex.Message}"); }
+                    _device = null;
+                    _isLoopRunning = false;
+
+                    UpdateStatus($"Connection failed — {detail}. Power-cycle the trainer and reconnect.");
+                    return;
                 }
 
-                if (_powerChar != null)
-                {
-                    await SubscribeToPowerAsync();
-                }
+                await SubscribeToPowerAsync();
 
                 UpdateStatus("Connected and Ready");
                 
@@ -256,18 +285,6 @@ namespace BikeFitness.Avalonia.Services
                 UpdateStatus($"Connection Error: {ex.Message}");
                 Logger.Log($"Connection Exception: {ex}");
             }
-        }
-
-        private async Task<bool> WaitForServicesResolvedAsync(Device device)
-        {
-            for (int attempt = 0; attempt < 20; attempt++)
-            {
-                bool resolved = await device.GetServicesResolvedAsync();
-                Logger.Log($"GetServicesResolvedAsync attempt {attempt}: {resolved}");
-                if (resolved) return true;
-                await Task.Delay(500);
-            }
-            return false;
         }
 
         private async Task SubscribeToPowerAsync()
