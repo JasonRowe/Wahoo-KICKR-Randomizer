@@ -195,8 +195,23 @@ namespace BikeFitness.Avalonia.Services
                 // TimeoutException, which the outer catch reports as
                 // Connection Error.
                 Logger.Log("Waiting for ServicesResolved (event-based, 45s)...");
-                await _device.WaitForPropertyValueAsync<bool>("ServicesResolved", true, TimeSpan.FromSeconds(45));
-                Logger.Log("ServicesResolved event-based wait completed.");
+                try
+                {
+                    await _device.WaitForPropertyValueAsync<bool>("ServicesResolved", true, TimeSpan.FromSeconds(45));
+                    Logger.Log("ServicesResolved event-based wait completed.");
+                }
+                catch (Exception ex)
+                {
+                    // Timeout or D-Bus error: fail loudly and clean up so the
+                    // user can hit Connect again without stale state.
+                    Logger.Log($"ServicesResolved wait failed: {ex.GetType().Name}: {ex.Message}");
+                    if (_deviceWatcher != null) { _deviceWatcher.Dispose(); _deviceWatcher = null; }
+                    try { await _device.DisconnectAsync(); } catch (Exception dcEx) { Logger.Log($"Cleanup disconnect failed: {dcEx.Message}"); }
+                    _device = null;
+                    _isLoopRunning = false;
+                    UpdateStatus("Connection failed — Bluetooth service discovery timed out. Power-cycle the trainer and reconnect.");
+                    return;
+                }
 
                 // Find Control Point + Power Measurement across all services.
                 _controlPoint = null;
@@ -240,7 +255,7 @@ namespace BikeFitness.Avalonia.Services
                     string detail = serviceCount == 0
                         ? "Bluetooth GATT service discovery failed (no services readable)"
                         : "the trainer's services were incomplete";
-                    Logger.Log($"Connection unusable: resolved={servicesResolved}, serviceCount={serviceCount}, controlPoint={_controlPoint != null}, powerChar={_powerChar != null}");
+                    Logger.Log($"Connection unusable: serviceCount={serviceCount}, controlPoint={_controlPoint != null}, powerChar={_powerChar != null}");
 
                     // Dispose the connection-loss watcher first so its
                     // "Device Disconnected" callback doesn't overwrite our error.
