@@ -17,6 +17,10 @@ namespace BikeFitness.Avalonia.Services
         private static readonly string WAHOO_CONTROL_POINT_UUID = "a026e005-0a7d-4ab3-97fa-f1500f9feb8b";
         private static readonly string POWER_MEASUREMENT_UUID = "00002A63-0000-1000-8000-00805f9b34fb";
 
+        // BlueZ needs 6-20s+ to finish GATT discovery on the KICKR; 45s gives
+        // generous headroom before we fail loudly.
+        private static readonly TimeSpan SERVICES_RESOLVED_TIMEOUT = TimeSpan.FromSeconds(45);
+
         // Internal State
         private Adapter? _adapter;
         private Device? _device;
@@ -184,7 +188,7 @@ namespace BikeFitness.Avalonia.Services
                     }
                 });
 
-                UpdateStatus("Connected. Discovering services...");
+                UpdateStatus("Connected. Discovering trainer services...");
 
                 // BlueZ flips ServicesResolved=true only after the full GATT
                 // discovery completes — on the KICKR that's ~6-20s after
@@ -194,10 +198,10 @@ namespace BikeFitness.Avalonia.Services
                 // first, so nothing is missed. On timeout it throws
                 // TimeoutException, which the outer catch reports as
                 // Connection Error.
-                Logger.Log("Waiting for ServicesResolved (event-based, 45s)...");
+                Logger.Log($"Waiting for ServicesResolved (event-based, {SERVICES_RESOLVED_TIMEOUT.TotalSeconds:F0}s)...");
                 try
                 {
-                    await _device.WaitForPropertyValueAsync<bool>("ServicesResolved", true, TimeSpan.FromSeconds(45));
+                    await _device.WaitForPropertyValueAsync<bool>("ServicesResolved", true, SERVICES_RESOLVED_TIMEOUT);
                     Logger.Log("ServicesResolved event-based wait completed.");
                 }
                 catch (Exception ex)
