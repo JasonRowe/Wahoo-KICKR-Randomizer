@@ -231,15 +231,29 @@ namespace BikeFitness.Avalonia.Services
 
                 Logger.Log($"Service discovery done. serviceCount={serviceCount}, controlPoint={_controlPoint != null}, powerChar={_powerChar != null}");
 
-                if (_controlPoint == null)
+                if (_controlPoint == null || _powerChar == null)
                 {
-                    UpdateStatus("Control Point NOT found.");
+                    // Connected at the link level, but the trainer's GATT services
+                    // weren't readable, so we can neither control resistance nor
+                    // receive telemetry. Fail loudly instead of pretending we're
+                    // "Connected and Ready".
+                    string detail = serviceCount == 0
+                        ? "Bluetooth GATT service discovery failed (no services readable)"
+                        : "the trainer's services were incomplete";
+                    Logger.Log($"Connection unusable: resolved={servicesResolved}, serviceCount={serviceCount}, controlPoint={_controlPoint != null}, powerChar={_powerChar != null}");
+
+                    // Dispose the connection-loss watcher first so its
+                    // "Device Disconnected" callback doesn't overwrite our error.
+                    if (_deviceWatcher != null) { _deviceWatcher.Dispose(); _deviceWatcher = null; }
+                    try { await _device.DisconnectAsync(); } catch (Exception ex) { Logger.Log($"Cleanup disconnect failed: {ex.Message}"); }
+                    _device = null;
+                    _isLoopRunning = false;
+
+                    UpdateStatus($"Connection failed — {detail}. Power-cycle the trainer and reconnect.");
+                    return;
                 }
 
-                if (_powerChar != null)
-                {
-                    await SubscribeToPowerAsync();
-                }
+                await SubscribeToPowerAsync();
 
                 UpdateStatus("Connected and Ready");
                 
