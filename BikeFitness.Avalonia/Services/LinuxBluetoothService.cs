@@ -186,21 +186,17 @@ namespace BikeFitness.Avalonia.Services
 
                 UpdateStatus("Connected. Discovering services...");
 
-                // Resolve GATT services. BlueZ flips ServicesResolved=true once it
-                // finishes discovering the device's service database. Log every
-                // attempt; if it never resolves (stale/half-open link), retry the
-                // connection once before giving up.
-                bool servicesResolved = await WaitForServicesResolvedAsync(_device);
-
-                if (!servicesResolved)
-                {
-                    Logger.Log("Services never resolved; disconnecting and retrying connection once.");
-                    UpdateStatus("Services not resolved; reconnecting...");
-                    try { await _device.DisconnectAsync(); } catch (Exception ex) { Logger.Log($"Retry-disconnect failed: {ex.Message}"); }
-                    await Task.Delay(1000);
-                    try { await _device.ConnectAsync(); } catch (Exception ex) { Logger.Log($"Reconnect failed: {ex.Message}"); }
-                    servicesResolved = await WaitForServicesResolvedAsync(_device);
-                }
+                // BlueZ flips ServicesResolved=true only after the full GATT
+                // discovery completes — on the KICKR that's ~6-20s after
+                // connect (wire-level ATT discovery is fast; the D-Bus property
+                // lags). WaitForPropertyValueAsync is event-based: it subscribes
+                // to the PropertiesChanged signal and checks the current value
+                // first, so nothing is missed. On timeout it throws
+                // TimeoutException, which the outer catch reports as
+                // Connection Error.
+                Logger.Log("Waiting for ServicesResolved (event-based, 45s)...");
+                await _device.WaitForPropertyValueAsync<bool>("ServicesResolved", true, TimeSpan.FromSeconds(45));
+                Logger.Log("ServicesResolved event-based wait completed.");
 
                 // Find Control Point + Power Measurement across all services.
                 _controlPoint = null;
@@ -233,7 +229,7 @@ namespace BikeFitness.Avalonia.Services
                     }
                 }
 
-                Logger.Log($"Service discovery done. resolved={servicesResolved}, serviceCount={serviceCount}, controlPoint={_controlPoint != null}, powerChar={_powerChar != null}");
+                Logger.Log($"Service discovery done. serviceCount={serviceCount}, controlPoint={_controlPoint != null}, powerChar={_powerChar != null}");
 
                 if (_controlPoint == null)
                 {
@@ -256,18 +252,6 @@ namespace BikeFitness.Avalonia.Services
                 UpdateStatus($"Connection Error: {ex.Message}");
                 Logger.Log($"Connection Exception: {ex}");
             }
-        }
-
-        private async Task<bool> WaitForServicesResolvedAsync(Device device)
-        {
-            for (int attempt = 0; attempt < 20; attempt++)
-            {
-                bool resolved = await device.GetServicesResolvedAsync();
-                Logger.Log($"GetServicesResolvedAsync attempt {attempt}: {resolved}");
-                if (resolved) return true;
-                await Task.Delay(500);
-            }
-            return false;
         }
 
         private async Task SubscribeToPowerAsync()
