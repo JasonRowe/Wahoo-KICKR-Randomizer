@@ -186,20 +186,24 @@ namespace BikeFitness.Avalonia.Services
 
                 UpdateStatus("Connected. Discovering services...");
 
-                // Resolve GATT services. BlueZ flips ServicesResolved=true once it
-                // finishes discovering the device's service database. Log every
-                // attempt; if it never resolves (stale/half-open link), retry the
-                // connection once before giving up.
-                bool servicesResolved = await WaitForServicesResolvedAsync(_device);
-
-                if (!servicesResolved)
+                // Wait for BlueZ to resolve the GATT services. On the KICKR the
+                // ServicesResolved D-Bus property flips ~6-20s after connect — the
+                // wire-level ATT discovery is fast, but the property lags. Use the
+                // library's event-based wait (it subscribes to PropertiesChanged and
+                // checks the current value first) with a generous timeout. Do NOT
+                // disconnect and reconnect here: that just restarts the discovery timer.
+                bool servicesResolved;
+                try
                 {
-                    Logger.Log("Services never resolved; disconnecting and retrying connection once.");
-                    UpdateStatus("Services not resolved; reconnecting...");
-                    try { await _device.DisconnectAsync(); } catch (Exception ex) { Logger.Log($"Retry-disconnect failed: {ex.Message}"); }
-                    await Task.Delay(1000);
-                    try { await _device.ConnectAsync(); } catch (Exception ex) { Logger.Log($"Reconnect failed: {ex.Message}"); }
-                    servicesResolved = await WaitForServicesResolvedAsync(_device);
+                    Logger.Log("Waiting for ServicesResolved (event-based, 45s)...");
+                    await _device.WaitForPropertyValueAsync<bool>("ServicesResolved", true, TimeSpan.FromSeconds(45));
+                    servicesResolved = true;
+                    Logger.Log("ServicesResolved resolved.");
+                }
+                catch (TimeoutException)
+                {
+                    servicesResolved = false;
+                    Logger.Log("ServicesResolved timed out after 45s.");
                 }
 
                 // Find Control Point + Power Measurement across all services.
@@ -253,7 +257,7 @@ namespace BikeFitness.Avalonia.Services
                     _device = null;
                     _isLoopRunning = false;
 
-                    UpdateStatus($"Connection failed — {detail}. Power-cycle the trainer and reconnect.");
+                    UpdateStatus($"Connection failed — {detail}. Reconnect to retry.");
                     return;
                 }
 
@@ -270,18 +274,6 @@ namespace BikeFitness.Avalonia.Services
                 UpdateStatus($"Connection Error: {ex.Message}");
                 Logger.Log($"Connection Exception: {ex}");
             }
-        }
-
-        private async Task<bool> WaitForServicesResolvedAsync(Device device)
-        {
-            for (int attempt = 0; attempt < 20; attempt++)
-            {
-                bool resolved = await device.GetServicesResolvedAsync();
-                Logger.Log($"GetServicesResolvedAsync attempt {attempt}: {resolved}");
-                if (resolved) return true;
-                await Task.Delay(500);
-            }
-            return false;
         }
 
         private async Task SubscribeToPowerAsync()
