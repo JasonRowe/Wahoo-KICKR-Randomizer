@@ -20,7 +20,10 @@ is read-only and does not code/push.
    and ask Jason to do it. Don't claim done when it needs Jason's hands.
 6. Open a PR with a concise summary: what / why / tests run / anything needing Jason or another
    agent to verify. Tag reviewers (Jason + relevant agents).
-7. Do not merge your own PR. It merges after review/approval.
+7. Merge your own PR only after approval. "Do not merge your own PR" means do NOT merge
+   without Jason's go-ahead — once he approves (a Slack message or a GitHub review), you do the
+   merge yourself: `gh pr merge <n> --squash --delete-branch` (squash is the repo norm, one
+   commit per PR tagged `(#n)`).
 
 ### Git & deploy
 - Source of truth = GitHub. All changes ship via PR -> merge to the default branch.
