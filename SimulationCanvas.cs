@@ -24,13 +24,12 @@ namespace BikeFitnessApp
         private readonly List<BitmapSource> _pedalFrames = new List<BitmapSource>();
         private int _lastPedalFrameIndex = -1;
 
-        // Wheel hub positions in sheet-cell pixel coordinates (rough estimates — verify against
-        // the art with the PedalHubMarker overlay). Sheet is 290x322; ground line is 6px above
-        // the cell bottom, matching the handoff metadata.
-        private static readonly Point FrontHubCell = new Point(230, 258);
-        private static readonly Point RearHubCell = new Point(55, 258);
+        // Wheel hub positions in sheet-cell pixel coordinates (measured from the sheet; verify
+        // against the art with the PedalHubMarker overlay). Cell is 290x322; wheels bottom out
+        // around y=273-278 (see PedalAnimation.WheelBottomY) and are ~108px across.
+        private static readonly Point FrontHubCell = new Point(212, 222);
+        private static readonly Point RearHubCell = new Point(78, 222);
         private const double WheelRadiusCell = 54.0;
-        private const double SheetGroundMarginPx = 6.0;
 
         // Pens & Brushes (Keep in WPF)
         private static readonly Brush GrassBrush;
@@ -531,14 +530,15 @@ namespace BikeFitnessApp
 
         private void DrawPedalCyclist(DrawingContext dc)
         {
-            var (scale, dest) = GetPedalDest();
             double phase = PedalAnimation.GetCrankPhase(_engine.TotalDistanceMeters, PedalMetersPerRevolution);
+            int overlayFrame = 0;
 
             if (PedalFrameOverride >= 0)
             {
                 _lastPedalFrameIndex = -1;
                 int index = Math.Clamp(PedalFrameOverride, 0, PedalAnimation.FrameCount - 1);
-                DrawSheetFrame(dc, dest, index, 1.0);
+                DrawSheetFrame(dc, index, 1.0);
+                overlayFrame = index;
             }
             else if (PedalSeamMode == SeamMode.CrossFade)
             {
@@ -547,62 +547,74 @@ namespace BikeFitnessApp
                 if (t > 0)
                 {
                     _lastPedalFrameIndex = -1;
-                    DrawSheetFrame(dc, dest, PedalAnimation.FrameCount - 1, 1.0 - t);
-                    DrawSheetFrame(dc, dest, 0, t);
+                    DrawSheetFrame(dc, PedalAnimation.FrameCount - 1, 1.0 - t);
+                    DrawSheetFrame(dc, 0, t);
                 }
                 else
                 {
-                    DrawCurrentFrameWithBlend(dc, dest, PedalAnimation.GetFrameIndex(phase, PedalSeamMode));
+                    overlayFrame = PedalAnimation.GetFrameIndex(phase, PedalSeamMode);
+                    DrawCurrentFrameWithBlend(dc, overlayFrame);
                 }
             }
             else
             {
-                DrawCurrentFrameWithBlend(dc, dest, PedalAnimation.GetFrameIndex(phase, PedalSeamMode));
+                overlayFrame = PedalAnimation.GetFrameIndex(phase, PedalSeamMode);
+                DrawCurrentFrameWithBlend(dc, overlayFrame);
             }
 
-            DrawWheelOverlays(dc, scale, dest);
+            DrawWheelOverlays(dc, overlayFrame);
         }
 
-        private void DrawCurrentFrameWithBlend(DrawingContext dc, Rect dest, int currentIndex)
+        private void DrawCurrentFrameWithBlend(DrawingContext dc, int currentIndex)
         {
             double blend = PedalBlendAlpha;
             if (blend > 0 && _lastPedalFrameIndex >= 0 && _lastPedalFrameIndex != currentIndex)
             {
                 // Moving average to damp frame "boil": previous frame full, current on top at blend alpha.
-                DrawSheetFrame(dc, dest, _lastPedalFrameIndex, 1.0);
-                DrawSheetFrame(dc, dest, currentIndex, blend);
+                DrawSheetFrame(dc, _lastPedalFrameIndex, 1.0);
+                DrawSheetFrame(dc, currentIndex, blend);
             }
             else
             {
-                DrawSheetFrame(dc, dest, currentIndex, 1.0);
+                DrawSheetFrame(dc, currentIndex, 1.0);
             }
             _lastPedalFrameIndex = currentIndex;
         }
 
-        private void DrawSheetFrame(DrawingContext dc, Rect dest, int frameIndex, double opacity)
+        private void DrawSheetFrame(DrawingContext dc, int frameIndex, double opacity)
         {
             if (frameIndex < 0 || frameIndex >= _pedalFrames.Count) return;
+
+            Rect dest = GetFrameDest(frameIndex);
             if (opacity < 1.0) dc.PushOpacity(opacity);
             dc.DrawImage(_pedalFrames[frameIndex], dest);
             if (opacity < 1.0) dc.Pop();
         }
 
-        private (double Scale, Rect Dest) GetPedalDest()
+        private double GetPedalScale()
         {
             double drawWidth = PedalDrawSizePx > 0 ? PedalDrawSizePx : PedalAnimation.CellWidth;
-            double scale = drawWidth / PedalAnimation.CellWidth;
-            double drawHeight = PedalAnimation.CellHeight * scale;
-
-            // Anchor the sheet's ground line (SheetGroundMarginPx above the cell bottom) on the
-            // road line (bike-local y = 0), so all 12 frames stay bottom-aligned with no vertical bob.
-            double bottomY = SheetGroundMarginPx * scale;
-            return (scale, new Rect(-drawWidth / 2.0, bottomY - drawHeight, drawWidth, drawHeight));
+            return drawWidth / PedalAnimation.CellWidth;
         }
 
-        private void DrawWheelOverlays(DrawingContext dc, double scale, Rect dest)
+        private Rect GetFrameDest(int frameIndex)
+        {
+            double scale = GetPedalScale();
+            double drawWidth = PedalAnimation.CellWidth * scale;
+            double drawHeight = PedalAnimation.CellCropHeight * scale;
+
+            // Anchor each frame's wheel bottom (ground contact) on the road line (bike-local y = 0).
+            // Per-frame so the two grid rows' ~4px vertical misalignment doesn't read as a bob.
+            double bottomY = (PedalAnimation.CellCropHeight - PedalAnimation.GetWheelBottomY(frameIndex)) * scale;
+            return new Rect(-drawWidth / 2.0, bottomY - drawHeight, drawWidth, drawHeight);
+        }
+
+        private void DrawWheelOverlays(DrawingContext dc, int frameIndex)
         {
             if (!PedalWheelSpin && !PedalHubMarker) return;
 
+            double scale = GetPedalScale();
+            Rect dest = GetFrameDest(frameIndex);
             double angleDeg = (_engine.TotalDistanceMeters / PedalAnimation.WheelCircumferenceMeters) * 360.0;
             DrawWheelOverlay(dc, dest, scale, FrontHubCell, WheelRadiusCell, angleDeg);
             DrawWheelOverlay(dc, dest, scale, RearHubCell, WheelRadiusCell, angleDeg);

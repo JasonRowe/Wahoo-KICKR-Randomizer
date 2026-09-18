@@ -118,7 +118,7 @@ namespace BikeFitnessApp.Tests
         public void GetSourceRect_FirstFrame_TopLeftCell()
         {
             var rect = PedalAnimation.GetSourceRect(0);
-            Assert.AreEqual((0, 0, 290, 322), rect);
+            Assert.AreEqual((0, 0, 290, PedalAnimation.CellCropHeight), rect);
         }
 
         [TestMethod]
@@ -141,14 +141,43 @@ namespace BikeFitnessApp.Tests
         public void GetSourceRect_LastFrame_BottomRightCell()
         {
             var rect = PedalAnimation.GetSourceRect(11);
-            Assert.AreEqual((1450, 322, 290, 322), rect);
+            Assert.AreEqual((1450, 322, 290, PedalAnimation.CellCropHeight), rect);
         }
 
         [TestMethod]
         public void GetSourceRect_OutOfRange_Clamps()
         {
-            Assert.AreEqual((0, 0, 290, 322), PedalAnimation.GetSourceRect(-1));
-            Assert.AreEqual((1450, 322, 290, 322), PedalAnimation.GetSourceRect(12));
+            Assert.AreEqual((0, 0, 290, PedalAnimation.CellCropHeight), PedalAnimation.GetSourceRect(-1));
+            Assert.AreEqual((1450, 322, 290, PedalAnimation.CellCropHeight), PedalAnimation.GetSourceRect(12));
+        }
+
+        #endregion
+
+        #region Cell crop & ground alignment
+
+        [TestMethod]
+        public void CellCropHeight_IsLessThanCellHeight_ToExcludeCaptionBand()
+        {
+            Assert.IsTrue(PedalAnimation.CellCropHeight < PedalAnimation.CellHeight);
+            Assert.AreEqual(280, PedalAnimation.CellCropHeight);
+        }
+
+        [TestMethod]
+        public void GetWheelBottomY_ReturnsValueWithinCell()
+        {
+            for (int i = 0; i < PedalAnimation.FrameCount; i++)
+            {
+                int bottom = PedalAnimation.GetWheelBottomY(i);
+                Assert.IsTrue(bottom > 0 && bottom <= PedalAnimation.CellCropHeight,
+                    $"frame {i} wheel bottom {bottom} out of crop range");
+            }
+        }
+
+        [TestMethod]
+        public void GetWheelBottomY_ClampsToValidFrame()
+        {
+            Assert.AreEqual(PedalAnimation.GetWheelBottomY(0), PedalAnimation.GetWheelBottomY(-1));
+            Assert.AreEqual(PedalAnimation.GetWheelBottomY(11), PedalAnimation.GetWheelBottomY(12));
         }
 
         #endregion

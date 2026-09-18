@@ -35,6 +35,24 @@ namespace BikeFitness.Shared
         public const int CellWidth = 290;
         public const int CellHeight = 322;
 
+        /// <summary>
+        /// Crop height of each cell actually drawn. The bottom ~42px of every cell is a frame-number
+        /// caption band plus a faint ground shadow; cropping to this height removes both and leaves the
+        /// solid bike (wheels bottom out at ~278px in the source).
+        /// </summary>
+        public const int CellCropHeight = 280;
+
+        /// <summary>
+        /// Bottom of the solid wheels (ground contact) within each full 322px cell, per frame index,
+        /// measured from the sheet. The two grid rows are ~4px out of vertical alignment in the source
+        /// art, so this table is used to anchor each frame to a common ground line (no vertical bob).
+        /// </summary>
+        private static readonly int[] WheelBottomY =
+        {
+            278, 278, 278, 277, 278, 278, // top row (frames 0-5)
+            273, 273, 273, 274, 273, 273, // bottom row (frames 6-11)
+        };
+
         /// <summary>Default metres travelled per crank revolution (~50/16 gearing on 700c).</summary>
         public const double DefaultMetersPerRevolution = 6.5;
 
@@ -89,14 +107,22 @@ namespace BikeFitness.Shared
 
         /// <summary>
         /// Source rectangle (x, y, width, height) in the sheet for a frame index.
-        /// Row-major: column = index % 6, row = index / 6.
+        /// Row-major: column = index % 6, row = index / 6. Height is <see cref="CellCropHeight"/>
+        /// (cropped), so the frame-number caption band at the bottom of each cell is excluded.
         /// </summary>
         public static (int X, int Y, int Width, int Height) GetSourceRect(int frameIndex)
         {
             int index = Math.Clamp(frameIndex, 0, FrameCount - 1);
             int col = index % SheetColumns;
             int row = index / SheetColumns;
-            return (col * CellWidth, row * CellHeight, CellWidth, CellHeight);
+            return (col * CellWidth, row * CellHeight, CellWidth, CellCropHeight);
+        }
+
+        /// <summary>Bottom of the solid wheels (ground contact) within the full cell, for a frame index.</summary>
+        public static int GetWheelBottomY(int frameIndex)
+        {
+            int index = Math.Clamp(frameIndex, 0, FrameCount - 1);
+            return WheelBottomY[index];
         }
 
         /// <summary>
