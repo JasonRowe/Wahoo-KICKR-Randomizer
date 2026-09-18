@@ -215,3 +215,17 @@ To increase realism, we will explore replacing the static "sliding" bike with ar
 *   **Feasibility:** Medium. The coding is straightforward, but acquiring or creating a smooth 12-frame cycling sprite sheet that matches our art style is the blocker. Without quality assets, this looks "janky" and is worse than a static rider.
 *   **Recommendation:** Defer until a high-quality sprite sheet is available. Stick to "Rider Bob" (vertical sine wave) for now.
 
+#### 10.2.1 Status (2026-09): spike landed
+A 12-frame AI sheet (Jason, ChatGPT) was wired into `BikeFitness.Harness` and judged by eye.
+Verdict: **good as-is** — the loop seam and frame "boil" are acceptable without mitigation.
+
+- Chosen parameters: straight 12-frame loop (no seam cross-fade, no temporal blend), D = 6.5 m/rev.
+- The sheet's wheels are static (no rotation in the art); only the legs pedal. Code-spin overlay
+  is available behind the harness toggles but was not needed for the verdict.
+- Sheet cells were cropped 290→280 px tall to drop the baked-in frame-number caption; each frame is
+  ground-anchored by its measured wheel bottom (`PedalAnimation.WheelBottomY`) to kill the ~4 px
+  row misalignment.
+- Frame-index math lives in `BikeFitness.Shared/PedalAnimation.cs` (shared, unit-tested); the WPF
+  `SimulationCanvas` has an opt-in `PedalSheetSource` mode (default off). Porting to the Avalonia
+  canvas and enabling it in the app behind a setting is the follow-on.
+

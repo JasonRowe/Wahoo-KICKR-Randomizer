@@ -18,6 +18,19 @@ namespace BikeFitnessApp
         
         private readonly SimulationEngine<BitmapSource, BitmapSource> _engine = new SimulationEngine<BitmapSource, BitmapSource>();
 
+        // Pedal-cycle sprite sheet (prototype). Null unless PedalSheetSource is set, so the
+        // main app is unaffected.
+        private BitmapSource? _pedalSheet;
+        private readonly List<BitmapSource> _pedalFrames = new List<BitmapSource>();
+        private int _lastPedalFrameIndex = -1;
+
+        // Wheel hub positions in sheet-cell pixel coordinates (measured from the sheet; verify
+        // against the art with the PedalHubMarker overlay). Cell is 290x322; wheels bottom out
+        // around y=273-278 (see PedalAnimation.WheelBottomY) and are ~108px across.
+        private static readonly Point FrontHubCell = new Point(212, 222);
+        private static readonly Point RearHubCell = new Point(78, 222);
+        private const double WheelRadiusCell = 54.0;
+
         // Pens & Brushes (Keep in WPF)
         private static readonly Brush GrassBrush;
         private static readonly Pen PathPen = new Pen(new SolidColorBrush(Color.FromRgb(160, 135, 100)), 10);
@@ -34,6 +47,10 @@ namespace BikeFitnessApp
         private static readonly Brush PlainParticleBrush;
         private static readonly Brush DesertParticleBrush;
         private static readonly Brush OceanParticleBrush;
+        private static readonly Pen WheelSpokePen;
+        private static readonly Pen WheelRimPen;
+        private static readonly Pen HubMarkerPen;
+        private static readonly Brush WheelHubBrush;
 
         static SimulationCanvas()
         {
@@ -105,6 +122,25 @@ namespace BikeFitnessApp
             var oceanParticle = new SolidColorBrush(Color.FromRgb(210, 240, 250));
             oceanParticle.Freeze();
             OceanParticleBrush = oceanParticle;
+
+            var wheelSpoke = new SolidColorBrush(Color.FromArgb(190, 25, 25, 25));
+            wheelSpoke.Freeze();
+            WheelSpokePen = new Pen(wheelSpoke, 2.0);
+            WheelSpokePen.Freeze();
+
+            var wheelRim = new SolidColorBrush(Color.FromArgb(190, 25, 25, 25));
+            wheelRim.Freeze();
+            WheelRimPen = new Pen(wheelRim, 3.0);
+            WheelRimPen.Freeze();
+
+            var hubMarker = new SolidColorBrush(Color.FromArgb(255, 255, 60, 60));
+            hubMarker.Freeze();
+            HubMarkerPen = new Pen(hubMarker, 2.0);
+            HubMarkerPen.Freeze();
+
+            var wheelHub = new SolidColorBrush(Color.FromArgb(220, 25, 25, 25));
+            wheelHub.Freeze();
+            WheelHubBrush = wheelHub;
         }
 
         private enum RoadsideDrawPass
@@ -173,6 +209,91 @@ namespace BikeFitnessApp
             }
         }
 
+        public static readonly DependencyProperty PedalSheetSourceProperty =
+            DependencyProperty.Register(nameof(PedalSheetSource), typeof(string), typeof(SimulationCanvas),
+                new PropertyMetadata(string.Empty, OnPedalSheetSourceChanged));
+
+        public string PedalSheetSource
+        {
+            get => (string)GetValue(PedalSheetSourceProperty);
+            set => SetValue(PedalSheetSourceProperty, value);
+        }
+
+        private static void OnPedalSheetSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is SimulationCanvas canvas) canvas.LoadPedalSheet();
+        }
+
+        public static readonly DependencyProperty PedalMetersPerRevolutionProperty =
+            DependencyProperty.Register(nameof(PedalMetersPerRevolution), typeof(double), typeof(SimulationCanvas),
+                new PropertyMetadata(PedalAnimation.DefaultMetersPerRevolution));
+
+        public double PedalMetersPerRevolution
+        {
+            get => (double)GetValue(PedalMetersPerRevolutionProperty);
+            set => SetValue(PedalMetersPerRevolutionProperty, value);
+        }
+
+        public static readonly DependencyProperty PedalFrameOverrideProperty =
+            DependencyProperty.Register(nameof(PedalFrameOverride), typeof(int), typeof(SimulationCanvas),
+                new PropertyMetadata(-1));
+
+        public int PedalFrameOverride
+        {
+            get => (int)GetValue(PedalFrameOverrideProperty);
+            set => SetValue(PedalFrameOverrideProperty, value);
+        }
+
+        public static readonly DependencyProperty PedalSeamModeProperty =
+            DependencyProperty.Register(nameof(PedalSeamMode), typeof(SeamMode), typeof(SimulationCanvas),
+                new PropertyMetadata(SeamMode.Straight));
+
+        public SeamMode PedalSeamMode
+        {
+            get => (SeamMode)GetValue(PedalSeamModeProperty);
+            set => SetValue(PedalSeamModeProperty, value);
+        }
+
+        public static readonly DependencyProperty PedalBlendAlphaProperty =
+            DependencyProperty.Register(nameof(PedalBlendAlpha), typeof(double), typeof(SimulationCanvas),
+                new PropertyMetadata(0.0));
+
+        public double PedalBlendAlpha
+        {
+            get => (double)GetValue(PedalBlendAlphaProperty);
+            set => SetValue(PedalBlendAlphaProperty, value);
+        }
+
+        public static readonly DependencyProperty PedalWheelSpinProperty =
+            DependencyProperty.Register(nameof(PedalWheelSpin), typeof(bool), typeof(SimulationCanvas),
+                new PropertyMetadata(false));
+
+        public bool PedalWheelSpin
+        {
+            get => (bool)GetValue(PedalWheelSpinProperty);
+            set => SetValue(PedalWheelSpinProperty, value);
+        }
+
+        public static readonly DependencyProperty PedalHubMarkerProperty =
+            DependencyProperty.Register(nameof(PedalHubMarker), typeof(bool), typeof(SimulationCanvas),
+                new PropertyMetadata(false));
+
+        public bool PedalHubMarker
+        {
+            get => (bool)GetValue(PedalHubMarkerProperty);
+            set => SetValue(PedalHubMarkerProperty, value);
+        }
+
+        public static readonly DependencyProperty PedalDrawSizePxProperty =
+            DependencyProperty.Register(nameof(PedalDrawSizePx), typeof(double), typeof(SimulationCanvas),
+                new PropertyMetadata(150.0));
+
+        public double PedalDrawSizePx
+        {
+            get => (double)GetValue(PedalDrawSizePxProperty);
+            set => SetValue(PedalDrawSizePxProperty, value);
+        }
+
         #endregion
 
         public SimulationCanvas()
@@ -223,6 +344,8 @@ namespace BikeFitnessApp
                 AddBushSprite(LoadBitmap(Path.Combine(imagesDir, "sm_bush.png"), "Small Bush"));
                 AddBushSprite(LoadBitmap(Path.Combine(imagesDir, "big_bush.png"), "Big Bush"));
                 AddBushSprite(LoadBitmap(Path.Combine(imagesDir, "tall_bush.png"), "Tall Bush"));
+
+                LoadPedalSheet();
             }
             catch (Exception ex)
             {
@@ -233,6 +356,32 @@ namespace BikeFitnessApp
         private void AddBushSprite(BitmapSource? sprite)
         {
             if (sprite != null) _engine.BushSprites.Add(sprite);
+        }
+
+        private void LoadPedalSheet()
+        {
+            _pedalFrames.Clear();
+            _pedalSheet = null;
+            _lastPedalFrameIndex = -1;
+
+            string source = PedalSheetSource;
+            if (string.IsNullOrWhiteSpace(source)) return;
+
+            var sheet = LoadBitmap(source, "PedalSheet");
+            if (sheet == null)
+            {
+                Log($"Pedal sheet not found or failed to load: {source}");
+                return;
+            }
+
+            _pedalSheet = sheet;
+            for (int i = 0; i < PedalAnimation.FrameCount; i++)
+            {
+                var (x, y, w, h) = PedalAnimation.GetSourceRect(i);
+                var cropped = new CroppedBitmap(sheet, new Int32Rect(x, y, w, h));
+                cropped.Freeze();
+                _pedalFrames.Add(cropped);
+            }
         }
 
         private BitmapSource? LoadBitmap(string path, string name)
@@ -354,10 +503,7 @@ namespace BikeFitnessApp
                 dc.PushTransform(new TranslateTransform(bikeScreenX, visualCenterY));
                 dc.PushTransform(new RotateTransform(-_engine.CurrentSlopeAngle)); 
 
-                if (_engine.CyclistSprite != null)
-                    dc.DrawImage(_engine.CyclistSprite, new Rect(-75, -130, 150, 150));
-                else
-                    dc.DrawRectangle(Brushes.Red, new Pen(Brushes.Black, 2), new Rect(-25, -40, 50, 40));
+                DrawCyclist(dc);
                 
                 dc.Pop();
                 dc.Pop();
@@ -366,6 +512,138 @@ namespace BikeFitnessApp
 
                 DrawBiomeLabel(dc);
             }
+        }
+
+        private void DrawCyclist(DrawingContext dc)
+        {
+            if (_pedalSheet != null && _pedalFrames.Count == PedalAnimation.FrameCount)
+            {
+                DrawPedalCyclist(dc);
+                return;
+            }
+
+            if (_engine.CyclistSprite != null)
+                dc.DrawImage(_engine.CyclistSprite, new Rect(-75, -130, 150, 150));
+            else
+                dc.DrawRectangle(Brushes.Red, new Pen(Brushes.Black, 2), new Rect(-25, -40, 50, 40));
+        }
+
+        private void DrawPedalCyclist(DrawingContext dc)
+        {
+            double phase = PedalAnimation.GetCrankPhase(_engine.TotalDistanceMeters, PedalMetersPerRevolution);
+            int overlayFrame = 0;
+
+            if (PedalFrameOverride >= 0)
+            {
+                _lastPedalFrameIndex = -1;
+                int index = Math.Clamp(PedalFrameOverride, 0, PedalAnimation.FrameCount - 1);
+                DrawSheetFrame(dc, index, 1.0);
+                overlayFrame = index;
+            }
+            else if (PedalSeamMode == SeamMode.CrossFade)
+            {
+                double fadeWindow = PedalAnimation.GetCrossFadeWindowPhase(_engine.SpeedKph, PedalMetersPerRevolution);
+                double t = PedalAnimation.GetCrossFadeFactor(phase, fadeWindow);
+                if (t > 0)
+                {
+                    _lastPedalFrameIndex = -1;
+                    DrawSheetFrame(dc, PedalAnimation.FrameCount - 1, 1.0 - t);
+                    DrawSheetFrame(dc, 0, t);
+                }
+                else
+                {
+                    overlayFrame = PedalAnimation.GetFrameIndex(phase, PedalSeamMode);
+                    DrawCurrentFrameWithBlend(dc, overlayFrame);
+                }
+            }
+            else
+            {
+                overlayFrame = PedalAnimation.GetFrameIndex(phase, PedalSeamMode);
+                DrawCurrentFrameWithBlend(dc, overlayFrame);
+            }
+
+            DrawWheelOverlays(dc, overlayFrame);
+        }
+
+        private void DrawCurrentFrameWithBlend(DrawingContext dc, int currentIndex)
+        {
+            double blend = PedalBlendAlpha;
+            if (blend > 0 && _lastPedalFrameIndex >= 0 && _lastPedalFrameIndex != currentIndex)
+            {
+                // Moving average to damp frame "boil": previous frame full, current on top at blend alpha.
+                DrawSheetFrame(dc, _lastPedalFrameIndex, 1.0);
+                DrawSheetFrame(dc, currentIndex, blend);
+            }
+            else
+            {
+                DrawSheetFrame(dc, currentIndex, 1.0);
+            }
+            _lastPedalFrameIndex = currentIndex;
+        }
+
+        private void DrawSheetFrame(DrawingContext dc, int frameIndex, double opacity)
+        {
+            if (frameIndex < 0 || frameIndex >= _pedalFrames.Count) return;
+
+            Rect dest = GetFrameDest(frameIndex);
+            if (opacity < 1.0) dc.PushOpacity(opacity);
+            dc.DrawImage(_pedalFrames[frameIndex], dest);
+            if (opacity < 1.0) dc.Pop();
+        }
+
+        private double GetPedalScale()
+        {
+            double drawWidth = PedalDrawSizePx > 0 ? PedalDrawSizePx : PedalAnimation.CellWidth;
+            return drawWidth / PedalAnimation.CellWidth;
+        }
+
+        private Rect GetFrameDest(int frameIndex)
+        {
+            double scale = GetPedalScale();
+            double drawWidth = PedalAnimation.CellWidth * scale;
+            double drawHeight = PedalAnimation.CellCropHeight * scale;
+
+            // Anchor each frame's wheel bottom (ground contact) on the road line (bike-local y = 0).
+            // Per-frame so the two grid rows' ~4px vertical misalignment doesn't read as a bob.
+            double bottomY = (PedalAnimation.CellCropHeight - PedalAnimation.GetWheelBottomY(frameIndex)) * scale;
+            return new Rect(-drawWidth / 2.0, bottomY - drawHeight, drawWidth, drawHeight);
+        }
+
+        private void DrawWheelOverlays(DrawingContext dc, int frameIndex)
+        {
+            if (!PedalWheelSpin && !PedalHubMarker) return;
+
+            double scale = GetPedalScale();
+            Rect dest = GetFrameDest(frameIndex);
+            double angleDeg = (_engine.TotalDistanceMeters / PedalAnimation.WheelCircumferenceMeters) * 360.0;
+            DrawWheelOverlay(dc, dest, scale, FrontHubCell, WheelRadiusCell, angleDeg);
+            DrawWheelOverlay(dc, dest, scale, RearHubCell, WheelRadiusCell, angleDeg);
+        }
+
+        private void DrawWheelOverlay(DrawingContext dc, Rect dest, double scale, Point hubCell, double radiusCell, double angleDeg)
+        {
+            var hub = new Point(dest.X + (hubCell.X * scale), dest.Y + (hubCell.Y * scale));
+            double radius = radiusCell * scale;
+
+            if (PedalHubMarker)
+            {
+                dc.DrawEllipse(null, HubMarkerPen, hub, radius, radius);
+                dc.DrawLine(HubMarkerPen, new Point(hub.X - radius - 6, hub.Y), new Point(hub.X + radius + 6, hub.Y));
+                dc.DrawLine(HubMarkerPen, new Point(hub.X, hub.Y - radius - 6), new Point(hub.X, hub.Y + radius + 6));
+            }
+
+            if (!PedalWheelSpin) return;
+
+            dc.PushClip(new EllipseGeometry(hub, radius, radius));
+            dc.DrawEllipse(null, WheelRimPen, hub, radius, radius);
+            for (int i = 0; i < 6; i++)
+            {
+                double a = (angleDeg + (i * 60.0)) * (Math.PI / 180.0);
+                var dir = new Vector(Math.Cos(a), Math.Sin(a));
+                dc.DrawLine(WheelSpokePen, hub - (dir * radius), hub + (dir * radius));
+            }
+            dc.Pop();
+            dc.DrawEllipse(WheelHubBrush, null, hub, radius * 0.14, radius * 0.14);
         }
 
         private void DrawBackground(DrawingContext dc, SimulationEngine<BitmapSource, BitmapSource>.BackgroundSegmentInfo info)
