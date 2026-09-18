@@ -1,13 +1,18 @@
 using System;
 using System.Runtime.InteropServices;
 using BikeFitness.Shared;
+using BikeFitness.Shared.Services;
 
 namespace BikeFitnessApp
 {
-    public static class PowerManagement
+    /// <summary>
+    /// Windows implementation using SetThreadExecutionState to keep the system awake
+    /// (and the display on) while a workout is in progress.
+    /// </summary>
+    public sealed class WindowsPowerManagementService : IPowerManagementService
     {
         [Flags]
-        public enum EXECUTION_STATE : uint
+        private enum EXECUTION_STATE : uint
         {
             ES_CONTINUOUS = 0x80000000,
             ES_SYSTEM_REQUIRED = 0x00000001,
@@ -17,10 +22,7 @@ namespace BikeFitnessApp
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern EXECUTION_STATE SetThreadExecutionState(EXECUTION_STATE esFlags);
 
-        /// <summary>
-        /// Prevents the system from going to sleep and keeps the display on.
-        /// </summary>
-        public static void PreventSleep()
+        public void PreventSleep()
         {
             try
             {
@@ -33,10 +35,7 @@ namespace BikeFitnessApp
             }
         }
 
-        /// <summary>
-        /// Allows the system to go to sleep and the display to turn off according to user settings.
-        /// </summary>
-        public static void AllowSleep()
+        public void AllowSleep()
         {
             try
             {

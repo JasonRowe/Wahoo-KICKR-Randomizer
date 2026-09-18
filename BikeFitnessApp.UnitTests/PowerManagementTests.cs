@@ -1,5 +1,4 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BikeFitness.Shared;
 
 namespace BikeFitnessApp.UnitTests
 {
@@ -9,10 +8,11 @@ namespace BikeFitnessApp.UnitTests
         [TestMethod]
         public void PreventSleep_DoesNotThrow()
         {
-            // Act & Assert
+            var service = new WindowsPowerManagementService();
+
             try
             {
-                PowerManagement.PreventSleep();
+                service.PreventSleep();
             }
             catch (System.Exception ex)
             {
@@ -23,10 +23,11 @@ namespace BikeFitnessApp.UnitTests
         [TestMethod]
         public void AllowSleep_DoesNotThrow()
         {
-            // Act & Assert
+            var service = new WindowsPowerManagementService();
+
             try
             {
-                PowerManagement.AllowSleep();
+                service.AllowSleep();
             }
             catch (System.Exception ex)
             {

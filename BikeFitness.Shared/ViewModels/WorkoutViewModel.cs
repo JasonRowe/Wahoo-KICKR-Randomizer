@@ -18,6 +18,7 @@ namespace BikeFitness.Shared.ViewModels
         private readonly IBluetoothService _bluetoothService;
         private readonly IStravaService _stravaService;
         private readonly IUserInterfaceService _uiService;
+        private readonly IPowerManagementService _powerManagementService;
         private readonly KickrLogic _logic = new KickrLogic();
         private readonly System.Timers.Timer _workoutTimer;
         private readonly System.Timers.Timer _dataTimer;
@@ -158,11 +159,12 @@ namespace BikeFitness.Shared.ViewModels
 
         public event Action? Disconnected;
 
-        public WorkoutViewModel(IBluetoothService bluetoothService, IStravaService stravaService, IUserInterfaceService uiService)
+        public WorkoutViewModel(IBluetoothService bluetoothService, IStravaService stravaService, IUserInterfaceService uiService, IPowerManagementService powerManagementService)
         {
             _bluetoothService = bluetoothService;
             _stravaService = stravaService;
             _uiService = uiService;
+            _powerManagementService = powerManagementService;
             
             _bluetoothService.ConnectionLost += OnConnectionLost;
             _bluetoothService.PowerReceived += OnPowerReceived;
@@ -203,8 +205,9 @@ namespace BikeFitness.Shared.ViewModels
             _workoutTimer.Dispose();
             _dataTimer.Stop();
             _dataTimer.Dispose();
-            
-            // We'll let the UI handle PowerManagement or add a service for it.
+
+            _powerManagementService.AllowSleep();
+
             System.GC.SuppressFinalize(this);
         }
 
@@ -290,6 +293,7 @@ namespace BikeFitness.Shared.ViewModels
                 IsWorkoutActive = false;
                 _workoutTimer.Stop();
                 _dataTimer.Stop();
+                _powerManagementService.AllowSleep();
                 Status = "DISCONNECTED";
                 Log = "Status: Device Disconnected.";
                 Disconnected?.Invoke();
@@ -310,6 +314,7 @@ namespace BikeFitness.Shared.ViewModels
             IsWorkoutActive = true;
             ShowPostWorkoutOptions = false;
             HasWorkoutData = false;
+            _powerManagementService.PreventSleep();
             _workoutTimer.Start();
             _dataTimer.Start();
             Status = "WORKOUT ACTIVE";
@@ -326,6 +331,7 @@ namespace BikeFitness.Shared.ViewModels
             IsWorkoutActive = false;
             _workoutTimer.Stop();
             _dataTimer.Stop();
+            _powerManagementService.AllowSleep();
             Status = "CONNECTED";
             Log = "Status: Workout Stopped";
 

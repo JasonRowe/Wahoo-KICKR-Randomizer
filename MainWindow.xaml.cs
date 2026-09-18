@@ -28,7 +28,7 @@ namespace BikeFitnessApp
                 e.Cancel = true;
                 _disconnectOnClose = true;
 
-                PowerManagement.AllowSleep();
+                _services.GetService<IPowerManagementService>()?.AllowSleep();
 
                 var bluetooth = _services.GetService<IBluetoothService>();
                 if (bluetooth != null && bluetooth.IsConnected)

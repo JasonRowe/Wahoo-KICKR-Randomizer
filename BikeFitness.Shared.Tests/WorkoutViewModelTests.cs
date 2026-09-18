@@ -12,6 +12,7 @@ namespace BikeFitnessApp.UnitTests
         private MockBluetoothService _mockBluetoothService = null!;
         private MockStravaService _mockStravaService = null!;
         private MockUserInterfaceService _mockUIService = null!;
+        private MockPowerManagementService _mockPowerManagementService = null!;
         private WorkoutViewModel _viewModel = null!;
 
         [TestInitialize]
@@ -20,7 +21,8 @@ namespace BikeFitnessApp.UnitTests
             _mockBluetoothService = new MockBluetoothService();
             _mockStravaService = new MockStravaService();
             _mockUIService = new MockUserInterfaceService();
-            _viewModel = new WorkoutViewModel(_mockBluetoothService, _mockStravaService, _mockUIService);
+            _mockPowerManagementService = new MockPowerManagementService();
+            _viewModel = new WorkoutViewModel(_mockBluetoothService, _mockStravaService, _mockUIService, _mockPowerManagementService);
         }
 
         [TestCleanup]
@@ -103,6 +105,7 @@ namespace BikeFitnessApp.UnitTests
             Assert.AreEqual("Status: Workout Started", _viewModel.Log);
             Assert.IsFalse(_viewModel.ShowPostWorkoutOptions);
             Assert.IsFalse(_viewModel.HasWorkoutData);
+            Assert.AreEqual(1, _mockPowerManagementService.PreventSleepCalls);
         }
 
         [TestMethod]
@@ -120,6 +123,7 @@ namespace BikeFitnessApp.UnitTests
             Assert.IsFalse(_viewModel.CanStop);
             Assert.AreEqual("CONNECTED", _viewModel.Status);
             Assert.AreEqual("Status: Workout Stopped", _viewModel.Log);
+            Assert.AreEqual(1, _mockPowerManagementService.AllowSleepCalls);
         }
 
         [TestMethod]
@@ -135,6 +139,7 @@ namespace BikeFitnessApp.UnitTests
             Assert.IsFalse(_viewModel.IsWorkoutActive);
             Assert.AreEqual("DISCONNECTED", _viewModel.Status);
             Assert.AreEqual("Status: Device Disconnected.", _viewModel.Log);
+            Assert.AreEqual(1, _mockPowerManagementService.AllowSleepCalls);
         }
 
         [TestMethod]

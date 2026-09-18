@@ -71,6 +71,7 @@ namespace BikeFitness.Avalonia
 
             services.AddSingleton<IStravaService, BikeFitness.Shared.Services.StravaService>();
             services.AddSingleton<IUserInterfaceService, AvaloniaUserInterfaceService>();
+            services.AddSingleton<IPowerManagementService, LinuxPowerManagementService>();
 
             // ViewModels
             services.AddSingleton<MainViewModel>();

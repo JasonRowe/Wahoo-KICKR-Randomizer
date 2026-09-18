@@ -29,6 +29,7 @@ namespace BikeFitnessApp
             services.AddSingleton<IBluetoothService, WindowsBluetoothService>();
             services.AddSingleton<IStravaService, StravaService>();
             services.AddSingleton<IUserInterfaceService, WpfUserInterfaceService>();
+            services.AddSingleton<IPowerManagementService, WindowsPowerManagementService>();
 
             // ViewModels
             services.AddSingleton<MainViewModel>();
