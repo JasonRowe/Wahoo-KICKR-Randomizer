@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace BikeFitness.Shared
 {
@@ -55,6 +56,24 @@ namespace BikeFitness.Shared
 
         /// <summary>Default metres travelled per crank revolution (~50/16 gearing on 700c).</summary>
         public const double DefaultMetersPerRevolution = 6.5;
+
+        /// <summary>
+        /// File name of the shipped pedal-cycle sheet, as deployed under the app's <c>Images</c>
+        /// directory. Shared so the WPF and Avalonia apps load the same asset.
+        /// </summary>
+        public const string SheetFileName = "rider_pedal_sheet_12f.png";
+
+        /// <summary>
+        /// Default draw width, in DIUs, for one sheet cell. 150 matches the size the legacy
+        /// single-sprite cyclist is drawn at, so the animation drops in without a scale jump.
+        /// </summary>
+        public const double DefaultDrawWidthPx = 150.0;
+
+        /// <summary>Full path of the shipped pedal-cycle sheet inside an images directory.</summary>
+        public static string GetDefaultSheetPath(string imagesDirectory)
+        {
+            return Path.Combine(imagesDirectory, SheetFileName);
+        }
 
         /// <summary>Nominal 700c wheel circumference in metres (used for wheel-spin overlay).</summary>
         public const double WheelCircumferenceMeters = 2.1;
@@ -123,6 +142,37 @@ namespace BikeFitness.Shared
         {
             int index = Math.Clamp(frameIndex, 0, FrameCount - 1);
             return WheelBottomY[index];
+        }
+
+        /// <summary>
+        /// Scale factor from sheet-cell pixels to draw units, for a requested draw width.
+        /// A non-positive width falls back to the cell width (scale 1.0).
+        /// </summary>
+        public static double GetDrawScale(double drawWidthPx)
+        {
+            double width = drawWidthPx > 0 ? drawWidthPx : CellWidth;
+            return width / CellWidth;
+        }
+
+        /// <summary>
+        /// Destination rectangle for a frame, in canvas units, relative to the bike's ground
+        /// contact point (bike-local y = 0, x = 0 at the bike's horizontal anchor — the two
+        /// canvases translate/rotate to that origin themselves).
+        /// <para>
+        /// The frame is horizontally centred and each frame is anchored by its own measured wheel
+        /// bottom (<see cref="GetWheelBottomY"/>), so the sheet's two grid rows — ~4px out of
+        /// vertical alignment in the source art — share one ground line instead of bobbing.
+        /// Shared by the WPF and Avalonia canvases so both render identically.
+        /// </para>
+        /// </summary>
+        public static (double X, double Y, double Width, double Height) GetFrameDestRect(int frameIndex, double drawWidthPx)
+        {
+            double scale = GetDrawScale(drawWidthPx);
+            double drawWidth = CellWidth * scale;
+            double drawHeight = CellCropHeight * scale;
+
+            double bottomY = (CellCropHeight - GetWheelBottomY(frameIndex)) * scale;
+            return (-drawWidth / 2.0, bottomY - drawHeight, drawWidth, drawHeight);
         }
 
         /// <summary>

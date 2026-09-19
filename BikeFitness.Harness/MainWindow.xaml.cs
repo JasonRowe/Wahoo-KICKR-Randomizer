@@ -20,8 +20,9 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        // Point the harness at the prototype sheet (kept out of Images/ per the spike guardrail).
-        string sheetPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PrototypeArt", "bike_pedal_sheet_12f.png");
+        // Point the harness at the shipped sheet (Images/, same asset the two apps use).
+        string imagesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images");
+        string sheetPath = PedalAnimation.GetDefaultSheetPath(imagesDir);
         SimCanvas.PedalSheetSource = File.Exists(sheetPath) ? sheetPath : string.Empty;
 
         _autoDriveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };

@@ -1,7 +1,9 @@
 using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
+using BikeFitness.Shared;
 using BikeFitness.Shared.ViewModels;
 
 namespace BikeFitnessApp
@@ -13,6 +15,12 @@ namespace BikeFitnessApp
         public WorkoutView()
         {
             InitializeComponent();
+
+            // Rider pedal animation: the 12-frame sheet ships under Images/ (see PedalAnimation).
+            // Wheel-spin overlay is deliberately not enabled yet.
+            SimCanvas.PedalSheetSource = PedalAnimation.GetDefaultSheetPath(
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images"));
+
             _viewModel = App.Current.Services.GetRequiredService<WorkoutViewModel>();
             DataContext = _viewModel;
 

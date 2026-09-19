@@ -114,6 +114,61 @@ namespace BikeFitness.Avalonia.Controls
             }
         }
 
+        public static readonly DirectProperty<SimulationCanvas, string> PedalSheetSourceProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, string>(
+                nameof(PedalSheetSource),
+                o => o.PedalSheetSource,
+                (o, v) => o.PedalSheetSource = v);
+
+        private string _pedalSheetSource = string.Empty;
+
+        /// <summary>
+        /// Path to the pedal-cycle sprite sheet. Empty (the default) keeps the legacy static
+        /// cyclist sprite, so the canvas renders exactly as before unless a sheet is supplied.
+        /// </summary>
+        public string PedalSheetSource
+        {
+            get => _pedalSheetSource;
+            set
+            {
+                if (SetAndRaise(PedalSheetSourceProperty, ref _pedalSheetSource, value))
+                    LoadPedalSheet();
+            }
+        }
+
+        public static readonly DirectProperty<SimulationCanvas, double> PedalMetersPerRevolutionProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, double>(
+                nameof(PedalMetersPerRevolution),
+                o => o.PedalMetersPerRevolution,
+                (o, v) => o.PedalMetersPerRevolution = v);
+
+        private double _pedalMetersPerRevolution = PedalAnimation.DefaultMetersPerRevolution;
+
+        /// <summary>Metres travelled per crank revolution — the gear the animation pedals at.</summary>
+        public double PedalMetersPerRevolution
+        {
+            get => _pedalMetersPerRevolution;
+            set => SetAndRaise(PedalMetersPerRevolutionProperty, ref _pedalMetersPerRevolution, value);
+        }
+
+        public static readonly DirectProperty<SimulationCanvas, double> PedalDrawSizePxProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, double>(
+                nameof(PedalDrawSizePx),
+                o => o.PedalDrawSizePx,
+                (o, v) => o.PedalDrawSizePx = v);
+
+        private double _pedalDrawSizePx = PedalAnimation.DefaultDrawWidthPx;
+
+        /// <summary>Width, in canvas units, that one sheet cell is drawn at.</summary>
+        public double PedalDrawSizePx
+        {
+            get => _pedalDrawSizePx;
+            set => SetAndRaise(PedalDrawSizePxProperty, ref _pedalDrawSizePx, value);
+        }
+
+        // Pre-cropped sheet frames, one per crank phase; empty unless PedalSheetSource is set.
+        private readonly List<IImage> _pedalFrames = new List<IImage>();
+
         public SimulationCanvas()
         {
             _timer = new DispatcherTimer(DispatcherPriority.Render);
@@ -155,7 +210,7 @@ namespace BikeFitness.Avalonia.Controls
             try
             {
                 string baseDir = AppContext.BaseDirectory;
-                string imageDir = FindImageDir(baseDir);
+                string imageDir = ResolveImageDirectory(baseDir);
 
                 if (!string.IsNullOrEmpty(imageDir))
                 {
@@ -203,7 +258,11 @@ namespace BikeFitness.Avalonia.Controls
             if (b != null) _engine.BushSprites.Add(b);
         }
 
-        private string FindImageDir(string startDir)
+        /// <summary>
+        /// Walks up from <paramref name="startDir"/> to the nearest directory containing an
+        /// <c>Images</c> folder. Public so views resolve asset paths the same way the canvas does.
+        /// </summary>
+        public static string ResolveImageDirectory(string startDir)
         {
             var dir = new DirectoryInfo(startDir);
             while (dir != null)
@@ -219,6 +278,32 @@ namespace BikeFitness.Avalonia.Controls
         {
             if (File.Exists(path)) return new Bitmap(path);
             return null;
+        }
+
+        /// <summary>
+        /// Crops the sheet into one frame per crank phase. Called whenever
+        /// <see cref="PedalSheetSource"/> changes; frames are pre-cropped so the render loop
+        /// only ever does a straight image draw.
+        /// </summary>
+        private void LoadPedalSheet()
+        {
+            _pedalFrames.Clear();
+
+            string source = PedalSheetSource;
+            if (string.IsNullOrWhiteSpace(source)) return;
+
+            var sheet = LoadBitmap(source);
+            if (sheet == null)
+            {
+                Debug.WriteLine($"Pedal sheet not found or failed to load: {source}");
+                return;
+            }
+
+            for (int i = 0; i < PedalAnimation.FrameCount; i++)
+            {
+                var (x, y, w, h) = PedalAnimation.GetSourceRect(i);
+                _pedalFrames.Add(new CroppedBitmap(sheet, new PixelRect(x, y, w, h)));
+            }
         }
 
         public override void Render(DrawingContext context)
@@ -249,16 +334,50 @@ namespace BikeFitness.Avalonia.Controls
             // Biker
             using (context.PushTransform(Matrix.CreateRotation(-_engine.CurrentSlopeAngle * (Math.PI / 180.0)) * Matrix.CreateTranslation(bikeScreenX, visualCenterY)))
             {
-                if (_engine.CyclistSprite != null)
-                    context.DrawImage(_engine.CyclistSprite, new Rect(0,0,_engine.CyclistSprite.Size.Width, _engine.CyclistSprite.Size.Height), new Rect(-75, -130, 150, 150));
-                else
-                    context.FillRectangle(Brushes.Red, new Rect(-25, -40, 50, 40));
+                DrawCyclist(context);
             }
 
             // Objects Front
             DrawRoadside(context, leftDist, rightDist, bikeDist, bikeHeight, visualCenterY, bikeScreenX, theme, false);
 
             DrawBiomeLabel(context);
+        }
+
+        /// <summary>
+        /// Draws the rider in bike-local space (origin = ground contact under the rider).
+        /// Uses the animated sheet when one is loaded, otherwise the legacy static sprite.
+        /// </summary>
+        private void DrawCyclist(DrawingContext context)
+        {
+            if (_pedalFrames.Count == PedalAnimation.FrameCount)
+            {
+                DrawPedalCyclist(context);
+                return;
+            }
+
+            if (_engine.CyclistSprite != null)
+                context.DrawImage(_engine.CyclistSprite, new Rect(0, 0, _engine.CyclistSprite.Size.Width, _engine.CyclistSprite.Size.Height), new Rect(-75, -130, 150, 150));
+            else
+                context.FillRectangle(Brushes.Red, new Rect(-25, -40, 50, 40));
+        }
+
+        /// <summary>
+        /// Pedal animation driven by distance (fixed-gear assumption), mirroring the WPF canvas:
+        /// straight 12-frame loop, D = <see cref="PedalMetersPerRevolution"/>. The code wheel-spin
+        /// overlay is deliberately not ported yet.
+        /// </summary>
+        private void DrawPedalCyclist(DrawingContext context)
+        {
+            double phase = PedalAnimation.GetCrankPhase(_engine.TotalDistanceMeters, PedalMetersPerRevolution);
+            DrawSheetFrame(context, PedalAnimation.GetFrameIndex(phase));
+        }
+
+        private void DrawSheetFrame(DrawingContext context, int frameIndex)
+        {
+            if (frameIndex < 0 || frameIndex >= _pedalFrames.Count) return;
+
+            var (x, y, width, height) = PedalAnimation.GetFrameDestRect(frameIndex, PedalDrawSizePx);
+            context.DrawImage(_pedalFrames[frameIndex], new Rect(x, y, width, height));
         }
 
         private void DrawBackground(DrawingContext context, SimulationEngine<Bitmap, Bitmap>.BackgroundSegmentInfo info)

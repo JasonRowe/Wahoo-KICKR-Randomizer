@@ -108,7 +108,8 @@
             <!-- Simulation -->
             <material:Card Grid.Column="1" Margin="16,0,0,0" Padding="0" ClipToBounds="True" Background="Black">
                 <Grid>
-                    <controls:SimulationCanvas SpeedKph="{Binding CurrentSpeedKph}" 
+                    <controls:SimulationCanvas x:Name="SimCanvas"
+                                              SpeedKph="{Binding CurrentSpeedKph}" 
                                               GradePercent="{Binding CurrentGradePercent}"
                                               SyncedDistanceMeters="{Binding CurrentDistanceMeters}"/>
 

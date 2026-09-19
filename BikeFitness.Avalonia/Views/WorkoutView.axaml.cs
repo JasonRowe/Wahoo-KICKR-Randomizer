@@ -1,6 +1,8 @@
 using System;
 using Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
+using BikeFitness.Avalonia.Controls;
+using BikeFitness.Shared;
 using BikeFitness.Shared.ViewModels;
 
 namespace BikeFitness.Avalonia.Views
@@ -17,6 +19,12 @@ namespace BikeFitness.Avalonia.Views
         protected override void OnInitialized()
         {
             base.OnInitialized();
+
+            // Rider pedal animation: same 12-frame sheet the WPF app uses, shipped under Images/.
+            // Wheel-spin overlay is deliberately not enabled yet.
+            SimCanvas.PedalSheetSource = PedalAnimation.GetDefaultSheetPath(
+                SimulationCanvas.ResolveImageDirectory(AppContext.BaseDirectory));
+
             _viewModel = App.Current.Services?.GetRequiredService<WorkoutViewModel>();
             DataContext = _viewModel;
             

@@ -286,7 +286,7 @@ namespace BikeFitnessApp
 
         public static readonly DependencyProperty PedalDrawSizePxProperty =
             DependencyProperty.Register(nameof(PedalDrawSizePx), typeof(double), typeof(SimulationCanvas),
-                new PropertyMetadata(150.0));
+                new PropertyMetadata(PedalAnimation.DefaultDrawWidthPx));
 
         public double PedalDrawSizePx
         {
@@ -593,20 +593,14 @@ namespace BikeFitnessApp
 
         private double GetPedalScale()
         {
-            double drawWidth = PedalDrawSizePx > 0 ? PedalDrawSizePx : PedalAnimation.CellWidth;
-            return drawWidth / PedalAnimation.CellWidth;
+            return PedalAnimation.GetDrawScale(PedalDrawSizePx);
         }
 
         private Rect GetFrameDest(int frameIndex)
         {
-            double scale = GetPedalScale();
-            double drawWidth = PedalAnimation.CellWidth * scale;
-            double drawHeight = PedalAnimation.CellCropHeight * scale;
-
-            // Anchor each frame's wheel bottom (ground contact) on the road line (bike-local y = 0).
-            // Per-frame so the two grid rows' ~4px vertical misalignment doesn't read as a bob.
-            double bottomY = (PedalAnimation.CellCropHeight - PedalAnimation.GetWheelBottomY(frameIndex)) * scale;
-            return new Rect(-drawWidth / 2.0, bottomY - drawHeight, drawWidth, drawHeight);
+            // Shared with the Avalonia canvas so both apps ground-align frames identically.
+            var (x, y, width, height) = PedalAnimation.GetFrameDestRect(frameIndex, PedalDrawSizePx);
+            return new Rect(x, y, width, height);
         }
 
         private void DrawWheelOverlays(DrawingContext dc, int frameIndex)
