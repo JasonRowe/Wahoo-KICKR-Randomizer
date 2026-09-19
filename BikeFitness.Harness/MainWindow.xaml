@@ -119,8 +119,8 @@
                     <DockPanel Margin="0,3">
                         <TextBlock Text="Profile:" Width="130" VerticalAlignment="Center"/>
                         <ComboBox x:Name="CmbGhostProfile" Width="240" SelectionChanged="CmbGhostProfile_Changed">
-                            <ComboBoxItem Content="Synthetic 20 min" IsSelected="True"/>
-                            <ComboBoxItem Content="Mirror my effort (auto-drive)"/>
+                            <ComboBoxItem Content="Mirror my effort (auto-drive)" IsSelected="True"/>
+                            <ComboBoxItem Content="Canned ride (synthetic 20 min)"/>
                             <ComboBoxItem Content="Load Workout_*.json…"/>
                         </ComboBox>
                     </DockPanel>
@@ -157,6 +157,61 @@
                         <CheckBox x:Name="ChkPerfHud" Content="Perf HUD" Width="130" VerticalAlignment="Center"
                                   Checked="ChkPerfHud_Changed" Unchecked="ChkPerfHud_Changed"/>
                         <TextBlock x:Name="TxtPerf" FontFamily="Consolas" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <Separator Margin="0,10"/>
+
+                    <!-- POC 2: rubber-band pacer. Mutually exclusive with the ghost. -->
+                    <TextBlock FontWeight="Bold" Margin="0,0,0,8">Second rider — pacer (POC 2)</TextBlock>
+
+                    <DockPanel Margin="0,3">
+                        <CheckBox x:Name="ChkPacer" Content="Enable pacer" Width="130" VerticalAlignment="Center"
+                                  Checked="ChkPacer_Changed" Unchecked="ChkPacer_Changed"/>
+                        <TextBlock x:Name="TxtPacerState" Width="150" FontFamily="Consolas" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtPacerGap" Width="130" FontFamily="Consolas" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtPacerWatts" FontFamily="Consolas" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <DockPanel Margin="0,3">
+                        <TextBlock Text="Pacer strength:" Width="130" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ElementName=SliderPacerWPerKg, Path=Value, StringFormat=F1}" Width="46" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <Slider x:Name="SliderPacerWPerKg" Minimum="1.5" Maximum="4.0" Value="2.5" TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                ValueChanged="SliderPacer_Changed"/>
+                        <TextBlock Text=" W/kg (≈)" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <DockPanel Margin="0,3">
+                        <TextBlock Text="Gap target (m):" Width="130" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ElementName=SliderPacerTarget, Path=Value, StringFormat=F0}" Width="46" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <Slider x:Name="SliderPacerTarget" Minimum="10" Maximum="40" Value="25" TickFrequency="1" IsSnapToTickEnabled="True"
+                                ValueChanged="SliderPacer_Changed"/>
+                    </DockPanel>
+
+                    <DockPanel Margin="0,3">
+                        <TextBlock Text="Band (± m):" Width="130" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ElementName=SliderPacerBand, Path=Value, StringFormat=F0}" Width="46" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <Slider x:Name="SliderPacerBand" Minimum="5" Maximum="25" Value="15" TickFrequency="1" IsSnapToTickEnabled="True"
+                                ValueChanged="SliderPacer_Changed"/>
+                    </DockPanel>
+
+                    <DockPanel Margin="0,3">
+                        <TextBlock Text="Elasticity:" Width="130" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ElementName=SliderPacerElasticity, Path=Value, StringFormat=F2}" Width="46" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <Slider x:Name="SliderPacerElasticity" Minimum="0.10" Maximum="0.80" Value="0.35" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                ValueChanged="SliderPacer_Changed"/>
+                        <TextBlock Text="  rubber band vs stick" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <DockPanel Margin="0,3">
+                        <CheckBox x:Name="ChkPacerMercy" Content="Mercy rule" Width="130" VerticalAlignment="Center" IsChecked="True"
+                                  Checked="ChkPacerMercy_Changed" Unchecked="ChkPacerMercy_Changed"/>
+                        <CheckBox x:Name="ChkPacerStrip" Content="Gap strip" Width="130" VerticalAlignment="Center" IsChecked="True"
+                                  Checked="ChkPacerStrip_Changed" Unchecked="ChkPacerStrip_Changed"/>
+                    </DockPanel>
+
+                    <DockPanel Margin="130,0,0,3">
+                        <Button x:Name="BtnPacerReset" Content="Reset duel (level)" Width="150" Margin="0,0,6,0" Click="BtnPacerReset_Click"/>
+                        <TextBlock x:Name="TxtPacerVerdict" FontFamily="Consolas" VerticalAlignment="Center"/>
                     </DockPanel>
                 </StackPanel>
             </ScrollViewer>
