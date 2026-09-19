@@ -117,8 +117,8 @@ namespace BikeFitness.Shared.SecondRider
 
         /// <summary>
         /// Deterministic synthetic ride: <paramref name="seconds"/> of 1 Hz samples inside the harness
-        /// auto-drive envelope (grade −5…+8 %, speed 5–40 kph). Same seed ⇒ identical trace, on every
-        /// platform and .NET version, so the harness can be feel-tested without owning a recording.
+        /// auto-drive envelope (grade −5…+8 %, speed 5–40 kph). Same seed ⇒ identical trace within a run, so
+        /// the harness can be feel-tested without owning a recording.
         /// </summary>
         public static RideProfile Synthetic(int seconds = 1200, int seed = 20260918)
         {
@@ -129,7 +129,10 @@ namespace BikeFitness.Shared.SecondRider
                 Source = SourceSynthetic,
             };
 
-            var rng = new PocRandom(seed);
+            // A seeded System.Random: repeatable for a given runtime, which is all this profile needs. The
+            // seed is an explicit parameter so two harness runs can be compared, and no test asserts on
+            // values produced by a different runtime.
+            var rng = new Random(seed);
             double distanceMeters = 0;
 
             for (int t = 0; t <= durationSeconds; t++)

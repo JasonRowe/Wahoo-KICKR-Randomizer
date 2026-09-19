@@ -67,12 +67,12 @@ namespace BikeFitnessApp.Tests.SecondRider
         public void Advance_DistanceIsMonotonic_Over10kRandomDtSteps()
         {
             var ghost = new GhostReplay(RideProfile.Synthetic(300, seed: 42));
-            var rng = new PocRandom(99);
+            var rng = new Random(99);
             double previous = ghost.DistanceMeters;
 
             for (int i = 0; i < 10000; i++)
             {
-                ghost.Advance(rng.NextRange(0.001, 0.5));
+                ghost.Advance(0.001 + (rng.NextDouble() * (0.5 - 0.001)));
 
                 Assert.IsTrue(ghost.DistanceMeters >= previous, $"distance went backwards at step {i}");
                 Assert.IsTrue(double.IsFinite(ghost.DistanceMeters), $"distance not finite at step {i}");
@@ -212,8 +212,8 @@ namespace BikeFitnessApp.Tests.SecondRider
             var b = new GhostReplay(profile);
 
             var deltas = new List<double>();
-            var rng = new PocRandom(7);
-            for (int i = 0; i < 500; i++) deltas.Add(rng.NextRange(0.001, 0.4));
+            var rng = new Random(7);
+            for (int i = 0; i < 500; i++) deltas.Add(0.001 + (rng.NextDouble() * (0.4 - 0.001)));
 
             foreach (double dt in deltas) a.Advance(dt);
             foreach (double dt in deltas) b.Advance(dt);
