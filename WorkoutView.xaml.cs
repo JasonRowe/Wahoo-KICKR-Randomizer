@@ -144,6 +144,17 @@ namespace BikeFitnessApp
             ApplyPacerSettings();
         }
 
+        /// <summary>
+        /// Pedal animation rate: metres of travel per crank revolution. The sheet is a pedal cycle, so this
+        /// is the one gear assumption behind the leg speed — the trainer reports no cadence to use instead.
+        /// </summary>
+        private void PedalSlider_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (SimCanvas == null || SliderPedalMetersPerRevolution == null) return;
+
+            SimCanvas.PedalMetersPerRevolution = SliderPedalMetersPerRevolution.Value;
+        }
+
         private void PacerCheck_Changed(object sender, RoutedEventArgs e)
         {
             ApplyPacerSettings();

@@ -215,6 +215,23 @@
                                         Style="{DynamicResource MaterialDesignOutlinedButton}" Click="BtnPacerReset_Click"/>
                             </StackPanel>
                         </Expander>
+
+                        <!-- Pedal animation. The sheet is 12 frames of a pedal cycle, so the crank rate is
+                             speed / metres-per-crank-revolution — one assumed gear. A different gear (or a
+                             different wheel) makes the legs look too fast or too slow, and the trainer sends
+                             no cadence to derive it from, so it has to be dialled by eye. -->
+                        <Expander x:Name="ExpanderPedal" Header="PEDAL ANIMATION (beta)" IsExpanded="False" Margin="0,16,0,0">
+                            <StackPanel Margin="0,8,0,0">
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Gear (m/rev):" Width="130" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ElementName=SliderPedalMetersPerRevolution, Path=Value, StringFormat=F1}" Width="40" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <Slider x:Name="SliderPedalMetersPerRevolution" Minimum="3" Maximum="16" Value="6.5" TickFrequency="0.5" IsSnapToTickEnabled="True"
+                                            Style="{DynamicResource MaterialDesignSlider}" ValueChanged="PedalSlider_Changed"/>
+                                </DockPanel>
+                                <TextBlock TextWrapping="Wrap" Opacity="0.7" Margin="0,4,0,0"
+                                           Text="How far the bike travels per crank revolution. Raise it if the legs spin faster than yours, lower it if they look lazy. 6.5 is about 50/16 on a 700c wheel."/>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                 </materialDesign:Card>
 

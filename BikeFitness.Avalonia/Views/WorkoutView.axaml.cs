@@ -59,6 +59,12 @@ namespace BikeFitness.Avalonia.Views
             SliderPacerRecover.ValueChanged += (_, _) => ApplyPacerSettings();
             SliderPacerCatch.ValueChanged += (_, _) => ApplyPacerSettings();
 
+            // Pedal animation rate: metres of travel per crank revolution — the one gear assumption behind
+            // the leg speed, since the trainer reports no cadence.
+            SliderPedalMetersPerRevolution.ValueChanged += (_, _) =>
+                SimCanvas.PedalMetersPerRevolution = SliderPedalMetersPerRevolution.Value;
+            SimCanvas.PedalMetersPerRevolution = SliderPedalMetersPerRevolution.Value;
+
             ApplyPacerSettings();
         }
 
