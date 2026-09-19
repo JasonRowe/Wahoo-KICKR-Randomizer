@@ -45,7 +45,26 @@ namespace BikeFitnessApp.UnitTests
             Assert.AreEqual(true, DefaultOf(SimulationCanvas.GhostShowHudProperty));
         }
 
-        private static object? DefaultOf(DependencyProperty property)
+        [TestMethod]
+        public void SecondRiderGapStrip_DefaultsOff()
+        {
+            // The strip is a POC 2 instrument; with it off (and no rival enabled) the frame is unchanged.
+            Assert.AreEqual(false, DefaultOf(SimulationCanvas.SecondRiderGapStripProperty));
+        }
+
+        [TestMethod]
+        public void SecondRiderDefaults_MatchTheDocumentedPanelDefaults()
+        {
+            Assert.AreEqual("ghost", DefaultOf(SimulationCanvas.SecondRiderLabelProperty));
+            Assert.AreEqual(25.0, (double)DefaultOf(SimulationCanvas.SecondRiderGapTargetMetersProperty), 1e-9);
+            Assert.AreEqual(15.0, (double)DefaultOf(SimulationCanvas.SecondRiderGapBandMetersProperty), 1e-9);
+        }
+
+        /// <summary>
+        /// Reads a dependency property's default straight from its metadata — no element construction, so no
+        /// STA thread and no WPF Application instance are needed.
+        /// </summary>
+        private static object DefaultOf(DependencyProperty property)
         {
             return property.GetMetadata(typeof(SimulationCanvas)).DefaultValue;
         }

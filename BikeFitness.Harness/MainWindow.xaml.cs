@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Threading;
 using BikeFitness.Shared;
 using BikeFitness.Shared.SecondRider;
@@ -21,6 +22,7 @@ public partial class MainWindow : Window
     // --- POC 1 (ghost racer) state. Harness-local: nothing here is persisted, and the only
     // --- shared-state mutation is pushing the ghost's position into the canvas DPs.
     private GhostReplay _ghost = new GhostReplay(RideProfile.Synthetic());
+    private readonly PacerModel _pacer = new PacerModel(new PacerConfig());
     private double _ghostOffsetMeters;
     private double _riderDistanceMeters;
     private bool _uiReady;
@@ -51,7 +53,9 @@ public partial class MainWindow : Window
         SimCanvas.FrameRendered += SimCanvas_FrameRendered;
 
         _uiReady = true;
+        SimCanvas.SecondRiderLabel = "ghost";
         ApplyGhostProfile();
+        ApplyPacerConfig();
         SimCanvas.GhostOpacity = SliderGhostOpacity.Value / 100.0;
         SimCanvas.GhostShowMarker = ChkGhostMarker.IsChecked == true;
         SimCanvas.GhostShowHud = ChkGhostHud.IsChecked == true;
@@ -98,15 +102,21 @@ public partial class MainWindow : Window
         if (!_uiReady) return;
 
         bool on = ChkGhost.IsChecked == true;
-        SimCanvas.GhostEnabled = on;
 
         if (on)
         {
+            if (ChkPacer.IsChecked == true) ChkPacer.IsChecked = false;   // the two rivals are exclusive
+
             // Start the duel level with the rider, wherever they already are on the road.
             _ghost.Reset();
             AlignGhostToRider(0.0);
+
+            SimCanvas.SecondRiderLabel = "ghost";
+            SimCanvas.SecondRiderGapStrip = false;
+            SimCanvas.GhostOpacity = SliderGhostOpacity.Value / 100.0;
         }
 
+        SimCanvas.GhostEnabled = on;
         UpdateGhostReadouts(riderSpeedKph: SimCanvas.SpeedKph);
     }
 
@@ -125,6 +135,7 @@ public partial class MainWindow : Window
     private void SliderGhostOpacity_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (!_uiReady) return;
+        if (ChkPacer.IsChecked == true) return;   // the pacer owns the rival's opacity while it is active
         SimCanvas.GhostOpacity = e.NewValue / 100.0;
     }
 
@@ -162,7 +173,8 @@ public partial class MainWindow : Window
         switch (CmbGhostProfile.SelectedIndex)
         {
             case 1:
-                profile = BuildMirrorProfile();
+                // "Canned ride": the deterministic synthetic trace. A different rider by design.
+                profile = RideProfile.Synthetic();
                 break;
             case 2:
                 RideProfile? loaded = LoadProfileFromFile();
@@ -170,7 +182,9 @@ public partial class MainWindow : Window
                 profile = loaded ?? _ghost.Profile;   // cancelled or unusable: keep the current profile
                 break;
             default:
-                profile = RideProfile.Synthetic();
+                // Default is "Mirror my effort": the only source that produces a real duel in the harness,
+                // because the ghost then rides the same speed law the auto-drive is driving you with.
+                profile = BuildMirrorProfile();
                 break;
         }
 
@@ -262,6 +276,8 @@ public partial class MainWindow : Window
 
     private void PushGhostState()
     {
+        if (ChkPacer.IsChecked == true) return;   // the pacer owns the rival's position while it is active
+
         SimCanvas.GhostDistanceMeters = Math.Max(0.0, _ghost.DistanceMeters + _ghostOffsetMeters);
         SimCanvas.GhostSpeedKph = _ghost.SpeedKph;
     }
@@ -271,13 +287,22 @@ public partial class MainWindow : Window
         _riderDistanceMeters = e.RiderDistanceMeters;
 
         bool ghostOn = ChkGhost.IsChecked == true;
+        bool pacerOn = ChkPacer.IsChecked == true;
+
         if (ghostOn)
         {
             _ghost.Advance(e.DeltaSeconds);
             PushGhostState();
         }
+        else if (pacerOn)
+        {
+            // Same clock, same primitive as the ghost: the pacer's own speed only, never the trainer's.
+            _pacer.Advance(e.DeltaSeconds, e.RiderDistanceMeters, e.RiderSpeedKph, SimCanvas.GradePercent);
+            SimCanvas.GhostDistanceMeters = _pacer.DistanceMeters;
+            SimCanvas.GhostSpeedKph = _pacer.SpeedKph;
+        }
 
-        UpdatePerfHud(e.DeltaSeconds, ghostOn);
+        UpdatePerfHud(e.DeltaSeconds, ghostOn || pacerOn);
         UpdateGhostReadouts(e.RiderSpeedKph);
     }
 
@@ -292,22 +317,146 @@ public partial class MainWindow : Window
             TxtGhostGap.Text = string.Empty;
             TxtGhostDelta.Text = string.Empty;
             TxtGhostSpeed.Text = string.Empty;
+        }
+        else
+        {
+            double ghostDistance = Math.Max(0.0, _ghost.DistanceMeters + _ghostOffsetMeters);
+            double gap = DuelMath.GapMeters(ghostDistance, _riderDistanceMeters);
+            double delta = DuelMath.DeltaSeconds(ghostDistance, _riderDistanceMeters, riderSpeedKph, _ghost.SpeedKph);
+
+            TxtGhostGap.Text = $"GAP {DuelMath.FormatGapMeters(gap)}";
+            TxtGhostDelta.Text = $"\u0394 {DuelMath.FormatDelta(delta)}";
+            TxtGhostSpeed.Text = $"ghost {_ghost.SpeedKph:F1} / you {riderSpeedKph:F1} kph · {_ghost.GradePercent:F1} %";
+        }
+
+        UpdatePacerReadouts(riderSpeedKph);
+    }
+
+    /// <summary>
+    /// Pacer panel readouts. Power is pseudo-power from the shared model, so every watt here carries a ≈ —
+    /// the harness has no power meter (`HeartRate` is null and nothing connects BLE).
+    /// </summary>
+    private void UpdatePacerReadouts(double riderSpeedKph)
+    {
+        if (ChkPacer.IsChecked != true)
+        {
+            TxtPacerState.Text = string.Empty;
+            TxtPacerGap.Text = string.Empty;
+            TxtPacerWatts.Text = string.Empty;
+            TxtPacerVerdict.Text = string.Empty;
             return;
         }
 
-        double ghostDistance = Math.Max(0.0, _ghost.DistanceMeters + _ghostOffsetMeters);
-        double gap = DuelMath.GapMeters(ghostDistance, _riderDistanceMeters);
-        double delta = DuelMath.DeltaSeconds(ghostDistance, _riderDistanceMeters, riderSpeedKph, _ghost.SpeedKph);
+        double gap = _pacer.GapMeters(_riderDistanceMeters);
+        TxtPacerGap.Text = $"GAP {DuelMath.FormatGapMeters(gap)}";
+        TxtPacerState.Text = _pacer.State.ToString().ToUpperInvariant();
+        TxtPacerState.Foreground = _pacer.State switch
+        {
+            PacerState.Surging => Brushes.OrangeRed,
+            PacerState.Easing => Brushes.SteelBlue,
+            PacerState.Mercy => Brushes.MediumPurple,
+            _ => Brushes.DarkGreen,
+        };
 
-        TxtGhostGap.Text = $"GAP {DuelMath.FormatGapMeters(gap)}";
-        TxtGhostDelta.Text = $"\u0394 {DuelMath.FormatDelta(delta)}";
-        TxtGhostSpeed.Text = $"ghost {_ghost.SpeedKph:F1} / you {riderSpeedKph:F1} kph · {_ghost.GradePercent:F1} %";
+        double grade = SimCanvas.GradePercent;
+        double riderWatts = RiderPowerModel.PowerFromSpeed(riderSpeedKph, grade);
+        TxtPacerWatts.Text = $"\u2248pacer {_pacer.PseudoWatts:F0} W · \u2248you {riderWatts:F0} W · {_pacer.SpeedKph:F1} kph";
+
+        double delta = _pacer.ProjectedFinishDeltaSeconds;
+        string magnitude = DuelMath.FormatDelta(delta).TrimStart('+', '-');
+        TxtPacerVerdict.Text = delta >= 0 ? $"pacer ahead by {magnitude}" : $"you lead by {magnitude}";
+    }
+
+    // --- Pacer controls (POC 2) ---
+
+    private void ChkPacer_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_uiReady) return;
+
+        bool on = ChkPacer.IsChecked == true;
+
+        if (on)
+        {
+            if (ChkGhost.IsChecked == true) ChkGhost.IsChecked = false;   // the two rivals are exclusive
+
+            _pacer.Reset(_riderDistanceMeters, _pacer.Config.GapTargetMeters);
+            SimCanvas.SecondRiderLabel = "pacer";
+            SimCanvas.GhostOpacity = 0.55;
+            SimCanvas.GhostDistanceMeters = _pacer.DistanceMeters;
+            SimCanvas.GhostSpeedKph = _pacer.SpeedKph;
+        }
+        else if (ChkGhost.IsChecked != true)
+        {
+            SimCanvas.GhostDistanceMeters = 0;
+            SimCanvas.GhostSpeedKph = 0;
+        }
+
+        ChkGhost.IsEnabled = !on;
+        SimCanvas.GhostEnabled = on || ChkGhost.IsChecked == true;
+        ApplyPacerConfig();
+        UpdateGhostReadouts(SimCanvas.SpeedKph);
+    }
+
+    private void SliderPacer_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_uiReady) return;
+        ApplyPacerConfig();
+    }
+
+    private void ChkPacerMercy_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_uiReady) return;
+        ApplyPacerConfig();
+    }
+
+    private void ChkPacerStrip_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_uiReady) return;
+        ApplyPacerConfig();
+    }
+
+    private void BtnPacerReset_Click(object sender, RoutedEventArgs e)
+    {
+        _pacer.Reset(_riderDistanceMeters, _pacer.Config.GapTargetMeters);
+
+        if (ChkPacer.IsChecked == true)
+        {
+            SimCanvas.GhostDistanceMeters = _pacer.DistanceMeters;
+            SimCanvas.GhostSpeedKph = _pacer.SpeedKph;
+        }
+
+        UpdateGhostReadouts(SimCanvas.SpeedKph);
+    }
+
+    /// <summary>Pushes the live slider values into the pacer's config (every change applies mid-ride).</summary>
+    private void ApplyPacerConfig()
+    {
+        PacerConfig config = _pacer.Config;
+        config.PacerWPerKg = SliderPacerWPerKg.Value;
+        config.GapTargetMeters = SliderPacerTarget.Value;
+        config.BandMeters = SliderPacerBand.Value;
+        config.Elasticity = SliderPacerElasticity.Value;
+        config.MercyEnabled = ChkPacerMercy.IsChecked == true;
+
+        SimCanvas.SecondRiderGapTargetMeters = config.GapTargetMeters;
+        SimCanvas.SecondRiderGapBandMeters = config.BandMeters;
+        SimCanvas.SecondRiderGapStrip = ChkPacer.IsChecked == true && ChkPacerStrip.IsChecked == true;
     }
 
     private void UpdateGhostProfileLabel()
     {
+        string explanation = _ghost.Profile.Source switch
+        {
+            RideProfile.SourceSynthetic => "canned 20 min ride, fixed seed — a different rider, so the gap drifts by design",
+            RideProfile.SourceHarnessLive => "replays the harness's own auto-drive law — at 100 % the ghost holds station",
+            RideProfile.SourceWorkoutReport => "recorded ride",
+            _ => "",
+        };
+
+        string suffix = string.IsNullOrWhiteSpace(explanation) ? string.Empty : $"  —  {explanation}";
+
         TxtGhostProfile.Text = $"{_ghost.Profile.Label} · {_ghost.Profile.Samples.Count} samples · " +
-                               $"{_ghost.Profile.TotalDistanceMeters / 1000.0:F2} km / {_ghost.Profile.DurationSeconds / 60.0:F1} min";
+                               $"{_ghost.Profile.TotalDistanceMeters / 1000.0:F2} km / {_ghost.Profile.DurationSeconds / 60.0:F1} min{suffix}";
     }
 
     // --- Perf HUD (L4) ---

@@ -59,6 +59,11 @@ namespace BikeFitnessApp
         private static readonly Brush GhostChipTextBrush = CreateGhostChipTextBrush();
         private static readonly Pen GhostChipPen = CreateGhostChipPen();
 
+        // Gap-strip chrome (POC #2).
+        private static readonly Brush GapStripBandBrush = CreateSolid(Color.FromArgb(90, 90, 220, 120));
+        private static readonly Brush GapStripRiderBrush = CreateSolid(Color.FromArgb(235, 245, 250, 255));
+        private static readonly Brush GapStripRivalBrush = CreateSolid(Color.FromArgb(240, 255, 176, 60));
+
         static SimulationCanvas()
         {
             var gradient = new LinearGradientBrush
@@ -374,6 +379,55 @@ namespace BikeFitnessApp
             set => SetValue(GhostShowHudProperty, value);
         }
 
+        // --- Shared second-rider chrome (POC #2 pacer reuses the sprite/marker/HUD above) -------------
+
+        public static readonly DependencyProperty SecondRiderLabelProperty =
+            DependencyProperty.Register(nameof(SecondRiderLabel), typeof(string), typeof(SimulationCanvas),
+                new PropertyMetadata("ghost"));
+
+        /// <summary>What to call the rival in the HUD ("ghost" for POC 1, "pacer" for POC 2).</summary>
+        public string SecondRiderLabel
+        {
+            get => (string)GetValue(SecondRiderLabelProperty);
+            set => SetValue(SecondRiderLabelProperty, value);
+        }
+
+        public static readonly DependencyProperty SecondRiderGapStripProperty =
+            DependencyProperty.Register(nameof(SecondRiderGapStrip), typeof(bool), typeof(SimulationCanvas),
+                new PropertyMetadata(false));
+
+        /// <summary>
+        /// Compressed gap strip under the canvas. Not optional for a pacer holding a 10–40 m band: only
+        /// ~12.3 m ahead is visible at 50 px/m, so the band is otherwise off screen.
+        /// </summary>
+        public bool SecondRiderGapStrip
+        {
+            get => (bool)GetValue(SecondRiderGapStripProperty);
+            set => SetValue(SecondRiderGapStripProperty, value);
+        }
+
+        public static readonly DependencyProperty SecondRiderGapTargetMetersProperty =
+            DependencyProperty.Register(nameof(SecondRiderGapTargetMeters), typeof(double), typeof(SimulationCanvas),
+                new PropertyMetadata(25.0));
+
+        /// <summary>Gap the rival is trying to hold — drawn as the target band on the strip.</summary>
+        public double SecondRiderGapTargetMeters
+        {
+            get => (double)GetValue(SecondRiderGapTargetMetersProperty);
+            set => SetValue(SecondRiderGapTargetMetersProperty, value);
+        }
+
+        public static readonly DependencyProperty SecondRiderGapBandMetersProperty =
+            DependencyProperty.Register(nameof(SecondRiderGapBandMeters), typeof(double), typeof(SimulationCanvas),
+                new PropertyMetadata(15.0));
+
+        /// <summary>Half-width of the rival's band, drawn either side of the target.</summary>
+        public double SecondRiderGapBandMeters
+        {
+            get => (double)GetValue(SecondRiderGapBandMetersProperty);
+            set => SetValue(SecondRiderGapBandMetersProperty, value);
+        }
+
         #endregion
 
         /// <summary>
@@ -617,6 +671,8 @@ namespace BikeFitnessApp
                     if (GhostShowHud) DrawGhostHud(dc);
                 }
 
+                if (SecondRiderGapStrip) DrawGapStrip(dc);
+
                 DrawBiomeLabel(dc);
             }
         }
@@ -847,7 +903,8 @@ namespace BikeFitnessApp
             double delta = DuelMath.DeltaSeconds(GhostDistanceMeters, _engine.TotalDistanceMeters, _engine.SpeedKph, GhostSpeedKph);
 
             string line1 = $"GAP {DuelMath.FormatGapMeters(gap)}   \u0394 {DuelMath.FormatDelta(delta)}";
-            string line2 = $"ghost {GhostSpeedKph:F1} kph   {DuelMath.FormatGapChip(gap, delta)}";
+            string label = string.IsNullOrWhiteSpace(SecondRiderLabel) ? "rival" : SecondRiderLabel;
+            string line2 = $"{label} {GhostSpeedKph:F1} kph   {DuelMath.FormatGapChip(gap, delta)}";
 
             double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             var big = new FormattedText(line1, System.Globalization.CultureInfo.InvariantCulture,
@@ -864,6 +921,57 @@ namespace BikeFitnessApp
             dc.DrawRoundedRectangle(GhostChipBrush, GhostChipPen, new Rect(x, y, width, height), 6, 6);
             dc.DrawText(big, new Point(x + pad, y + pad));
             dc.DrawText(small, new Point(x + pad, y + pad + big.Height));
+        }
+
+        /// <summary>
+        /// Compressed 0–60 m gap strip: the rival's position on a fixed axis with the target band drawn as a
+        /// green window. This is the pacer's primary instrument — at 50 px/m only ~12.3 m ahead is visible, so
+        /// a rival holding a 10–40 m band spends most of the ride off screen.
+        /// </summary>
+        private void DrawGapStrip(DrawingContext dc)
+        {
+            if (ActualWidth <= 0 || ActualHeight <= 0) return;
+
+            const double metersBehind = 30.0;
+            const double metersAhead = 70.0;
+
+            double left = 40;
+            double right = ActualWidth - 40;
+            if (right - left < 80) return;
+
+            double height = 12;
+            double top = ActualHeight - 30;
+            double span = metersBehind + metersAhead;
+
+            double Map(double gapMeters) => left + (((gapMeters + metersBehind) / span) * (right - left));
+
+            double gap = DuelMath.GapMeters(GhostDistanceMeters, _engine.TotalDistanceMeters);
+            double target = SecondRiderGapTargetMeters;
+            double band = Math.Max(0, SecondRiderGapBandMeters);
+
+            dc.DrawRoundedRectangle(GhostChipBrush, GhostChipPen, new Rect(left, top, right - left, height), 4, 4);
+
+            double bandLeft = Map(Math.Max(-metersBehind, target - band));
+            double bandRight = Map(Math.Min(metersAhead, target + band));
+            if (bandRight > bandLeft)
+            {
+                dc.DrawRectangle(GapStripBandBrush, null, new Rect(bandLeft, top, bandRight - bandLeft, height));
+            }
+
+            // You are always the fixed zero point; the rival dot moves. Clamped to the ends when out of range,
+            // which reads as "beyond the strip" rather than silently disappearing.
+            double riderX = Map(0);
+            dc.DrawRectangle(GapStripRiderBrush, null, new Rect(riderX - 1.5, top - 4, 3, height + 8));
+
+            double rivalX = Map(Math.Clamp(gap, -metersBehind, metersAhead));
+            dc.DrawEllipse(GapStripRivalBrush, null, new Point(rivalX, top + (height / 2.0)), 5, 5);
+        }
+
+        private static Brush CreateSolid(Color color)
+        {
+            var brush = new SolidColorBrush(color);
+            brush.Freeze();
+            return brush;
         }
 
         private static Brush CreateGhostChipBrush()
