@@ -70,12 +70,32 @@ jobs:
       contents: write
       actions: read
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: 'bikefitness-*'
           merge-multiple: true
           path: dist
+
+      # Auto-generated release notes compare against a fixed base tag, so on a
+      # rolling tag they freeze on the first release and, fed back as the
+      # existing body, get duplicated on every run. Write the body explicitly.
+      - name: Build release notes
+        run: |
+          {
+            printf 'Rolling nightly build of `main` - %s\n\n' "$(date -u '+%Y-%m-%d %H:%M UTC')"
+            printf 'Commit: `%s`\n\n' "$GITHUB_SHA"
+            printf 'Recent commits:\n\n'
+            printf '```\n'
+            git log --oneline --no-decorate -20
+            printf '```\n'
+          } > "$RUNNER_TEMP/nightly-notes.md"
+          cat "$RUNNER_TEMP/nightly-notes.md"
 
       - name: Publish release
         uses: softprops/action-gh-release@v3
@@ -84,7 +104,7 @@ jobs:
           name: Nightly build
           prerelease: false
           overwrite_files: true
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/nightly-notes.md
           fail_on_unmatched_files: true
           files: |
             dist/bikefitness-win-x64.zip
