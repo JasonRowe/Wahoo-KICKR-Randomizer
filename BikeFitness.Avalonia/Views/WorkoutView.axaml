@@ -101,6 +101,48 @@
                         
                         <Button Content="STOP WORKOUT" Command="{Binding StopCommand}" Width="240" Height="48" 
                                 Classes="Accent Raised" CornerRadius="24" FontWeight="Bold"/>
+
+                        <!-- Pacer (POC). Collapsed and off by default: with it closed this ride is exactly the
+                             ride you had before. Kept in step with the WPF app's panel. -->
+                        <Expander Header="PACER (beta)" IsExpanded="False" Margin="0,8,0,0">
+                            <StackPanel Spacing="6" Margin="0,8,0,0">
+                                <CheckBox x:Name="ChkPacerEnabled" Content="Race a virtual pacer" IsChecked="False"
+                                          Checked="ChkPacerEnabled_Changed" Unchecked="ChkPacerEnabled_Changed"/>
+                                <TextBlock TextWrapping="Wrap" Classes="Caption" Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                           Text="A synthetic rival that holds a gap ahead of you and reacts to how you ride. It only moves itself — your resistance is never touched."/>
+
+                                <Grid ColumnDefinitions="130, 40, *" Margin="0,4,0,0">
+                                    <TextBlock Grid.Column="0" Text="Strength (W/kg):" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding #SliderPacerStrength.Value, StringFormat='{}{0:F1}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+                                    <Slider Grid.Column="2" x:Name="SliderPacerStrength" Minimum="1.5" Maximum="4.0" Value="2.5"
+                                            TickFrequency="0.1" IsSnapToTickEnabled="True"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="130, 40, *">
+                                    <TextBlock Grid.Column="0" Text="Gap (m):" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding #SliderPacerGap.Value, StringFormat='{}{0:F0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+                                    <Slider Grid.Column="2" x:Name="SliderPacerGap" Minimum="10" Maximum="40" Value="25"
+                                            TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="130, 40, *">
+                                    <TextBlock Grid.Column="0" Text="Elasticity:" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding #SliderPacerElasticity.Value, StringFormat='{}{0:F2}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+                                    <Slider Grid.Column="2" x:Name="SliderPacerElasticity" Minimum="0.10" Maximum="0.80" Value="0.35"
+                                            TickFrequency="0.05" IsSnapToTickEnabled="True"/>
+                                </Grid>
+
+                                <CheckBox x:Name="ChkPacerMercy" Content="Mercy rule (ease off when I fade)" IsChecked="True"
+                                          Checked="PacerCheck_Changed" Unchecked="PacerCheck_Changed"/>
+                                <CheckBox x:Name="ChkPacerStrip" Content="Gap strip" IsChecked="True"
+                                          Checked="PacerCheck_Changed" Unchecked="PacerCheck_Changed"/>
+
+                                <TextBlock x:Name="TxtPacerReadout" TextWrapping="Wrap" Classes="Caption"
+                                           Foreground="{DynamicResource MaterialDesignBodyLight}"/>
+                                <Button x:Name="BtnPacerReset" Content="Reset duel" Width="120" HorizontalAlignment="Left"
+                                        Click="BtnPacerReset_Click"/>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                 </material:Card>
             </StackPanel>
@@ -123,6 +165,23 @@
                                 <TextBlock Text="{Binding ResistancePercent, StringFormat={}{0:F1}%}" Classes="Headline2" FontWeight="Black" 
                                          Foreground="{Binding ResistanceColor, Converter={StaticResource SharedColorToBrushConverter}}"/>
                             </StackPanel>
+                        </StackPanel>
+                    </material:Card>
+
+                    <!-- Pacer HUD (POC). Hidden unless the pacer is on. Top-right so it never overlaps the grade
+                         badge, mirroring the WPF app. -->
+                    <material:Card x:Name="CardPacerHud" IsVisible="False"
+                                   VerticalAlignment="Top" HorizontalAlignment="Right" Margin="24" Padding="16"
+                                   Background="#CC212121" assist:ShadowAssist.ShadowDepth="Depth2">
+                        <StackPanel Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <avalonia:MaterialIcon Kind="Bike" Width="26" Height="26" Foreground="Silver" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="TxtPacerState" Classes="Headline4" FontWeight="Bold" Foreground="MediumSeaGreen" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock x:Name="TxtPacerGap" FontFamily="Consolas" FontSize="20" Foreground="White"/>
+                            <TextBlock x:Name="TxtPacerDelta" FontFamily="Consolas" FontSize="20" Foreground="White"/>
+                            <TextBlock x:Name="TxtPacerVerdict" FontFamily="Consolas" FontSize="14" Foreground="Silver"/>
+                            <TextBlock x:Name="TxtPacerWatts" FontFamily="Consolas" FontSize="12" Foreground="Silver"/>
                         </StackPanel>
                     </material:Card>
 

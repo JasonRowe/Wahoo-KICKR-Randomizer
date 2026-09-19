@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using BikeFitness.Shared;
+using BikeFitness.Shared.SecondRider;
 
 namespace BikeFitness.Avalonia.Controls
 {
@@ -29,6 +30,14 @@ namespace BikeFitness.Avalonia.Controls
         private static readonly IBrush PlainParticleBrush;
         private static readonly IBrush DesertParticleBrush;
         private static readonly IBrush OceanParticleBrush;
+
+        // Second-rider chrome — kept identical to the WPF canvas so both apps render the rival the same way.
+        private static readonly IBrush RivalChipBrush = new SolidColorBrush(Color.FromArgb(205, 12, 14, 18));
+        private static readonly IBrush RivalTextBrush = new SolidColorBrush(Color.FromArgb(245, 245, 250, 255));
+        private static readonly IPen RivalChipPen = new Pen(new SolidColorBrush(Color.FromArgb(120, 255, 255, 255)), 1);
+        private static readonly IBrush GapStripBandBrush = new SolidColorBrush(Color.FromArgb(90, 90, 220, 120));
+        private static readonly IBrush GapStripRiderBrush = new SolidColorBrush(Color.FromArgb(235, 245, 250, 255));
+        private static readonly IBrush GapStripRivalBrush = new SolidColorBrush(Color.FromArgb(240, 255, 176, 60));
 
         static SimulationCanvas()
         {
@@ -169,6 +178,163 @@ namespace BikeFitness.Avalonia.Controls
         // Pre-cropped sheet frames, one per crank phase; empty unless PedalSheetSource is set.
         private readonly List<IImage> _pedalFrames = new List<IImage>();
 
+        // --- Second rider (ghost / pacer) -----------------------------------------------------------------
+        // Mirrors the WPF SimulationCanvas property set name-for-name, so the two apps stay in sync. All of
+        // it is off by default: with GhostEnabled false the rendered output is exactly what it was before.
+
+        /// <summary>Raised once per frame, after the engine has advanced and before the frame is drawn.</summary>
+        public event EventHandler<SimulationFrameEventArgs>? FrameRendered;
+
+        public static readonly DirectProperty<SimulationCanvas, bool> GhostEnabledProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, bool>(
+                nameof(GhostEnabled),
+                o => o.GhostEnabled,
+                (o, v) => o.GhostEnabled = v);
+
+        private bool _ghostEnabled;
+
+        /// <summary>Master flag for the second-rider draw path. Off by default.</summary>
+        public bool GhostEnabled
+        {
+            get => _ghostEnabled;
+            set => SetAndRaise(GhostEnabledProperty, ref _ghostEnabled, value);
+        }
+
+        public static readonly DirectProperty<SimulationCanvas, double> GhostDistanceMetersProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, double>(
+                nameof(GhostDistanceMeters),
+                o => o.GhostDistanceMeters,
+                (o, v) => o.GhostDistanceMeters = v);
+
+        private double _ghostDistanceMeters;
+
+        /// <summary>Rival's cumulative distance. Callers own the replay maths; the canvas only draws it.</summary>
+        public double GhostDistanceMeters
+        {
+            get => _ghostDistanceMeters;
+            set => SetAndRaise(GhostDistanceMetersProperty, ref _ghostDistanceMeters, value);
+        }
+
+        public static readonly DirectProperty<SimulationCanvas, double> GhostSpeedKphProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, double>(
+                nameof(GhostSpeedKph),
+                o => o.GhostSpeedKph,
+                (o, v) => o.GhostSpeedKph = v);
+
+        private double _ghostSpeedKph;
+
+        /// <summary>Rival's reported speed, used by the marker/HUD delta only.</summary>
+        public double GhostSpeedKph
+        {
+            get => _ghostSpeedKph;
+            set => SetAndRaise(GhostSpeedKphProperty, ref _ghostSpeedKph, value);
+        }
+
+        public static readonly DirectProperty<SimulationCanvas, double> GhostOpacityProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, double>(
+                nameof(GhostOpacity),
+                o => o.GhostOpacity,
+                (o, v) => o.GhostOpacity = v);
+
+        private double _ghostOpacity = 0.4;
+
+        /// <summary>Sprite opacity for the rival.</summary>
+        public double GhostOpacity
+        {
+            get => _ghostOpacity;
+            set => SetAndRaise(GhostOpacityProperty, ref _ghostOpacity, value);
+        }
+
+        public static readonly DirectProperty<SimulationCanvas, bool> GhostShowMarkerProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, bool>(
+                nameof(GhostShowMarker),
+                o => o.GhostShowMarker,
+                (o, v) => o.GhostShowMarker = v);
+
+        private bool _ghostShowMarker = true;
+
+        /// <summary>Draw the off-screen gap chip when the rival is outside the visible road window.</summary>
+        public bool GhostShowMarker
+        {
+            get => _ghostShowMarker;
+            set => SetAndRaise(GhostShowMarkerProperty, ref _ghostShowMarker, value);
+        }
+
+        public static readonly DirectProperty<SimulationCanvas, bool> GhostShowHudProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, bool>(
+                nameof(GhostShowHud),
+                o => o.GhostShowHud,
+                (o, v) => o.GhostShowHud = v);
+
+        private bool _ghostShowHud = true;
+
+        /// <summary>Draw the in-canvas GAP / Δ readout.</summary>
+        public bool GhostShowHud
+        {
+            get => _ghostShowHud;
+            set => SetAndRaise(GhostShowHudProperty, ref _ghostShowHud, value);
+        }
+
+        public static readonly DirectProperty<SimulationCanvas, string> SecondRiderLabelProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, string>(
+                nameof(SecondRiderLabel),
+                o => o.SecondRiderLabel,
+                (o, v) => o.SecondRiderLabel = v);
+
+        private string _secondRiderLabel = "ghost";
+
+        /// <summary>What to call the rival in the HUD ("ghost" or "pacer").</summary>
+        public string SecondRiderLabel
+        {
+            get => _secondRiderLabel;
+            set => SetAndRaise(SecondRiderLabelProperty, ref _secondRiderLabel, value);
+        }
+
+        public static readonly DirectProperty<SimulationCanvas, bool> SecondRiderGapStripProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, bool>(
+                nameof(SecondRiderGapStrip),
+                o => o.SecondRiderGapStrip,
+                (o, v) => o.SecondRiderGapStrip = v);
+
+        private bool _secondRiderGapStrip;
+
+        /// <summary>Compressed gap strip under the canvas — the only way a 10–40 m band is legible on screen.</summary>
+        public bool SecondRiderGapStrip
+        {
+            get => _secondRiderGapStrip;
+            set => SetAndRaise(SecondRiderGapStripProperty, ref _secondRiderGapStrip, value);
+        }
+
+        public static readonly DirectProperty<SimulationCanvas, double> SecondRiderGapTargetMetersProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, double>(
+                nameof(SecondRiderGapTargetMeters),
+                o => o.SecondRiderGapTargetMeters,
+                (o, v) => o.SecondRiderGapTargetMeters = v);
+
+        private double _secondRiderGapTargetMeters = 25.0;
+
+        /// <summary>Gap the rival is trying to hold — drawn as the band on the strip.</summary>
+        public double SecondRiderGapTargetMeters
+        {
+            get => _secondRiderGapTargetMeters;
+            set => SetAndRaise(SecondRiderGapTargetMetersProperty, ref _secondRiderGapTargetMeters, value);
+        }
+
+        public static readonly DirectProperty<SimulationCanvas, double> SecondRiderGapBandMetersProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, double>(
+                nameof(SecondRiderGapBandMeters),
+                o => o.SecondRiderGapBandMeters,
+                (o, v) => o.SecondRiderGapBandMeters = v);
+
+        private double _secondRiderGapBandMeters = 15.0;
+
+        /// <summary>Half-width of the rival's band, drawn either side of the target.</summary>
+        public double SecondRiderGapBandMeters
+        {
+            get => _secondRiderGapBandMeters;
+            set => SetAndRaise(SecondRiderGapBandMetersProperty, ref _secondRiderGapBandMeters, value);
+        }
+
         public SimulationCanvas()
         {
             _timer = new DispatcherTimer(DispatcherPriority.Render);
@@ -188,6 +354,10 @@ namespace BikeFitness.Avalonia.Controls
                     }
 
                     _engine.Update(dt);
+
+                    // Let subscribers (the pacer panel) advance their own state on this exact frame.
+                    FrameRendered?.Invoke(this, new SimulationFrameEventArgs(dt, _engine.TotalDistanceMeters, _engine.SpeedKph));
+
                     InvalidateVisual();
                 }
             };
@@ -331,6 +501,13 @@ namespace BikeFitness.Avalonia.Controls
             // Objects Behind
             DrawRoadside(context, leftDist, rightDist, bikeDist, bikeHeight, visualCenterY, bikeScreenX, theme, true);
 
+            // Second rider (POC). Own transform, exactly like the WPF canvas: it sits on its own terrain height
+            // and tilts with the grade at its own distance, and the player still draws on top.
+            if (GhostEnabled)
+            {
+                DrawSecondRider(context, bikeDist, bikeHeight, visualCenterY, bikeScreenX);
+            }
+
             // Biker
             using (context.PushTransform(Matrix.CreateRotation(-_engine.CurrentSlopeAngle * (Math.PI / 180.0)) * Matrix.CreateTranslation(bikeScreenX, visualCenterY)))
             {
@@ -339,6 +516,14 @@ namespace BikeFitness.Avalonia.Controls
 
             // Objects Front
             DrawRoadside(context, leftDist, rightDist, bikeDist, bikeHeight, visualCenterY, bikeScreenX, theme, false);
+
+            if (GhostEnabled)
+            {
+                if (GhostShowMarker) DrawSecondRiderMarker(context);
+                if (GhostShowHud) DrawSecondRiderHud(context);
+            }
+
+            if (SecondRiderGapStrip) DrawGapStrip(context);
 
             DrawBiomeLabel(context);
         }
@@ -378,6 +563,165 @@ namespace BikeFitness.Avalonia.Controls
 
             var (x, y, width, height) = PedalAnimation.GetFrameDestRect(frameIndex, PedalDrawSizePx);
             context.DrawImage(_pedalFrames[frameIndex], new Rect(x, y, width, height));
+        }
+
+        // --- Second rider (ghost / pacer) drawing — mirrors the WPF canvas ---------------------------------
+
+        private void DrawSecondRider(DrawingContext context, double bikeDist, double bikeHeight, double visualCenterY, double bikeScreenX)
+        {
+            double rivalDistance = GhostDistanceMeters;
+            Point ground = WorldToScreen(rivalDistance, bikeDist, bikeHeight, visualCenterY, bikeScreenX);
+
+            double rivalGrade = _engine.Terrain.GetGradeAt(rivalDistance);
+            double rivalSlopeRadians = Math.Atan(rivalGrade / 100.0);
+
+            using (context.PushOpacity(Math.Clamp(GhostOpacity, 0.05, 1.0)))
+            using (context.PushTransform(Matrix.CreateRotation(-rivalSlopeRadians) * Matrix.CreateTranslation(ground.X, ground.Y)))
+            {
+                if (_pedalFrames.Count == PedalAnimation.FrameCount)
+                {
+                    // Animated from the rival's own distance, so its legs turn at its own speed.
+                    DrawSheetFrame(context, PedalAnimation.GetFrameIndexForDistance(rivalDistance, PedalMetersPerRevolution));
+                }
+                else if (_engine.CyclistSprite != null)
+                {
+                    context.DrawImage(
+                        _engine.CyclistSprite,
+                        new Rect(0, 0, _engine.CyclistSprite.Size.Width, _engine.CyclistSprite.Size.Height),
+                        new Rect(-75, -130, 150, 150));
+                }
+                else
+                {
+                    context.FillRectangle(Brushes.Red, new Rect(-25, -40, 50, 40));
+                }
+            }
+        }
+
+        /// <summary>Off-screen gap chip: mandatory, since only ~12 m ahead is visible at 50 px/m.</summary>
+        private void DrawSecondRiderMarker(DrawingContext context)
+        {
+            double width = _engine.ActualWidth;
+            double height = _engine.ActualHeight;
+            if (width <= 0 || height <= 0) return;
+
+            bool onScreen = SecondRiderGeometry.TryGetScreenPosition(
+                _engine.TotalDistanceMeters,
+                GhostDistanceMeters,
+                width,
+                height,
+                SecondRiderGeometry.DefaultBikeScreenRatio,
+                SimulationEngine<Bitmap, Bitmap>.PixelsPerMeter,
+                out double screenX,
+                out _);
+
+            if (onScreen) return;
+
+            double gap = DuelMath.GapMeters(GhostDistanceMeters, _engine.TotalDistanceMeters);
+            double delta = DuelMath.DeltaSeconds(GhostDistanceMeters, _engine.TotalDistanceMeters, _engine.SpeedKph, GhostSpeedKph);
+
+            var text = new FormattedText(
+                DuelMath.FormatGapChip(gap, delta),
+                System.Globalization.CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("Consolas"),
+                20,
+                RivalTextBrush);
+
+            double markerX = SecondRiderGeometry.GetMarkerX(screenX, width);
+            double centerY = height * 0.62;
+            double padX = 10;
+            double padY = 5;
+
+            var chip = new Rect(
+                markerX - (text.Width / 2.0) - padX,
+                centerY - (text.Height / 2.0) - padY,
+                text.Width + (padX * 2.0),
+                text.Height + (padY * 2.0));
+
+            context.DrawRectangle(RivalChipBrush, RivalChipPen, chip, 6, 6);
+            context.DrawText(text, new Point(chip.X + padX, chip.Y + padY));
+        }
+
+        /// <summary>In-canvas GAP / Δ readout (top-left).</summary>
+        private void DrawSecondRiderHud(DrawingContext context)
+        {
+            double width = _engine.ActualWidth;
+            double height = _engine.ActualHeight;
+            if (width <= 0 || height <= 0) return;
+
+            double gap = DuelMath.GapMeters(GhostDistanceMeters, _engine.TotalDistanceMeters);
+            double delta = DuelMath.DeltaSeconds(GhostDistanceMeters, _engine.TotalDistanceMeters, _engine.SpeedKph, GhostSpeedKph);
+            string label = string.IsNullOrWhiteSpace(SecondRiderLabel) ? "rival" : SecondRiderLabel;
+
+            var big = new FormattedText(
+                $"GAP {DuelMath.FormatGapMeters(gap)}   \u0394 {DuelMath.FormatDelta(delta)}",
+                System.Globalization.CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("Consolas"),
+                22,
+                RivalTextBrush);
+
+            var small = new FormattedText(
+                $"{label} {GhostSpeedKph:F1} kph   {DuelMath.FormatGapChip(gap, delta)}",
+                System.Globalization.CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("Consolas"),
+                14,
+                RivalTextBrush);
+
+            double x = 16;
+            double y = 14;
+            double pad = 8;
+
+            context.DrawRectangle(
+                RivalChipBrush,
+                RivalChipPen,
+                new Rect(x, y, Math.Max(big.Width, small.Width) + (pad * 2.0), big.Height + small.Height + (pad * 2.0)),
+                6,
+                6);
+
+            context.DrawText(big, new Point(x + pad, y + pad));
+            context.DrawText(small, new Point(x + pad, y + pad + big.Height));
+        }
+
+        /// <summary>Compressed gap strip: you as a fixed tick, the rival as a dot, the target band in green.</summary>
+        private void DrawGapStrip(DrawingContext context)
+        {
+            double canvasWidth = _engine.ActualWidth;
+            double canvasHeight = _engine.ActualHeight;
+            if (canvasWidth <= 0 || canvasHeight <= 0) return;
+
+            const double metersBehind = 30.0;
+            const double metersAhead = 70.0;
+
+            double left = 40;
+            double right = canvasWidth - 40;
+            if (right - left < 80) return;
+
+            double height = 12;
+            double top = canvasHeight - 30;
+            double span = metersBehind + metersAhead;
+
+            double Map(double gapMeters) => left + (((gapMeters + metersBehind) / span) * (right - left));
+
+            double gap = DuelMath.GapMeters(GhostDistanceMeters, _engine.TotalDistanceMeters);
+            double target = SecondRiderGapTargetMeters;
+            double band = Math.Max(0, SecondRiderGapBandMeters);
+
+            context.DrawRectangle(RivalChipBrush, RivalChipPen, new Rect(left, top, right - left, height), 4, 4);
+
+            double bandLeft = Map(Math.Max(-metersBehind, target - band));
+            double bandRight = Map(Math.Min(metersAhead, target + band));
+            if (bandRight > bandLeft)
+            {
+                context.FillRectangle(GapStripBandBrush, new Rect(bandLeft, top, bandRight - bandLeft, height));
+            }
+
+            double riderX = Map(0);
+            context.FillRectangle(GapStripRiderBrush, new Rect(riderX - 1.5, top - 4, 3, height + 8));
+
+            double rivalX = Map(Math.Clamp(gap, -metersBehind, metersAhead));
+            context.DrawEllipse(GapStripRivalBrush, null, new Point(rivalX, top + (height / 2.0)), 5, 5);
         }
 
         private void DrawBackground(DrawingContext context, SimulationEngine<Bitmap, Bitmap>.BackgroundSegmentInfo info)
