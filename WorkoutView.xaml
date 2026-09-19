@@ -125,6 +125,47 @@
                                 </Button>
                             </StackPanel>
                         </materialDesign:ColorZone>
+
+                        <!-- Pacer (POC 2 wiring). Collapsed and off by default: with it closed, this ride is
+                             exactly the ride you had before. -->
+                        <Expander x:Name="ExpanderPacer" Header="PACER (beta)" IsExpanded="False" Margin="0,16,0,0">
+                            <StackPanel Margin="0,8,0,0">
+                                <CheckBox x:Name="ChkPacerEnabled" Content="Race a virtual pacer" IsChecked="False"
+                                          Checked="ChkPacerEnabled_Changed" Unchecked="ChkPacerEnabled_Changed"/>
+                                <TextBlock TextWrapping="Wrap" Opacity="0.7" Margin="0,4,0,10"
+                                           Text="A synthetic rival that holds a gap ahead of you and reacts to how you ride. It only moves itself — your resistance is never touched."/>
+
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Strength (W/kg):" Width="130" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ElementName=SliderPacerStrength, Path=Value, StringFormat=F1}" Width="40" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <Slider x:Name="SliderPacerStrength" Minimum="1.5" Maximum="4.0" Value="2.5" TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                            Style="{DynamicResource MaterialDesignSlider}" ValueChanged="PacerSlider_Changed"/>
+                                </DockPanel>
+
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Gap (m):" Width="130" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ElementName=SliderPacerGap, Path=Value, StringFormat=F0}" Width="40" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <Slider x:Name="SliderPacerGap" Minimum="10" Maximum="40" Value="25" TickFrequency="1" IsSnapToTickEnabled="True"
+                                            Style="{DynamicResource MaterialDesignSlider}" ValueChanged="PacerSlider_Changed"/>
+                                </DockPanel>
+
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Elasticity:" Width="130" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ElementName=SliderPacerElasticity, Path=Value, StringFormat=F2}" Width="40" TextAlignment="Right" VerticalAlignment="Center"/>
+                                    <Slider x:Name="SliderPacerElasticity" Minimum="0.10" Maximum="0.80" Value="0.35" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                            Style="{DynamicResource MaterialDesignSlider}" ValueChanged="PacerSlider_Changed"/>
+                                </DockPanel>
+
+                                <CheckBox x:Name="ChkPacerMercy" Content="Mercy rule (ease off when I fade)" IsChecked="True" Margin="0,10,0,0"
+                                          Checked="PacerCheck_Changed" Unchecked="PacerCheck_Changed"/>
+                                <CheckBox x:Name="ChkPacerStrip" Content="Gap strip" IsChecked="True"
+                                          Checked="PacerCheck_Changed" Unchecked="PacerCheck_Changed"/>
+
+                                <TextBlock x:Name="TxtPacerReadout" FontFamily="Consolas" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                                <Button x:Name="BtnPacerReset" Content="Reset duel" Width="120" HorizontalAlignment="Left" Margin="0,10,0,0"
+                                        Style="{DynamicResource MaterialDesignOutlinedButton}" Click="BtnPacerReset_Click"/>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                 </materialDesign:Card>
 
@@ -147,10 +188,30 @@
                 <Grid>
                     <!-- Game Canvas -->
                     <shared:SimulationCanvas x:Name="SimCanvas"
-                                           SpeedKph="{Binding CurrentSpeedKph}" 
-                                           GradePercent="{Binding CurrentGradePercent}" 
+                                           SpeedKph="{Binding CurrentSpeedKph}"
+                                           GradePercent="{Binding CurrentGradePercent}"
                                            SyncedDistanceMeters="{Binding CurrentDistanceMeters}"
                                            Opacity="1.0"/>
+
+                    <!-- Pacer HUD (POC 2). Collapsed unless the pacer is switched on, so a normal ride is
+                         visually unchanged. Top-right so it never overlaps the grade badge. -->
+                    <materialDesign:Card x:Name="CardPacerHud" Visibility="Collapsed"
+                                         VerticalAlignment="Top" HorizontalAlignment="Right" Margin="24"
+                                         Background="#E6212121" UniformCornerRadius="12" Padding="16"
+                                         materialDesign:ElevationAssist.Elevation="Dp6">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Bike" Width="26" Height="26" Foreground="Silver"
+                                                         VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock x:Name="TxtPacerState" FontSize="22" FontWeight="Bold"
+                                           Foreground="MediumSeaGreen" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock x:Name="TxtPacerGap" FontFamily="Consolas" FontSize="20" Foreground="White" Margin="0,8,0,0"/>
+                            <TextBlock x:Name="TxtPacerDelta" FontFamily="Consolas" FontSize="20" Foreground="White"/>
+                            <TextBlock x:Name="TxtPacerVerdict" FontFamily="Consolas" FontSize="14" Foreground="Silver" Margin="0,6,0,0"/>
+                            <TextBlock x:Name="TxtPacerWatts" FontFamily="Consolas" FontSize="12" Foreground="Silver" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </materialDesign:Card>
 
                     <!-- HUD: Top Left Grade Badge -->
                     <materialDesign:Card VerticalAlignment="Top" HorizontalAlignment="Left" Margin="24" 
