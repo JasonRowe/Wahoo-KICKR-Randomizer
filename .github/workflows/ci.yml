@@ -16,10 +16,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
@@ -36,7 +36,7 @@ jobs:
         run: dotnet publish BikeFitnessApp.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/win-x64
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: bikefitness-win-x64
           path: artifacts/win-x64
@@ -46,10 +46,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
 
@@ -60,7 +60,7 @@ jobs:
         run: dotnet publish BikeFitness.Avalonia/BikeFitness.Avalonia.csproj --configuration Release --runtime linux-x64 --self-contained true --output artifacts/linux-x64
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: bikefitness-linux-x64
           path: artifacts/linux-x64

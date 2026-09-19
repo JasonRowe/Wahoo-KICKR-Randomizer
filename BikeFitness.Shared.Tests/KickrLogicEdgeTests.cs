@@ -1,7 +1,6 @@
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BikeFitness.Shared;
-using BikeFitness.Shared;
 
 namespace BikeFitnessApp.UnitTests
 {
@@ -58,7 +57,7 @@ namespace BikeFitnessApp.UnitTests
         public void ParsePower_NullOrSmallData_ReturnsZero()
         {
             var logic = new KickrLogic();
-            Assert.AreEqual(0, logic.ParsePower(null));
+            Assert.AreEqual(0, logic.ParsePower(null!));
             Assert.AreEqual(0, logic.ParsePower(new byte[] { 0, 0, 0 }));
         }
 
@@ -66,7 +65,7 @@ namespace BikeFitnessApp.UnitTests
         public void ParseCscData_NullOrSmallData_ReturnsFalse()
         {
             var logic = new KickrLogic();
-            Assert.IsFalse(logic.ParseCscData(null).hasWheelData);
+            Assert.IsFalse(logic.ParseCscData(null!).hasWheelData);
             Assert.IsFalse(logic.ParseCscData(new byte[] { 0x01, 0, 0, 0, 0, 0 }).hasWheelData); // 1 + 5 bytes < 1 + 6
         }
 

@@ -1,14 +1,13 @@
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BikeFitness.Shared;
-using BikeFitness.Shared;
 
 namespace BikeFitnessApp.UnitTests
 {
     [TestClass]
     public class KickrLogicGradeTests
     {
-        private KickrLogic _logic;
+        private KickrLogic _logic = null!;   // assigned in Setup
 
         [TestInitialize]
         public void Setup()

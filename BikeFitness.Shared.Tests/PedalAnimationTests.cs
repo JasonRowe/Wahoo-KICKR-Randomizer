@@ -160,8 +160,12 @@ namespace BikeFitnessApp.Tests
         [TestMethod]
         public void CellCropHeight_IsLessThanCellHeight_ToExcludeCaptionBand()
         {
+            // Both values are constants of the code under test, so the pin is the point of the test; the
+            // analyzer cannot see that (it only sees that they are constants).
+#pragma warning disable MSTEST0032
             Assert.IsTrue(PedalAnimation.CellCropHeight < PedalAnimation.CellHeight);
             Assert.AreEqual(280, PedalAnimation.CellCropHeight);
+#pragma warning restore MSTEST0032
         }
 
         [TestMethod]
