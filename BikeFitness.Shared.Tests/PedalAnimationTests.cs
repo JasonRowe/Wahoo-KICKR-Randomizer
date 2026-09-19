@@ -1,5 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BikeFitness.Shared;
+using System;
+using System.IO;
 
 namespace BikeFitnessApp.Tests
 {
@@ -178,6 +180,142 @@ namespace BikeFitnessApp.Tests
         {
             Assert.AreEqual(PedalAnimation.GetWheelBottomY(0), PedalAnimation.GetWheelBottomY(-1));
             Assert.AreEqual(PedalAnimation.GetWheelBottomY(11), PedalAnimation.GetWheelBottomY(12));
+        }
+
+        #endregion
+
+        #region GetDrawScale / GetFrameDestRect
+
+        [TestMethod]
+        public void GetDrawScale_FullCellWidth_ReturnsOne()
+        {
+            Assert.AreEqual(1.0, PedalAnimation.GetDrawScale(PedalAnimation.CellWidth), 1e-12);
+        }
+
+        [TestMethod]
+        public void GetDrawScale_NonPositiveWidth_FallsBackToNativeScale()
+        {
+            Assert.AreEqual(1.0, PedalAnimation.GetDrawScale(0.0), 1e-12);
+            Assert.AreEqual(1.0, PedalAnimation.GetDrawScale(-10.0), 1e-12);
+        }
+
+        [TestMethod]
+        public void GetDrawScale_DefaultInAppWidth_ScalesCellToThatWidth()
+        {
+            double scale = PedalAnimation.GetDrawScale(PedalAnimation.DefaultDrawWidthPx);
+            Assert.AreEqual(PedalAnimation.DefaultDrawWidthPx / PedalAnimation.CellWidth, scale, 1e-12);
+        }
+
+        [TestMethod]
+        public void GetFrameDestRect_IsHorizontallyCentredOnTheBikeAnchor()
+        {
+            var rect = PedalAnimation.GetFrameDestRect(0, PedalAnimation.DefaultDrawWidthPx);
+            Assert.AreEqual(-rect.Width / 2.0, rect.X, 1e-12);
+            Assert.AreEqual(PedalAnimation.DefaultDrawWidthPx, rect.Width, 1e-12);
+        }
+
+        [TestMethod]
+        public void GetFrameDestRect_HeightKeepsTheCroppedCellAspect()
+        {
+            double scale = PedalAnimation.GetDrawScale(PedalAnimation.DefaultDrawWidthPx);
+            var rect = PedalAnimation.GetFrameDestRect(3, PedalAnimation.DefaultDrawWidthPx);
+            Assert.AreEqual(PedalAnimation.CellCropHeight * scale, rect.Height, 1e-12);
+        }
+
+        [TestMethod]
+        public void GetFrameDestRect_AnchorsEachFrameByItsOwnWheelBottom()
+        {
+            double scale = PedalAnimation.GetDrawScale(PedalAnimation.DefaultDrawWidthPx);
+            for (int i = 0; i < PedalAnimation.FrameCount; i++)
+            {
+                var rect = PedalAnimation.GetFrameDestRect(i, PedalAnimation.DefaultDrawWidthPx);
+                double expectedBottom = (PedalAnimation.CellCropHeight - PedalAnimation.GetWheelBottomY(i)) * scale;
+                Assert.AreEqual(expectedBottom, rect.Y + rect.Height, 1e-12, $"frame {i}");
+            }
+        }
+
+        [TestMethod]
+        public void GetFrameDestRect_BottomGridRow_SitsLowerToShareOneGroundLine()
+        {
+            // The bottom row's wheels bottom out ~5px higher inside their cells (273 vs 278), so
+            // those frames must be pushed down by the same amount or the two rows bob.
+            double scale = PedalAnimation.GetDrawScale(PedalAnimation.DefaultDrawWidthPx);
+            var topRow = PedalAnimation.GetFrameDestRect(0, PedalAnimation.DefaultDrawWidthPx);
+            var bottomRow = PedalAnimation.GetFrameDestRect(6, PedalAnimation.DefaultDrawWidthPx);
+
+            double expectedDelta = (PedalAnimation.GetWheelBottomY(0) - PedalAnimation.GetWheelBottomY(6)) * scale;
+            Assert.IsTrue(expectedDelta > 0, "test assumes the bottom row bottoms out higher in its cell");
+            Assert.AreEqual(expectedDelta, (bottomRow.Y + bottomRow.Height) - (topRow.Y + topRow.Height), 1e-12);
+        }
+
+        [TestMethod]
+        public void GetFrameDestRect_OutOfRange_Clamps()
+        {
+            Assert.AreEqual(PedalAnimation.GetFrameDestRect(0, 150.0), PedalAnimation.GetFrameDestRect(-1, 150.0));
+            Assert.AreEqual(PedalAnimation.GetFrameDestRect(11, 150.0), PedalAnimation.GetFrameDestRect(12, 150.0));
+        }
+
+        #endregion
+
+        #region Shipped sheet asset
+
+        [TestMethod]
+        public void GetDefaultSheetPath_UsesTheSharedFileName()
+        {
+            string path = PedalAnimation.GetDefaultSheetPath(Path.Combine("some", "images"));
+
+            Assert.AreEqual(Path.Combine("some", "images", "rider_pedal_sheet_12f.png"), path);
+        }
+
+        [TestMethod]
+        public void ShippedSheet_MatchesTheGridGeometryTheCropMathAssumes()
+        {
+            string? imagesDir = FindRepoImagesDirectory();
+            if (imagesDir is null)
+            {
+                Assert.Inconclusive("Images/ not found above the test output directory — asset geometry not checked.");
+                return;
+            }
+
+            string sheetPath = PedalAnimation.GetDefaultSheetPath(imagesDir);
+            Assert.IsTrue(File.Exists(sheetPath), $"expected the shipped sheet at {sheetPath}");
+
+            var (width, height) = ReadPngSize(sheetPath);
+            Assert.AreEqual(PedalAnimation.CellWidth * PedalAnimation.SheetColumns, width,
+                "sheet width no longer matches SheetColumns x CellWidth");
+            Assert.AreEqual(PedalAnimation.CellHeight * PedalAnimation.SheetRows, height,
+                "sheet height no longer matches SheetRows x CellHeight");
+        }
+
+        /// <summary>Nearest ancestor of the test output directory that contains an Images/ folder.</summary>
+        private static string? FindRepoImagesDirectory()
+        {
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            while (dir is not null)
+            {
+                string candidate = Path.Combine(dir.FullName, "Images");
+                if (Directory.Exists(candidate)) return candidate;
+                dir = dir.Parent;
+            }
+            return null;
+        }
+
+        /// <summary>Reads width/height straight from a PNG IHDR chunk (no imaging dependency).</summary>
+        private static (int Width, int Height) ReadPngSize(string path)
+        {
+            var header = new byte[24];
+            using (var stream = File.OpenRead(path))
+            {
+                int read = stream.Read(header, 0, header.Length);
+                Assert.AreEqual(header.Length, read, "PNG header truncated");
+            }
+
+            string chunkType = System.Text.Encoding.ASCII.GetString(header, 12, 4);
+            Assert.AreEqual("IHDR", chunkType, "first PNG chunk is not IHDR");
+
+            int width = (header[16] << 24) | (header[17] << 16) | (header[18] << 8) | header[19];
+            int height = (header[20] << 24) | (header[21] << 16) | (header[22] << 8) | header[23];
+            return (width, height);
         }
 
         #endregion

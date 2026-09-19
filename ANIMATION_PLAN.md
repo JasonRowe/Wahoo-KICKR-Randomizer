@@ -229,3 +229,18 @@ Verdict: **good as-is** — the loop seam and frame "boil" are acceptable withou
   `SimulationCanvas` has an opt-in `PedalSheetSource` mode (default off). Porting to the Avalonia
   canvas and enabling it in the app behind a setting is the follow-on.
 
+#### 10.2.2 Status (2026-09): animated rider shipped in both apps
+The sheet is now the rider in the **WPF (Windows)** and **Avalonia (Linux)** apps, not just the
+harness.
+
+- Asset promoted out of the harness prototype area: `Images/rider_pedal_sheet_12f.png` (shipped by
+  all three csproj files through their `Images\*.png` content globs; `PedalAnimation.SheetFileName`).
+- Both `WorkoutView`s point their `SimulationCanvas` at that path, so the animation is on by
+  default in the apps. The canvases themselves keep the opt-in `PedalSheetSource` property, so
+  they still render the legacy static cyclist when no sheet is supplied.
+- Straight 12-frame loop at D = 6.5 m/rev; no seam cross-fade, no temporal blend (spike verdict).
+- The per-frame destination rect (scale + wheel-bottom ground anchoring) moved into
+  `PedalAnimation.GetFrameDestRect` and is shared by both canvases.
+- **Wheel-spin overlay remains off** — the WPF overlay code is still behind the harness toggles and
+  the Avalonia canvas does not implement it. Revisit once the pedalling rider is judged in-app.
+

@@ -146,7 +146,8 @@
             <materialDesign:Card Grid.Column="1" Margin="4,0,0,0" UniformCornerRadius="16" Background="#1A1A1A">
                 <Grid>
                     <!-- Game Canvas -->
-                    <shared:SimulationCanvas SpeedKph="{Binding CurrentSpeedKph}" 
+                    <shared:SimulationCanvas x:Name="SimCanvas"
+                                           SpeedKph="{Binding CurrentSpeedKph}" 
                                            GradePercent="{Binding CurrentGradePercent}" 
                                            SyncedDistanceMeters="{Binding CurrentDistanceMeters}"
                                            Opacity="1.0"/>
