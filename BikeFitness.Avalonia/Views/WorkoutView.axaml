@@ -111,6 +111,55 @@
                                 <TextBlock TextWrapping="Wrap" Classes="Caption" Foreground="{DynamicResource MaterialDesignBodyLight}"
                                            Text="A synthetic rival that holds a gap ahead of you and reacts to how you ride. It only moves itself — your resistance is never touched."/>
 
+                                <CheckBox x:Name="ChkPacerRideAlong" Content="Ride along: sit with me, then attack" IsChecked="False"
+                                          Checked="PacerCheck_Changed" Unchecked="PacerCheck_Changed"/>
+                                <TextBlock TextWrapping="Wrap" Classes="Caption" Foreground="{DynamicResource MaterialDesignBodyLight}"
+                                           Text="He rides level with you instead of holding a gap up the road, and takes off now and then so you have to chase him back. Ignored while the box above is off."/>
+
+                                <StackPanel x:Name="PanelPacerRideAlong" Spacing="6" Margin="16,4,0,0" IsVisible="False">
+                                    <Grid ColumnDefinitions="130, 40, *">
+                                        <TextBlock Grid.Column="0" Text="Alongside (m):" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding #SliderPacerAlongside.Value, StringFormat='{}{0:F0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+                                        <Slider Grid.Column="2" x:Name="SliderPacerAlongside" Minimum="1" Maximum="12" Value="4"
+                                                TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="130, 40, *">
+                                        <TextBlock Grid.Column="0" Text="Attack (m):" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding #SliderPacerAttackPush.Value, StringFormat='{}{0:F0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+                                        <Slider Grid.Column="2" x:Name="SliderPacerAttackPush" Minimum="2" Maximum="20" Value="8"
+                                                TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="130, 40, *">
+                                        <TextBlock Grid.Column="0" Text="Attack every (s):" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding #SliderPacerAttackInterval.Value, StringFormat='{}{0:F0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+                                        <Slider Grid.Column="2" x:Name="SliderPacerAttackInterval" Minimum="45" Maximum="300" Value="120"
+                                                TickFrequency="5" IsSnapToTickEnabled="True"/>
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="130, 40, *">
+                                        <TextBlock Grid.Column="0" Text="Attack length (s):" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding #SliderPacerAttackLength.Value, StringFormat='{}{0:F0}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+                                        <Slider Grid.Column="2" x:Name="SliderPacerAttackLength" Minimum="5" Maximum="30" Value="12"
+                                                TickFrequency="1" IsSnapToTickEnabled="True"/>
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="130, 40, *">
+                                        <TextBlock Grid.Column="0" Text="Recover (x):" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding #SliderPacerRecover.Value, StringFormat='{}{0:F2}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+                                        <Slider Grid.Column="2" x:Name="SliderPacerRecover" Minimum="0.60" Maximum="0.95" Value="0.80"
+                                                TickFrequency="0.05" IsSnapToTickEnabled="True"/>
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="130, 40, *">
+                                        <TextBlock Grid.Column="0" Text="Catch line (m):" VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding #SliderPacerCatch.Value, StringFormat='{}{0:F1}'}" VerticalAlignment="Center" TextAlignment="Right"/>
+                                        <Slider Grid.Column="2" x:Name="SliderPacerCatch" Minimum="2" Maximum="15" Value="5"
+                                                TickFrequency="0.5" IsSnapToTickEnabled="True"/>
+                                    </Grid>
+                                </StackPanel>
+
                                 <Grid ColumnDefinitions="130, 40, *" Margin="0,4,0,0">
                                     <TextBlock Grid.Column="0" Text="Strength (W/kg):" VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="1" Text="{Binding #SliderPacerStrength.Value, StringFormat='{}{0:F1}'}" VerticalAlignment="Center" TextAlignment="Right"/>

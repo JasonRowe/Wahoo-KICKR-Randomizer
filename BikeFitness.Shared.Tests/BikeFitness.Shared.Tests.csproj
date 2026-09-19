@@ -26,4 +26,9 @@
     <ProjectReference Include="..\BikeFitness.Shared\BikeFitness.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Behavioural baseline captured from 6cca907: the flag-off pacer's regression lock. -->
+    <None Include="SecondRider\Golden\pacer-golden-6cca907.csv" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

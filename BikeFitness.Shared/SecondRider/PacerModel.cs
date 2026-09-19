@@ -44,6 +44,68 @@ namespace BikeFitness.Shared.SecondRider
         /// <summary>Mercy rule on/off — the harness exposes this so the "ruthless bot" can be felt too.</summary>
         public bool MercyEnabled = true;
 
+        /// <summary>
+        /// Ride-along (POC #2b): he rides with you at <see cref="AlongsideGapMeters"/> and attacks now and
+        /// then, instead of holding a fixed gap up the road. Default <b>off</b> — with it off the pacer is
+        /// bit-identical to the rubber-band pacer and every value below is ignored.
+        /// </summary>
+        public bool RideAlongMode = false;
+
+        /// <summary>Gap he rides at in ride-along mode, in metres. 4 m ≈ 200 px at 50 px/m: actually on screen.</summary>
+        public double AlongsideGapMeters = 4.0;
+
+        /// <summary>Band around the alongside gap, in metres. He eases back inside it rather than snapping.</summary>
+        public double AlongsideBandMeters = 6.0;
+
+        /// <summary>
+        /// Distance over which the alongside pull-back ramps from nothing to <see cref="MaxRelativeSpeed"/>.
+        /// The station gap is only a few metres, so normalising the elasticity on it makes the smallest error
+        /// a full-speed rocket — the rider could never hold station, let alone get past him. Ramping over a
+        /// road-scale distance keeps the correction graded: nearly nothing beside you, full effort to close
+        /// a real gap.
+        /// </summary>
+        public double AlongsideElasticScaleMeters = 50.0;
+
+        /// <summary>
+        /// Seconds before he reacts to a change in your speed, as a smoothing time constant. This is what
+        /// makes a hard surge take ground off him: he is still riding your old pace while you go. It is also
+        /// one-sided — see <c>PacerModel.RideAlongReferenceSpeed</c> — so easing off can never push him ahead.
+        /// </summary>
+        public double AlongsideResponseSeconds = 10.0;
+
+        /// <summary>How far up the road an attack takes him, in metres, added to <see cref="AlongsideGapMeters"/>.</summary>
+        public double AttackPushMeters = 8.0;
+
+        /// <summary>Seconds between attacks, before jitter.</summary>
+        public double AttackIntervalSeconds = 120.0;
+
+        /// <summary>Fraction of the interval the attack timer jitters by, ±, 0–0.5.</summary>
+        public double AttackJitterFraction = 0.25;
+
+        /// <summary>Seconds an attack lasts.</summary>
+        public double AttackLengthSeconds = 12.0;
+
+        /// <summary>Pacer speed while recovering, as a multiple of yours, 0.60–0.95.</summary>
+        public double RecoverRelativeSpeed = 0.80;
+
+        /// <summary>Pacer speed while conceding, as a multiple of yours, 0.60–0.95.</summary>
+        public double ConcedeRelativeSpeed = 0.80;
+
+        /// <summary>How far past him you must get for it to count as a pass, in metres.</summary>
+        public double CatchOvertakeMeters = 5.0;
+
+        /// <summary>Seconds you must hold the pass before he concedes, in seconds.</summary>
+        public double CatchHoldSeconds = 3.0;
+
+        /// <summary>Seconds he concedes for once you are past.</summary>
+        public double ConcedeSeconds = 20.0;
+
+        /// <summary>
+        /// Seed for the attack-jitter RNG. The model stays clock-free and reproducible: same seed and same
+        /// trace give the same attacks.
+        /// </summary>
+        public int AttackJitterSeed = 20260919;
+
         /// <summary>Physics constants for the pacer's speed cap (shared with the power model).</summary>
         public RiderConstants Rider = new RiderConstants();
 
@@ -63,6 +125,21 @@ namespace BikeFitness.Shared.SecondRider
                 MercyBandBonus = MercyBandBonus,
                 PacerWPerKg = PacerWPerKg,
                 MercyEnabled = MercyEnabled,
+                RideAlongMode = RideAlongMode,
+                AlongsideGapMeters = AlongsideGapMeters,
+                AlongsideBandMeters = AlongsideBandMeters,
+                AlongsideElasticScaleMeters = AlongsideElasticScaleMeters,
+                AlongsideResponseSeconds = AlongsideResponseSeconds,
+                AttackPushMeters = AttackPushMeters,
+                AttackIntervalSeconds = AttackIntervalSeconds,
+                AttackJitterFraction = AttackJitterFraction,
+                AttackLengthSeconds = AttackLengthSeconds,
+                RecoverRelativeSpeed = RecoverRelativeSpeed,
+                ConcedeRelativeSpeed = ConcedeRelativeSpeed,
+                CatchOvertakeMeters = CatchOvertakeMeters,
+                CatchHoldSeconds = CatchHoldSeconds,
+                ConcedeSeconds = ConcedeSeconds,
+                AttackJitterSeed = AttackJitterSeed,
                 Rider = new RiderConstants
                 {
                     TotalMassKg = Rider.TotalMassKg,
@@ -89,6 +166,37 @@ namespace BikeFitness.Shared.SecondRider
 
         /// <summary>You are fading against your own best — the pacer loosens its hold instead of disappearing.</summary>
         Mercy,
+
+        /// <summary>Ride-along: riding with you at the alongside gap. The normal state.</summary>
+        Alongside,
+
+        /// <summary>Ride-along: pushing up the road to the attack gap, so you have to chase.</summary>
+        Attacking,
+
+        /// <summary>Ride-along: easing back to alongside after an attack.</summary>
+        Recovering,
+
+        /// <summary>Ride-along: you got past him and he is letting you go for now.</summary>
+        Conceding,
+    }
+
+    /// <summary>What last happened between you and the pacer. Ride-along only; <see cref="None"/> otherwise.</summary>
+    public enum PacerEvent
+    {
+        /// <summary>Nothing has happened yet.</summary>
+        None,
+
+        /// <summary>He has just gone up the road.</summary>
+        Attacked,
+
+        /// <summary>You got <see cref="PacerConfig.CatchOvertakeMeters"/> past him and held it.</summary>
+        Caught,
+
+        /// <summary>His concede period is up: he stopped letting you go.</summary>
+        Conceded,
+
+        /// <summary>He is back alongside after an attack.</summary>
+        RecoveredToAlongside,
     }
 
     /// <summary>
@@ -126,6 +234,19 @@ namespace BikeFitness.Shared.SecondRider
         /// <summary>Minimum stopping deceleration, so a stopped rider brings the pacer to 0 within 2 s.</summary>
         public const double MaxStopDecelerationKphPerSecond = 45.0;
 
+        /// <summary>
+        /// Ride-along: an attack is over after this long regardless of the gap, so a rider who stops cannot
+        /// leave him stuck in <see cref="PacerState.Recovering"/>. The gap normally closes well inside it.
+        /// </summary>
+        public const double RecoverTimeoutSeconds = 30.0;
+
+        /// <summary>
+        /// How close to the alongside gap he has to get before <see cref="PacerState.Recovering"/> is done.
+        /// Tight on purpose: the whole point of that state is the closing rate, which
+        /// <see cref="PacerConfig.RecoverRelativeSpeed"/> sets.
+        /// </summary>
+        public const double RecoverExitToleranceMeters = 1.0;
+
         private readonly PacerConfig _config;
         private readonly double[] _bucketDistances = new double[BucketCount];
         private readonly double[] _bucketDurations = new double[BucketCount];
@@ -140,6 +261,18 @@ namespace BikeFitness.Shared.SecondRider
         private double _easeTimer;
         private double _fadeTimer;
         private double _mercyRemainingSeconds;
+
+        // Ride-along (POC #2b). All timers are advanced by Advance's deltaTime — never a wall clock.
+        private Random _jitter = new Random(1);
+        private double _attackTimer;
+        private double _nextAttackSeconds;
+        private double _attackRemainingSeconds;
+        private double _recoverRemainingSeconds;
+        private double _concedeRemainingSeconds;
+        private double _holdTimer;
+        private bool _passLatched;
+        private double _smoothedRiderSpeedKph;
+        private bool _smoothedSpeedPrimed;
 
         private double _lastRiderDistanceMeters;
         private double _lastRiderSpeedKph;
@@ -179,6 +312,24 @@ namespace BikeFitness.Shared.SecondRider
         /// <summary>Seconds of mercy remaining, 0 when not in mercy.</summary>
         public double MercyRemainingSeconds => Math.Max(0, _mercyRemainingSeconds);
 
+        /// <summary>Ride-along: the last thing that happened. <see cref="PacerEvent.None"/> when the flag is off.</summary>
+        public PacerEvent LastEvent { get; private set; } = PacerEvent.None;
+
+        /// <summary>Ride-along: seconds until the next attack, jitter included. 0 when not applicable.</summary>
+        public double SecondsToNextAttack =>
+            _config.RideAlongMode && _nextAttackSeconds > 0
+                ? Math.Max(0.0, _nextAttackSeconds - _attackTimer)
+                : 0.0;
+
+        /// <summary>
+        /// Ride-along: the gap he is working to right now — the alongside gap, pushed out while attacking.
+        /// Equal to <see cref="EffectiveGapTargetMeters"/> when the flag is off.
+        /// </summary>
+        public double RideAlongTargetMeters =>
+            _config.RideAlongMode
+                ? EffectiveGapTargetMeters + (_attackRemainingSeconds > 0 ? _config.AttackPushMeters : 0.0)
+                : EffectiveGapTargetMeters;
+
         /// <summary>
         /// Finish-time delta for the end-of-run verdict, on the same sign convention as
         /// <see cref="DuelMath.DeltaSeconds"/>: positive = the pacer is ahead ("beat you by 12 s").
@@ -195,8 +346,12 @@ namespace BikeFitness.Shared.SecondRider
         /// <summary>Restarts the duel with the pacer holding <see cref="PacerConfig.GapTargetMeters"/>.</summary>
         public void Reset(double riderDistanceMeters)
         {
-            Reset(riderDistanceMeters, _config.GapTargetMeters);
+            Reset(riderDistanceMeters, DefaultStartGapMeters());
         }
+
+        /// <summary>Gap the pacer starts at: the alongside gap in ride-along mode, the target gap otherwise.</summary>
+        private double DefaultStartGapMeters() =>
+            _config.RideAlongMode ? _config.AlongsideGapMeters : _config.GapTargetMeters;
 
         /// <summary>Restarts the duel with an explicit starting gap (tests use this to start at ±100 m).</summary>
         public void Reset(double riderDistanceMeters, double gapMeters)
@@ -221,6 +376,27 @@ namespace BikeFitness.Shared.SecondRider
             _fadeTimer = 0;
             _mercyRemainingSeconds = 0;
 
+            LastEvent = PacerEvent.None;
+            _jitter = new Random(_config.AttackJitterSeed);
+            _attackTimer = 0;
+            _attackRemainingSeconds = 0;
+            _recoverRemainingSeconds = 0;
+            _concedeRemainingSeconds = 0;
+            _holdTimer = 0;
+            _passLatched = false;
+            _nextAttackSeconds = 0;
+            _smoothedRiderSpeedKph = 0;
+            _smoothedSpeedPrimed = false;
+
+            if (_config.RideAlongMode)
+            {
+                // Ride-along owns the state machine: the rubber band's Contested/Surging/Easing never apply.
+                State = PacerState.Alongside;
+                EffectiveGapTargetMeters = _config.AlongsideGapMeters;
+                EffectiveBandMeters = _config.AlongsideBandMeters;
+                _nextAttackSeconds = NextAttackIntervalSeconds();
+            }
+
             _lastRiderDistanceMeters = riderDistanceMeters;
             _lastRiderSpeedKph = 0;
             _lastRiderDeltaMeters = 0;
@@ -242,11 +418,14 @@ namespace BikeFitness.Shared.SecondRider
             _lastRiderDistanceMeters = riderDistance;
             _lastRiderSpeedKph = riderSpeed;
 
+            UpdateSmoothedRiderSpeed(riderSpeed, dt);
+
             RecordRiderHistory(dt, _lastRiderDeltaMeters);
             UpdateMercy(dt);
 
             double gap = GapMeters(riderDistance);
-            UpdateState(dt, gap);
+            if (_config.RideAlongMode) UpdateRideAlongState(dt, gap);
+            else UpdateState(dt, gap);
 
             if (riderSpeed <= 0.01)
             {
@@ -257,14 +436,26 @@ namespace BikeFitness.Shared.SecondRider
             }
             else
             {
-                double target = EffectiveGapTargetMeters > 0 ? EffectiveGapTargetMeters : 1.0;
-                double relative = 1.0 + (_config.Elasticity * ((target - gap) / target));
+                double reference = _config.RideAlongMode ? RideAlongReferenceSpeed(riderSpeed) : riderSpeed;
+                double relative;
+
+                if (_config.RideAlongMode)
+                {
+                    relative = RideAlongRelativeSpeed(Math.Max(1.0, RideAlongTargetMeters), gap);
+                }
+                else
+                {
+                    // Unchanged from 6cca907: the rubber band's own correction, on its own target.
+                    double target = EffectiveGapTargetMeters > 0 ? EffectiveGapTargetMeters : 1.0;
+                    relative = 1.0 + (_config.Elasticity * ((target - gap) / target));
+                }
+
                 relative = Math.Clamp(relative, _config.MinRelativeSpeed, _config.MaxRelativeSpeed);
 
                 double physicalCap = RiderPowerModel.SpeedFromPower(
                     _config.PacerWPerKg * _config.Rider.TotalMassKg, gradePercent, _config.Rider);
 
-                SpeedKph = Math.Max(0.0, Math.Min(riderSpeed * relative, physicalCap));
+                SpeedKph = Math.Max(0.0, Math.Min(reference * relative, physicalCap));
             }
 
             PseudoWatts = RiderPowerModel.PowerFromSpeed(SpeedKph, gradePercent, _config.Rider);
@@ -308,6 +499,188 @@ namespace BikeFitness.Shared.SecondRider
             }
         }
 
+        /// <summary>
+        /// Ride-along state machine. Mercy outranks everything; otherwise he holds station alongside, takes
+        /// off on the attack timer, eases back once the attack is done, and lets you go when you have held a
+        /// pass. The rubber band's Contested/Surging/Easing states never apply while this is in charge.
+        /// </summary>
+        private void UpdateRideAlongState(double deltaTime, double gap)
+        {
+            if (_mercyRemainingSeconds > 0)
+            {
+                State = PacerState.Mercy;
+                EffectiveGapTargetMeters = BaseGapTargetMeters * (1.0 - _config.MercyBandBonus);
+                EffectiveBandMeters = BaseBandMeters * (1.0 + _config.MercyBandBonus);
+                return;
+            }
+
+            _attackTimer += deltaTime;
+            double alongside = _config.AlongsideGapMeters;
+
+            switch (State)
+            {
+                case PacerState.Alongside:
+                    // One concede per pass: he has to get back up the road before another pass counts, or a
+                    // sustained effort would re-trigger it every ConcedeSeconds and hand the rider the road.
+                    if (_passLatched && gap > alongside + _config.AlongsideBandMeters)
+                    {
+                        _passLatched = false;
+                    }
+
+                    if (!_passLatched && gap < -_config.CatchOvertakeMeters)
+                    {
+                        _holdTimer += deltaTime;
+                        if (_holdTimer >= _config.CatchHoldSeconds)
+                        {
+                            _holdTimer = 0.0;
+                            _passLatched = true;
+                            State = PacerState.Conceding;
+                            _concedeRemainingSeconds = _config.ConcedeSeconds;
+                            LastEvent = PacerEvent.Caught;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        _holdTimer = 0.0;
+                    }
+
+                    if (_attackTimer >= _nextAttackSeconds)
+                    {
+                        State = PacerState.Attacking;
+                        _attackRemainingSeconds = _config.AttackLengthSeconds;
+                        _attackTimer = 0.0;
+                        _nextAttackSeconds = NextAttackIntervalSeconds();
+                        LastEvent = PacerEvent.Attacked;
+                    }
+
+                    break;
+
+                case PacerState.Attacking:
+                    _attackRemainingSeconds -= deltaTime;
+                    if (_attackRemainingSeconds <= 0.0 || gap > RideAlongTargetMeters + _config.AlongsideBandMeters)
+                    {
+                        _attackRemainingSeconds = 0.0;
+                        State = PacerState.Recovering;
+                        _recoverRemainingSeconds = RecoverTimeoutSeconds;
+                    }
+
+                    break;
+
+                case PacerState.Recovering:
+                    _recoverRemainingSeconds -= deltaTime;
+                    if (_recoverRemainingSeconds <= 0.0 || gap <= alongside + RecoverExitToleranceMeters)
+                    {
+                        _recoverRemainingSeconds = 0.0;
+                        EnterAlongside();
+                        LastEvent = PacerEvent.RecoveredToAlongside;
+                    }
+
+                    break;
+
+                case PacerState.Conceding:
+                    _concedeRemainingSeconds -= deltaTime;
+                    if (_concedeRemainingSeconds <= 0.0)
+                    {
+                        _concedeRemainingSeconds = 0.0;
+                        EnterAlongside();
+                        LastEvent = PacerEvent.Conceded;
+                    }
+
+                    break;
+
+                default:
+                    // Contested / Surging / Easing cannot be current under ride-along: mercy expiry and the
+                    // first frame after a flag change both land here.
+                    EnterAlongside();
+                    LastEvent = PacerEvent.None;
+                    break;
+            }
+
+            EffectiveGapTargetMeters = BaseGapTargetMeters;
+            EffectiveBandMeters = BaseBandMeters;
+        }
+
+        /// <summary>
+        /// Back to riding alongside. The attack timer deliberately keeps running: the interval is a clock,
+        /// not a countdown that restarts every time something interesting happens.
+        /// </summary>
+        private void EnterAlongside()
+        {
+            State = PacerState.Alongside;
+            _holdTimer = 0.0;
+        }
+
+        /// <summary>Seconds until the next attack: the interval, jittered by ±<see cref="PacerConfig.AttackJitterFraction"/>.</summary>
+        private double NextAttackIntervalSeconds()
+        {
+            double interval = Math.Max(1.0, _config.AttackIntervalSeconds);
+            double jitter = Math.Clamp(_config.AttackJitterFraction, 0.0, 0.5);
+            if (jitter <= 0.0) return interval;
+
+            return interval * (1.0 + (jitter * ((2.0 * _jitter.NextDouble()) - 1.0)));
+        }
+
+        /// <summary>
+        /// The speed he rides at when he is not attacking or conceding: yours, with a graded correction
+        /// toward the station he is holding. The lag is the point — it is what lets a hard effort take
+        /// ground off him, while easing off can never push him up the road.
+        /// </summary>
+        private double RideAlongReferenceSpeed(double riderSpeed)
+        {
+            if (!_smoothedSpeedPrimed) return riderSpeed;
+
+            // The lower of the two, on purpose: he never rides faster than you are going right now, so
+            // slowing down can only ever bring him back to you.
+            return Math.Min(riderSpeed, _smoothedRiderSpeedKph);
+        }
+
+        /// <summary>One-sided lag on your speed: he has to notice an acceleration before he answers it.</summary>
+        private void UpdateSmoothedRiderSpeed(double riderSpeed, double deltaTime)
+        {
+            if (!_smoothedSpeedPrimed)
+            {
+                _smoothedRiderSpeedKph = riderSpeed;
+                _smoothedSpeedPrimed = true;
+                return;
+            }
+
+            double tau = Math.Max(0.5, _config.AlongsideResponseSeconds);
+            double alpha = Math.Min(1.0, deltaTime / tau);
+            _smoothedRiderSpeedKph += (riderSpeed - _smoothedRiderSpeedKph) * alpha;
+        }
+
+        /// <summary>
+        /// Ride-along speed as a multiple of the reference speed. Attacks and the alongside hold both pull
+        /// toward <paramref name="target"/>, but only the alongside hold is ramped over
+        /// <see cref="PacerConfig.AlongsideElasticScaleMeters"/>; recovering and conceding are explicit
+        /// multipliers so those sliders do exactly what they say.
+        /// </summary>
+        private double RideAlongRelativeSpeed(double target, double gap)
+        {
+            if (State == PacerState.Recovering) return _config.RecoverRelativeSpeed;
+            if (State == PacerState.Conceding) return _config.ConcedeRelativeSpeed;
+
+            if (State == PacerState.Attacking)
+            {
+                // Going for it: the pull is on the attack station itself, so the push reads as acceleration
+                // rather than as a slow asymptote.
+                double attackTarget = Math.Max(1.0, target);
+                return 1.0 + (_config.Elasticity * ((attackTarget - gap) / attackTarget));
+            }
+
+            double scale = Math.Max(1.0, _config.AlongsideElasticScaleMeters);
+            return 1.0 + (_config.Elasticity * ((target - gap) / scale));
+        }
+
+        /// <summary>Gap he rides at when nothing special is happening, on either side of the flag.</summary>
+        private double BaseGapTargetMeters =>
+            _config.RideAlongMode ? _config.AlongsideGapMeters : _config.GapTargetMeters;
+
+        /// <summary>Hysteresis band in force when nothing special is happening, on either side of the flag.</summary>
+        private double BaseBandMeters =>
+            _config.RideAlongMode ? _config.AlongsideBandMeters : _config.BandMeters;
+
         private void UpdateMercy(double deltaTime)
         {
             if (_mercyRemainingSeconds > 0)
@@ -317,9 +690,16 @@ namespace BikeFitness.Shared.SecondRider
                 {
                     _mercyRemainingSeconds = 0;
                     _fadeTimer = 0;
-                    State = PacerState.Contested;
-                    EffectiveGapTargetMeters = _config.GapTargetMeters;
-                    EffectiveBandMeters = _config.BandMeters;
+                    State = _config.RideAlongMode ? PacerState.Alongside : PacerState.Contested;
+                    EffectiveGapTargetMeters = BaseGapTargetMeters;
+                    EffectiveBandMeters = BaseBandMeters;
+
+                    if (_config.RideAlongMode)
+                    {
+                        // A mercy period is a breather, not a launch pad: he does not attack the moment it lifts.
+                        _attackTimer = 0;
+                        _nextAttackSeconds = NextAttackIntervalSeconds();
+                    }
                 }
 
                 return;
@@ -339,8 +719,8 @@ namespace BikeFitness.Shared.SecondRider
                 _mercyRemainingSeconds = MercyDurationSeconds;
                 _fadeTimer = 0;
                 State = PacerState.Mercy;
-                EffectiveBandMeters = _config.BandMeters * (1.0 + _config.MercyBandBonus);
-                EffectiveGapTargetMeters = _config.GapTargetMeters * (1.0 - _config.MercyBandBonus);
+                EffectiveBandMeters = BaseBandMeters * (1.0 + _config.MercyBandBonus);
+                EffectiveGapTargetMeters = BaseGapTargetMeters * (1.0 - _config.MercyBandBonus);
             }
         }
 
