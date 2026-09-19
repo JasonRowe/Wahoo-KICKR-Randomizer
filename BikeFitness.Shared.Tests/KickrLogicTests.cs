@@ -1,7 +1,6 @@
 using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BikeFitness.Shared;
-using BikeFitness.Shared;
 
 namespace BikeFitnessApp.UnitTests
 {
@@ -153,7 +152,7 @@ namespace BikeFitnessApp.UnitTests
             ushort prevTime = 10000;
             
             ushort currRevs = 101; // 1 rev
-            ushort currTime = 11024; // 1024 ticks = 1 second later
+            ushort currTime = 12048; // 2048 ticks = 1 second later (0x2A63 crank event time is 1/2048 s)
             
             // 1 rev per second = 60 RPM
             double rpm = logic.CalculateCadence(prevRevs, prevTime, currRevs, currTime);
@@ -184,7 +183,7 @@ namespace BikeFitnessApp.UnitTests
             ushort prevTime = 10000;
             
             uint currRevs = 101; // 1 rev
-            ushort currTime = 11024; // 1024 ticks = 1 second later
+            ushort currTime = 12048; // 2048 ticks = 1 second later (0x2A63 wheel event time is 1/2048 s)
             
             double circumference = 2.0; // 2 meters
             
@@ -195,6 +194,27 @@ namespace BikeFitnessApp.UnitTests
             Assert.AreEqual(7.2, speed, 0.001);
         }
 
+        /// <summary>
+        /// The physical calibration, from a hand-spin on the trainer: 20 wheel revolutions in 34 s with a
+        /// 26" wheel (2.07 m) is 1.22 m/s = 2.7 mph. The trainer and the Wahoo app both read ~3 mph; this
+        /// app read half of that until the 0x2A63 event time was divided by 2048.
+        /// </summary>
+        [TestMethod]
+        public void TestCalculateSpeed_MatchesAHandTurnedWheel()
+        {
+            var logic = new KickrLogic();
+            double circumference = 2.07;
+
+            // The app sees this packet by packet: one revolution every 1.7 s is the same rate (20 in 34 s).
+            ushort prevTime = 10000;
+            ushort currTime = (ushort)(10000 + (ushort)(1.7 * KickrLogic.PowerPacketEventTimeTicksPerSecond));
+
+            double speed = logic.CalculateSpeed(0, prevTime, 1, currTime, circumference);
+
+            Assert.AreEqual(4.38, speed, 0.05, "one wheel revolution per 1.7 s with a 26\" wheel");
+            Assert.IsTrue(speed * 0.621371 > 2.5, "must read ~2.7 mph, not the halved ~1.4 mph");
+        }
+
         [TestMethod]
         public void TestCalculateSpeed_TimeWrapAround()
         {
@@ -203,12 +223,8 @@ namespace BikeFitnessApp.UnitTests
             ushort prevTime = 65000;
             
             uint currRevs = 101; 
-            ushort currTime = 487; // Wrapped around. 65536 - 65000 = 536. 536 + 488 = 1024 ticks (1 sec)
-            // Let's do exact math: (65536 - 65000) + 488 = 1024 ticks = 1 second?
-            // Wait: 487 - 65000 = -64513. -64513 + 65536 = 1023 ticks?
-            // Let's set currTime to (65000 + 1024) % 65536 = 66024 % 65536 = 488
-            
-            currTime = 488;
+            // 2048 ticks = 1 second later, wrapped: (65000 + 2048) % 65536
+            ushort currTime = (ushort)((65000 + 2048) % 65536);
             
             double circumference = 2.0; 
             
@@ -219,19 +235,20 @@ namespace BikeFitnessApp.UnitTests
         [TestMethod]
         public void TestCalculateSpeed_VerifyTimingDivisor()
         {
-            // This test ensures the timing divisor remains 1024.0.
-            // Using 2048.0 was attempted to match some BLE specifications but caused KICKR SNAP telemetry to fail.
+            // Locks the event-time unit for the packet this app actually reads. The 0x2A63 Cycling Power
+            // Measurement wheel/crank event times are 1/2048 s; dividing by 1024 halved every speed the
+            // app reported (measured against a counted hand-spin, see TestCalculateSpeed_MatchesAHandTurnedWheel).
             var logic = new KickrLogic();
             uint prevRevs = 0;
             ushort prevTime = 0;
             uint currRevs = 1;
-            ushort currTime = 1024; // Exactly 1 second if divisor is 1024
+            ushort currTime = 2048; // Exactly 1 second at 1/2048 s units
             double circumference = 2.0;
 
             double speed = logic.CalculateSpeed(prevRevs, prevTime, currRevs, currTime, circumference);
             
             // Expected Speed: 1 rev * 2.0m / 1.0s = 2.0 m/s = 7.2 kph
-            Assert.AreEqual(7.2, speed, 0.001, "Speed calculation must use 1/1024s timing divisor.");
+            Assert.AreEqual(7.2, speed, 0.001, "Speed calculation must use the 1/2048s event time unit.");
         }
 
         [TestMethod]
@@ -243,7 +260,7 @@ namespace BikeFitnessApp.UnitTests
             ushort prevTime = 10000;
             
             uint currRevs = 5; // Wrapped around. Actual delta = 10 revs
-            ushort currTime = 11024; // 1024 ticks = 1 second later
+            ushort currTime = 12048; // 2048 ticks = 1 second later
             
             double circumference = 2.0;
             
@@ -260,7 +277,7 @@ namespace BikeFitnessApp.UnitTests
             ushort prevTime = 10000;
             
             uint currRevs = 101; // 1 rev
-            ushort currTime = 10100; // Only 100 ticks = ~0.098 seconds
+            ushort currTime = 10200; // 200 ticks = ~0.098 seconds
             
             double circumference = 2.0;
             
@@ -269,7 +286,7 @@ namespace BikeFitnessApp.UnitTests
             Assert.IsTrue(speed > 0 && speed <= 120.0, $"Speed {speed} should be valid and under 120 kph cap.");
             
             // Now test a scenario that would exceed 120 kph cap
-            currRevs = 110; // 10 revs in 100 ticks => massive speed
+            currRevs = 110; // 10 revs in 200 ticks => massive speed
             speed = logic.CalculateSpeed(prevRevs, prevTime, currRevs, currTime, circumference);
             Assert.AreEqual(0, speed, "Speed above 120 kph should be rejected as corrupt.");
         }
@@ -298,7 +315,7 @@ namespace BikeFitnessApp.UnitTests
             ushort prevTime = 10000;
             
             ushort currRevs = 5; // Wrapped around. Actual delta = 11 revs
-            ushort currTime = 11024; // 1024 ticks = 1 second later
+            ushort currTime = 12048; // 2048 ticks = 1 second later
             
             // 11 revs per second = 660 RPM (exceeds 200 RPM cap, should return 0)
             double rpm = logic.CalculateCadence(prevRevs, prevTime, currRevs, currTime);

@@ -247,15 +247,15 @@ namespace BikeFitness.Shared
                 : (65536 - prevRevs) + currRevs;
             if (revsDiff == 0) return 0;
 
-            // Time unit is 1/1024 seconds
+            // Time unit is 1/2048 seconds (0x2A63 Crank Event Time — same packet as the wheel data)
             // Handle wrap-around of time (UInt16)
             int timeDiff = currTime - prevTime;
             if (timeDiff < 0) timeDiff += 65536;
 
-            // Guard: ignore suspiciously small time deltas (< ~50ms)
+            // Guard: ignore suspiciously small time deltas (< ~24ms)
             if (timeDiff < 50) return 0;
 
-            double timeMinutes = (timeDiff / 1024.0) / 60.0;
+            double timeMinutes = (timeDiff / PowerPacketEventTimeTicksPerSecond) / 60.0;
             double rpm = revsDiff / timeMinutes;
 
             // Sanity cap: reject readings above 200 RPM as corrupt
@@ -310,6 +310,24 @@ namespace BikeFitness.Shared
             return (true, wheelRevs, lastWheelTime);
         }
 
+        /// <summary>
+        /// Wheel and crank event times in the Cycling Power Measurement packet (<c>0x2A63</c>) are in
+        /// <b>1/2048 s</b> units. This app takes speed and cadence from that packet
+        /// (<see cref="ParseWheelDataFromPower"/>, <see cref="ParseCrankDataFromPower"/>), so this is the
+        /// divisor — the CSC characteristic's 1/1024 s does not apply to the path this app reads.
+        /// <para>
+        /// Measured on the KICKR SNAP (20 hand-turned wheel revolutions in 34 s, 26" wheel at 2.07 m, i.e.
+        /// 1.22 m/s = 2.7 mph): the trainer and the Wahoo app both read ~3 mph, this app read ~1.5 mph —
+        /// exactly half. Distance was never wrong: it accumulates revolutions × circumference, so before
+        /// this correction the reported speed disagreed with the app's own odometer.
+        /// </para>
+        /// <para>
+        /// If the readout ever looks frozen again, check the deltas before blaming this constant: every
+        /// guard in <see cref="CalculateSpeed"/> is unchanged from the 1/1024 era.
+        /// </para>
+        /// </summary>
+        public const double PowerPacketEventTimeTicksPerSecond = 2048.0;
+
         public double CalculateSpeed(uint prevRevs, ushort prevTime, uint currRevs, ushort currTime, double circumferenceMeters)
         {
             // Handle uint32 wrap-around for cumulative wheel revolutions
@@ -318,21 +336,17 @@ namespace BikeFitness.Shared
                 : (uint)((ulong)uint.MaxValue - prevRevs + currRevs + 1);
             if (revsDiff == 0) return 0;
 
-            // Time unit is 1/1024 seconds
+            // Time unit is 1/2048 seconds (0x2A63 Wheel Event Time).
             // Handle wrap-around of time (UInt16)
             int timeDiff = currTime - prevTime;
             if (timeDiff < 0) timeDiff += 65536; // Wrap around adjustment for UInt16
 
-            // Guard: ignore suspiciously small time deltas (< ~50ms)
+            // Guard: ignore suspiciously small time deltas (< ~24ms)
             // A burst of buffered BLE packets can produce timeDiff of 1-2 ticks,
             // which results in speed values of 7000+ kph.
             if (timeDiff < 50) return 0;
 
-            // WARNING: Do not change this to 2048.0. 
-            // Although some BLE specs suggest 1/2048s for wheel data in Power packets (0x2A63),
-            // an experimental attempt to use 2048.0 on the KICKR SNAP caused telemetry to freeze.
-            // Stick to 1024.0 for stability and correct speed reporting on this hardware.
-            double timeSeconds = timeDiff / 1024.0;
+            double timeSeconds = timeDiff / PowerPacketEventTimeTicksPerSecond;
             double distanceMeters = revsDiff * circumferenceMeters;
             
             double speedMps = distanceMeters / timeSeconds;
