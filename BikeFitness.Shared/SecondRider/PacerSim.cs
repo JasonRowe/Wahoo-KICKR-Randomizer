@@ -13,6 +13,9 @@ namespace BikeFitness.Shared.SecondRider
         public List<double> RiderDistancesMeters { get; } = new List<double>();
         public List<PacerState> States { get; } = new List<PacerState>();
 
+        /// <summary>Ride-along events in order, with the time each happened. Empty when the flag is off.</summary>
+        public List<(double T, PacerEvent Event)> Events { get; } = new List<(double, PacerEvent)>();
+
         /// <summary>Number of state changes over the run (a naive threshold implementation scores huge here).</summary>
         public int StateTransitions { get; internal set; }
 
@@ -101,10 +104,13 @@ namespace BikeFitness.Shared.SecondRider
             double dt = Math.Min(deltaTime, 2.0);
             var model = new PacerModel(config);
             double startDistance = riderTrace[0].DistanceMeters;
-            model.Reset(startDistance, initialGapMeters ?? config.GapTargetMeters);
+            double startGap = initialGapMeters
+                ?? (config.RideAlongMode ? config.AlongsideGapMeters : config.GapTargetMeters);
+            model.Reset(startDistance, startGap);
 
             double endTime = riderTrace[riderTrace.Count - 1].T;
             double previousState = (double)(int)model.State;
+            PacerEvent previousEvent = model.LastEvent;
 
             for (double t = riderTrace[0].T; t <= endTime + 1e-9; t += dt)
             {
@@ -116,6 +122,12 @@ namespace BikeFitness.Shared.SecondRider
                 {
                     result.StateTransitions++;
                     previousState = (int)model.State;
+                }
+
+                if (model.LastEvent != previousEvent)
+                {
+                    result.Events.Add((t, model.LastEvent));
+                    previousEvent = model.LastEvent;
                 }
 
                 if (riderTrace.Count > 0 && speed > 0.01)

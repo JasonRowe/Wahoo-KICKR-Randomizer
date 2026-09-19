@@ -135,6 +135,55 @@
                                 <TextBlock TextWrapping="Wrap" Opacity="0.7" Margin="0,4,0,10"
                                            Text="A synthetic rival that holds a gap ahead of you and reacts to how you ride. It only moves itself — your resistance is never touched."/>
 
+                                <CheckBox x:Name="ChkPacerRideAlong" Content="Ride along: sit with me, then attack" IsChecked="False"
+                                          Checked="PacerCheck_Changed" Unchecked="PacerCheck_Changed"/>
+                                <TextBlock TextWrapping="Wrap" Opacity="0.7" Margin="0,4,0,0"
+                                           Text="He rides level with you instead of holding a gap up the road, and takes off now and then so you have to chase him back. Ignored while the box above is off."/>
+
+                                <StackPanel x:Name="PanelPacerRideAlong" Margin="16,6,0,0" Visibility="Collapsed">
+                                    <DockPanel Margin="0,3">
+                                        <TextBlock Text="Alongside (m):" Width="130" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ElementName=SliderPacerAlongside, Path=Value, StringFormat=F0}" Width="40" TextAlignment="Right" VerticalAlignment="Center"/>
+                                        <Slider x:Name="SliderPacerAlongside" Minimum="1" Maximum="12" Value="4" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                Style="{DynamicResource MaterialDesignSlider}" ValueChanged="PacerSlider_Changed"/>
+                                    </DockPanel>
+
+                                    <DockPanel Margin="0,3">
+                                        <TextBlock Text="Attack (m):" Width="130" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ElementName=SliderPacerAttackPush, Path=Value, StringFormat=F0}" Width="40" TextAlignment="Right" VerticalAlignment="Center"/>
+                                        <Slider x:Name="SliderPacerAttackPush" Minimum="2" Maximum="20" Value="8" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                Style="{DynamicResource MaterialDesignSlider}" ValueChanged="PacerSlider_Changed"/>
+                                    </DockPanel>
+
+                                    <DockPanel Margin="0,3">
+                                        <TextBlock Text="Attack every (s):" Width="130" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ElementName=SliderPacerAttackInterval, Path=Value, StringFormat=F0}" Width="40" TextAlignment="Right" VerticalAlignment="Center"/>
+                                        <Slider x:Name="SliderPacerAttackInterval" Minimum="45" Maximum="300" Value="120" TickFrequency="5" IsSnapToTickEnabled="True"
+                                                Style="{DynamicResource MaterialDesignSlider}" ValueChanged="PacerSlider_Changed"/>
+                                    </DockPanel>
+
+                                    <DockPanel Margin="0,3">
+                                        <TextBlock Text="Attack length (s):" Width="130" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ElementName=SliderPacerAttackLength, Path=Value, StringFormat=F0}" Width="40" TextAlignment="Right" VerticalAlignment="Center"/>
+                                        <Slider x:Name="SliderPacerAttackLength" Minimum="5" Maximum="30" Value="12" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                Style="{DynamicResource MaterialDesignSlider}" ValueChanged="PacerSlider_Changed"/>
+                                    </DockPanel>
+
+                                    <DockPanel Margin="0,3">
+                                        <TextBlock Text="Recover (x):" Width="130" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ElementName=SliderPacerRecover, Path=Value, StringFormat=F2}" Width="40" TextAlignment="Right" VerticalAlignment="Center"/>
+                                        <Slider x:Name="SliderPacerRecover" Minimum="0.60" Maximum="0.95" Value="0.80" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                                Style="{DynamicResource MaterialDesignSlider}" ValueChanged="PacerSlider_Changed"/>
+                                    </DockPanel>
+
+                                    <DockPanel Margin="0,3">
+                                        <TextBlock Text="Catch line (m):" Width="130" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding ElementName=SliderPacerCatch, Path=Value, StringFormat=F1}" Width="40" TextAlignment="Right" VerticalAlignment="Center"/>
+                                        <Slider x:Name="SliderPacerCatch" Minimum="2" Maximum="15" Value="5" TickFrequency="0.5" IsSnapToTickEnabled="True"
+                                                Style="{DynamicResource MaterialDesignSlider}" ValueChanged="PacerSlider_Changed"/>
+                                    </DockPanel>
+                                </StackPanel>
+
                                 <DockPanel Margin="0,3">
                                     <TextBlock Text="Strength (W/kg):" Width="130" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding ElementName=SliderPacerStrength, Path=Value, StringFormat=F1}" Width="40" TextAlignment="Right" VerticalAlignment="Center"/>

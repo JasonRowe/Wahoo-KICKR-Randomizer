@@ -52,6 +52,12 @@ namespace BikeFitness.Avalonia.Views
             SliderPacerStrength.ValueChanged += (_, _) => ApplyPacerSettings();
             SliderPacerGap.ValueChanged += (_, _) => ApplyPacerSettings();
             SliderPacerElasticity.ValueChanged += (_, _) => ApplyPacerSettings();
+            SliderPacerAlongside.ValueChanged += (_, _) => ApplyPacerSettings();
+            SliderPacerAttackPush.ValueChanged += (_, _) => ApplyPacerSettings();
+            SliderPacerAttackInterval.ValueChanged += (_, _) => ApplyPacerSettings();
+            SliderPacerAttackLength.ValueChanged += (_, _) => ApplyPacerSettings();
+            SliderPacerRecover.ValueChanged += (_, _) => ApplyPacerSettings();
+            SliderPacerCatch.ValueChanged += (_, _) => ApplyPacerSettings();
 
             ApplyPacerSettings();
         }
@@ -124,9 +130,11 @@ namespace BikeFitness.Avalonia.Views
         {
             bool on = ChkPacerEnabled.IsChecked == true;
 
+            ApplyPacerSettings();   // the reset below needs the current mode to pick the station
+
             if (on)
             {
-                _pacer.Reset(_riderDistanceMeters, _pacer.Config.GapTargetMeters);
+                _pacer.Reset(_riderDistanceMeters);
 
                 SimCanvas.SecondRiderLabel = "pacer";
                 SimCanvas.GhostOpacity = 0.55;
@@ -155,7 +163,7 @@ namespace BikeFitness.Avalonia.Views
 
         private void BtnPacerReset_Click(object? sender, RoutedEventArgs e)
         {
-            _pacer.Reset(_riderDistanceMeters, _pacer.Config.GapTargetMeters);
+            _pacer.Reset(_riderDistanceMeters);   // the model picks the station for the current mode
 
             if (ChkPacerEnabled.IsChecked == true)
             {
@@ -165,7 +173,10 @@ namespace BikeFitness.Avalonia.Views
             }
         }
 
-        /// <summary>Pushes the live settings into the pacer's config. The band stays at its default in-app.</summary>
+        /// <summary>
+        /// Pushes the live settings into the pacer's config. The band stays at its default in-app, on both
+        /// sides of the ride-along flag.
+        /// </summary>
         private void ApplyPacerSettings()
         {
             PacerConfig config = _pacer.Config;
@@ -174,8 +185,23 @@ namespace BikeFitness.Avalonia.Views
             config.Elasticity = SliderPacerElasticity.Value;
             config.MercyEnabled = ChkPacerMercy.IsChecked == true;
 
-            SimCanvas.SecondRiderGapTargetMeters = config.GapTargetMeters;
-            SimCanvas.SecondRiderGapBandMeters = config.BandMeters;
+            config.RideAlongMode = ChkPacerRideAlong.IsChecked == true;
+            config.AlongsideGapMeters = SliderPacerAlongside.Value;
+            config.AttackPushMeters = SliderPacerAttackPush.Value;
+            config.AttackIntervalSeconds = SliderPacerAttackInterval.Value;
+            config.AttackLengthSeconds = SliderPacerAttackLength.Value;
+            config.RecoverRelativeSpeed = SliderPacerRecover.Value;
+            config.CatchOvertakeMeters = SliderPacerCatch.Value;
+
+            PanelPacerRideAlong.IsVisible = config.RideAlongMode;
+
+            // The gap strip has to track the gap he is actually holding, not the one the old slider asks for.
+            SimCanvas.SecondRiderGapTargetMeters = config.RideAlongMode
+                ? config.AlongsideGapMeters
+                : config.GapTargetMeters;
+            SimCanvas.SecondRiderGapBandMeters = config.RideAlongMode
+                ? config.AlongsideBandMeters
+                : config.BandMeters;
             SimCanvas.SecondRiderGapStrip = ChkPacerEnabled.IsChecked == true && ChkPacerStrip.IsChecked == true;
         }
     }

@@ -112,9 +112,12 @@ namespace BikeFitnessApp
         {
             bool on = ChkPacerEnabled.IsChecked == true;
 
+            ApplyPacerSettings();   // the reset below needs the current mode to pick the station
+
             if (on)
             {
-                _pacer.Reset(_riderDistanceMeters, _pacer.Config.GapTargetMeters);
+                // The model picks the station: alongside gap in ride-along mode, the target gap otherwise.
+                _pacer.Reset(_riderDistanceMeters);
 
                 SimCanvas.SecondRiderLabel = "pacer";
                 SimCanvas.GhostOpacity = 0.55;
@@ -148,7 +151,7 @@ namespace BikeFitnessApp
 
         private void BtnPacerReset_Click(object sender, RoutedEventArgs e)
         {
-            _pacer.Reset(_riderDistanceMeters, _pacer.Config.GapTargetMeters);
+            _pacer.Reset(_riderDistanceMeters);
 
             if (ChkPacerEnabled.IsChecked == true)
             {
@@ -158,7 +161,10 @@ namespace BikeFitnessApp
             }
         }
 
-        /// <summary>Pushes the live settings into the pacer's config. The band stays at its default in-app.</summary>
+        /// <summary>
+        /// Pushes the live settings into the pacer's config. The band stays at its default in-app, on both
+        /// sides of the ride-along flag.
+        /// </summary>
         private void ApplyPacerSettings()
         {
             if (SliderPacerStrength == null) return;   // XAML not built yet
@@ -169,8 +175,23 @@ namespace BikeFitnessApp
             config.Elasticity = SliderPacerElasticity.Value;
             config.MercyEnabled = ChkPacerMercy.IsChecked == true;
 
-            SimCanvas.SecondRiderGapTargetMeters = config.GapTargetMeters;
-            SimCanvas.SecondRiderGapBandMeters = config.BandMeters;
+            config.RideAlongMode = ChkPacerRideAlong.IsChecked == true;
+            config.AlongsideGapMeters = SliderPacerAlongside.Value;
+            config.AttackPushMeters = SliderPacerAttackPush.Value;
+            config.AttackIntervalSeconds = SliderPacerAttackInterval.Value;
+            config.AttackLengthSeconds = SliderPacerAttackLength.Value;
+            config.RecoverRelativeSpeed = SliderPacerRecover.Value;
+            config.CatchOvertakeMeters = SliderPacerCatch.Value;
+
+            PanelPacerRideAlong.Visibility = config.RideAlongMode ? Visibility.Visible : Visibility.Collapsed;
+
+            // The gap strip has to track the gap he is actually holding, not the one the old slider asks for.
+            SimCanvas.SecondRiderGapTargetMeters = config.RideAlongMode
+                ? config.AlongsideGapMeters
+                : config.GapTargetMeters;
+            SimCanvas.SecondRiderGapBandMeters = config.RideAlongMode
+                ? config.AlongsideBandMeters
+                : config.BandMeters;
             SimCanvas.SecondRiderGapStrip = ChkPacerEnabled.IsChecked == true && ChkPacerStrip.IsChecked == true;
         }
     }
