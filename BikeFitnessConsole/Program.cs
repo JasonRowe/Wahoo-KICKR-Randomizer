@@ -7,7 +7,6 @@ using Windows.Devices.Bluetooth.Advertisement;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Storage.Streams;
 using BikeFitness.Shared;
-using BikeFitness.Shared;
 
 namespace BikeFitnessConsole
 {
@@ -35,7 +34,6 @@ namespace BikeFitnessConsole
         private static bool _showPower = false;
         private static bool _showCadence = false;
         private static bool _showSpeed = false;
-        private static bool _useResistanceMode = true; // Default to Resistance (0x41) as it matches Main App
 
         // State for calculations
         private static ushort _prevCrankRevs = 0;

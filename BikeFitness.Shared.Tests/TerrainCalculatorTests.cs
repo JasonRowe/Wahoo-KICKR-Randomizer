@@ -216,12 +216,16 @@ namespace BikeFitnessApp.Tests
         [TestMethod]
         public void BackgroundTheme_HasExpectedValues()
         {
-            // Verify all expected biomes exist
+            // Verify all expected biomes exist. These numbers are persisted, so a renumbering is a data
+            // migration rather than a rename — deliberately pinned (hence the analyzer suppression: it
+            // cannot see that the constants come from the code under test).
+#pragma warning disable MSTEST0032
             Assert.AreEqual(0, (int)BackgroundTheme.Mountain);
             Assert.AreEqual(1, (int)BackgroundTheme.Plain);
             Assert.AreEqual(2, (int)BackgroundTheme.Desert);
             Assert.AreEqual(3, (int)BackgroundTheme.Ocean);
             Assert.AreEqual(4, (int)BackgroundTheme.Transition);
+#pragma warning restore MSTEST0032
         }
 
         #endregion
