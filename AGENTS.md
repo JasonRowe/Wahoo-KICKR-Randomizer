@@ -1,40 +1,20 @@
 # AGENTS.md — Wahoo-KICKR-Randomizer (BikeFitnessApp: "Hack Your Ride")
 
-C#/.NET (Avalonia) desktop app that turns a Wahoo KICKR smart trainer into a mountain
-simulator (no subscriptions). Channel: #bike-fitness. Desktop app — no box runtime/deploy
-checkout; ship changes via PR like any Verity repo.
+C#/.NET (Avalonia) desktop app that turns a Wahoo KICKR trainer into a mountain simulator. Slack: `#bike-fitness`. All changes ship via PR.
 
-## Standard Ways of Working (applies to all dev agents — Hermes / Verity Systems Dev etc.)
+## Dev Loop (All dev agents)
 
-Dev agents working in this repo MUST follow this workflow. The OpenClaw "Verity Researcher"
-is read-only and does not code/push.
+1. **Scope**: Read requirements in Slack. If unclear, ask Jason first—never guess scope.
+2. **Branch**: Never commit directly to the default branch (`main`). Always work on a feature branch.
+3. **Develop**: Keep diffs small and follow existing repo style.
+4. **Test**: Add/update unit tests and test locally (`dotnet build` & `dotnet test`). For hardware verification (BLE, physical trainer), state it explicitly and ask Jason to test—never claim done without physical verification.
+5. **PR**: Open a PR with a concise summary (`what` / `why` / `tests run` / `verification needed`). Tag Jason and relevant agents.
+6. **Merge**: Only merge after Jason approves. Once approved, merge yourself:
+   `gh pr merge <n> --squash --delete-branch`
 
-### The dev loop
-1. Read the requirement in Slack. If unclear/incomplete -> ask Jason questions first. Never guess scope.
-2. Never commit to the default branch directly. Work on a feature branch pushed to GitHub
-   (use a git worktree or separate clone, NOT the running deploy checkout).
-3. Implement the change in small diffs, following existing repo style.
-4. Add/update unit tests for your change.
-5. Test locally. If the change needs real-world/hardware verification (camera, MQTT, live
-   pantry + Google Keep, Kasa/TP-Link cloud, cron end-to-end, physical device) say so explicitly
-   and ask Jason to do it. Don't claim done when it needs Jason's hands.
-6. Open a PR with a concise summary: what / why / tests run / anything needing Jason or another
-   agent to verify. Tag reviewers (Jason + relevant agents).
-7. Merge your own PR only after approval. "Do not merge your own PR" means do NOT merge
-   without Jason's go-ahead — once he approves (a Slack message or a GitHub review), you do the
-   merge yourself: `gh pr merge <n> --squash --delete-branch` (squash is the repo norm, one
-   commit per PR tagged `(#n)`).
+## Guardrails
 
-### Git & deploy
-- Source of truth = GitHub. All changes ship via PR -> merge to the default branch.
-- Deployed runtime checkouts on the boxes stay on the default branch and update ONLY via
-  `git pull --ff-only origin <branch>` (NO rsync of code, no hand-editing the deploy tree for
-  feature work).
-- After a merge, deploy = pull in the deploy checkout, then confirm the service/cron run.
-
-### Guardrails
-- Never commit secrets (.env, .tplink_creds, tokens/keys). Real secrets live in the vault
-  (/etc/verity/*.env). Keep .gitignore authoritative.
-- Destructive or irreversible actions (deleting data, killing services, history rewrites) -> ask first.
-- Anything that leaves the machine (posts, external sends, real money) -> ask first.
-- Small diffs > giant ones; ask when in doubt.
+- **Secrets**: Never commit credentials or secrets (`.env`, tokens/keys). Real secrets live in `/etc/verity/*.env`.
+- **Approvals**: Ask Jason first before destructive/irreversible actions (deleting data, killing services, rewriting history) or anything leaving the machine.
+- **Roles**: OpenClaw "Verity Researcher" is read-only (no code/push).
+- **Style**: Small diffs > giant ones; ask when in doubt.
