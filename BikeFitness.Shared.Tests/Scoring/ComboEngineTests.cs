@@ -225,8 +225,8 @@ namespace BikeFitnessApp.Tests.Scoring
             var second = new ComboEngine(config);
 
             var deltas = new List<double>();
-            var rng = new BikeFitness.Shared.SecondRider.PocRandom(7);
-            for (int i = 0; i < 2000; i++) deltas.Add(rng.NextRange(0.005, 0.05));
+            var rng = new Random(7);
+            for (int i = 0; i < 2000; i++) deltas.Add(0.005 + (rng.NextDouble() * (0.05 - 0.005)));
 
             foreach (double dt in deltas) first.Advance(dt, 205.0, 4.0);
 
