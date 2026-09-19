@@ -102,6 +102,62 @@
                         <CheckBox x:Name="ChkHubMarker" Content="Hub markers" Width="130" VerticalAlignment="Center"
                                   Checked="ChkHubMarker_Changed" Unchecked="ChkHubMarker_Changed"/>
                     </DockPanel>
+
+                    <Separator Margin="0,10"/>
+
+                    <!-- POC 1: Ghost racer. Everything here is off by default. -->
+                    <TextBlock FontWeight="Bold" Margin="0,0,0,8">Second rider — ghost (POC 1)</TextBlock>
+
+                    <DockPanel Margin="0,3">
+                        <CheckBox x:Name="ChkGhost" Content="Enable ghost" Width="130" VerticalAlignment="Center"
+                                  Checked="ChkGhost_Changed" Unchecked="ChkGhost_Changed"/>
+                        <TextBlock x:Name="TxtGhostGap" Width="150" FontFamily="Consolas" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtGhostDelta" Width="150" FontFamily="Consolas" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtGhostSpeed" FontFamily="Consolas" VerticalAlignment="Center"/>
+                    </DockPanel>
+
+                    <DockPanel Margin="0,3">
+                        <TextBlock Text="Profile:" Width="130" VerticalAlignment="Center"/>
+                        <ComboBox x:Name="CmbGhostProfile" Width="240" SelectionChanged="CmbGhostProfile_Changed">
+                            <ComboBoxItem Content="Synthetic 20 min" IsSelected="True"/>
+                            <ComboBoxItem Content="Mirror my effort (auto-drive)"/>
+                            <ComboBoxItem Content="Load Workout_*.json…"/>
+                        </ComboBox>
+                    </DockPanel>
+
+                    <TextBlock x:Name="TxtGhostProfile" Margin="130,0,0,3" FontStyle="Italic" TextWrapping="Wrap"/>
+
+                    <DockPanel Margin="0,3">
+                        <TextBlock Text="Ghost effort (%):" Width="130" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ElementName=SliderGhostEffort, Path=Value, StringFormat=F0}" Width="46" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <Slider x:Name="SliderGhostEffort" Minimum="85" Maximum="110" Value="100" TickFrequency="5" IsSnapToTickEnabled="True"
+                                ValueChanged="SliderGhostEffort_Changed"/>
+                    </DockPanel>
+
+                    <DockPanel Margin="0,3">
+                        <TextBlock Text="Ghost opacity (%):" Width="130" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ElementName=SliderGhostOpacity, Path=Value, StringFormat=F0}" Width="46" VerticalAlignment="Center" TextAlignment="Right"/>
+                        <Slider x:Name="SliderGhostOpacity" Minimum="20" Maximum="70" Value="40" TickFrequency="5" IsSnapToTickEnabled="True"
+                                ValueChanged="SliderGhostOpacity_Changed"/>
+                    </DockPanel>
+
+                    <DockPanel Margin="130,0,0,3">
+                        <Button x:Name="BtnGhostHeadStart" Content="Give me head start" Width="140" Margin="0,0,6,0" Click="BtnGhostHeadStart_Click"/>
+                        <Button x:Name="BtnGhostReset" Content="Reset ghost" Width="110" Click="BtnGhostReset_Click"/>
+                    </DockPanel>
+
+                    <DockPanel Margin="0,3">
+                        <CheckBox x:Name="ChkGhostMarker" Content="Off-screen marker" Width="180" VerticalAlignment="Center" IsChecked="True"
+                                  Checked="ChkGhostMarker_Changed" Unchecked="ChkGhostMarker_Changed"/>
+                        <CheckBox x:Name="ChkGhostHud" Content="HUD (gap + delta)" Width="180" VerticalAlignment="Center" IsChecked="True"
+                                  Checked="ChkGhostHud_Changed" Unchecked="ChkGhostHud_Changed"/>
+                    </DockPanel>
+
+                    <DockPanel Margin="0,3">
+                        <CheckBox x:Name="ChkPerfHud" Content="Perf HUD" Width="130" VerticalAlignment="Center"
+                                  Checked="ChkPerfHud_Changed" Unchecked="ChkPerfHud_Changed"/>
+                        <TextBlock x:Name="TxtPerf" FontFamily="Consolas" VerticalAlignment="Center"/>
+                    </DockPanel>
                 </StackPanel>
             </ScrollViewer>
         </Border>

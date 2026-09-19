@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using BikeFitness.Shared;
+using BikeFitness.Shared.SecondRider;
 
 namespace BikeFitnessApp
 {
@@ -51,6 +52,12 @@ namespace BikeFitnessApp
         private static readonly Pen WheelRimPen;
         private static readonly Pen HubMarkerPen;
         private static readonly Brush WheelHubBrush;
+
+        // Second-rider (POC) chrome. Created through factories so the existing static constructor
+        // stays untouched; all frozen, so nothing is allocated per frame.
+        private static readonly Brush GhostChipBrush = CreateGhostChipBrush();
+        private static readonly Brush GhostChipTextBrush = CreateGhostChipTextBrush();
+        private static readonly Pen GhostChipPen = CreateGhostChipPen();
 
         static SimulationCanvas()
         {
@@ -294,7 +301,88 @@ namespace BikeFitnessApp
             set => SetValue(PedalDrawSizePxProperty, value);
         }
 
+        // --- Second rider / ghost (POC #1) -------------------------------------------------
+        // All default-off / default-to-today's-behaviour, so with the ghost flag off the render
+        // output is byte-for-byte what it was before this feature existed.
+
+        public static readonly DependencyProperty GhostEnabledProperty =
+            DependencyProperty.Register(nameof(GhostEnabled), typeof(bool), typeof(SimulationCanvas),
+                new PropertyMetadata(false));
+
+        /// <summary>Master flag for the second-rider (ghost) draw path. Off by default.</summary>
+        public bool GhostEnabled
+        {
+            get => (bool)GetValue(GhostEnabledProperty);
+            set => SetValue(GhostEnabledProperty, value);
+        }
+
+        public static readonly DependencyProperty GhostDistanceMetersProperty =
+            DependencyProperty.Register(nameof(GhostDistanceMeters), typeof(double), typeof(SimulationCanvas),
+                new PropertyMetadata(0.0));
+
+        /// <summary>
+        /// Ghost's cumulative distance. The harness owns the replay and pushes this every frame; the
+        /// canvas never does replay maths (see POC doctrine: logic in BikeFitness.Shared).
+        /// </summary>
+        public double GhostDistanceMeters
+        {
+            get => (double)GetValue(GhostDistanceMetersProperty);
+            set => SetValue(GhostDistanceMetersProperty, value);
+        }
+
+        public static readonly DependencyProperty GhostSpeedKphProperty =
+            DependencyProperty.Register(nameof(GhostSpeedKph), typeof(double), typeof(SimulationCanvas),
+                new PropertyMetadata(0.0));
+
+        /// <summary>Ghost's reported speed, for the marker/HUD delta only.</summary>
+        public double GhostSpeedKph
+        {
+            get => (double)GetValue(GhostSpeedKphProperty);
+            set => SetValue(GhostSpeedKphProperty, value);
+        }
+
+        public static readonly DependencyProperty GhostOpacityProperty =
+            DependencyProperty.Register(nameof(GhostOpacity), typeof(double), typeof(SimulationCanvas),
+                new PropertyMetadata(0.4));
+
+        /// <summary>Sprite opacity for the ghost (0.2–0.7 in the harness).</summary>
+        public double GhostOpacity
+        {
+            get => (double)GetValue(GhostOpacityProperty);
+            set => SetValue(GhostOpacityProperty, value);
+        }
+
+        public static readonly DependencyProperty GhostShowMarkerProperty =
+            DependencyProperty.Register(nameof(GhostShowMarker), typeof(bool), typeof(SimulationCanvas),
+                new PropertyMetadata(true));
+
+        /// <summary>Draw the off-screen gap chip when the ghost is outside the visible road window.</summary>
+        public bool GhostShowMarker
+        {
+            get => (bool)GetValue(GhostShowMarkerProperty);
+            set => SetValue(GhostShowMarkerProperty, value);
+        }
+
+        public static readonly DependencyProperty GhostShowHudProperty =
+            DependencyProperty.Register(nameof(GhostShowHud), typeof(bool), typeof(SimulationCanvas),
+                new PropertyMetadata(true));
+
+        /// <summary>Draw the in-canvas GAP / Δ readout.</summary>
+        public bool GhostShowHud
+        {
+            get => (bool)GetValue(GhostShowHudProperty);
+            set => SetValue(GhostShowHudProperty, value);
+        }
+
         #endregion
+
+        /// <summary>
+        /// Raised once per rendered frame, after the simulation engine has advanced and before the frame
+        /// is drawn. Exists so the harness can drive a second rider (ghost / pacer / scoring) on exactly
+        /// the same clock as the scene instead of a parallel timer, which would make the rival jitter
+        /// against the road.
+        /// </summary>
+        public event EventHandler<SimulationFrameEventArgs>? FrameRendered;
 
         public SimulationCanvas()
         {
@@ -427,6 +515,11 @@ namespace BikeFitnessApp
             if (deltaTime <= 0) return;
 
             _engine.Update(deltaTime);
+
+            // Give subscribers (the harness ghost/pacer panels) a chance to advance their own state on
+            // this exact frame before it is drawn.
+            FrameRendered?.Invoke(this, new SimulationFrameEventArgs(deltaTime, _engine.TotalDistanceMeters, _engine.SpeedKph));
+
             DrawFrame();
         }
 
@@ -500,6 +593,13 @@ namespace BikeFitnessApp
 
                 DrawRoadsideObjects(dc, leftWorldDist, rightWorldDist, bikeWorldDist, bikeWorldHeight, visualCenterY, bikeScreenX, roadsideTheme, RoadsideDrawPass.Background);
 
+                // POC: second rider gets its own translate/rotate so it sits on its own terrain height and
+                // tilts with the slope at its own distance, then the existing cyclist draws on top.
+                if (GhostEnabled)
+                {
+                    DrawSecondRider(dc, bikeWorldDist, bikeWorldHeight, visualCenterY, bikeScreenX);
+                }
+
                 dc.PushTransform(new TranslateTransform(bikeScreenX, visualCenterY));
                 dc.PushTransform(new RotateTransform(-_engine.CurrentSlopeAngle)); 
 
@@ -509,6 +609,13 @@ namespace BikeFitnessApp
                 dc.Pop();
 
                 DrawRoadsideObjects(dc, leftWorldDist, rightWorldDist, bikeWorldDist, bikeWorldHeight, visualCenterY, bikeScreenX, roadsideTheme, RoadsideDrawPass.Foreground);
+
+                if (GhostEnabled)
+                {
+                    // Outside the transform stack: the marker pins to the canvas edge, not to the road.
+                    if (GhostShowMarker) DrawGhostMarker(dc);
+                    if (GhostShowHud) DrawGhostHud(dc);
+                }
 
                 DrawBiomeLabel(dc);
             }
@@ -638,6 +745,146 @@ namespace BikeFitnessApp
             }
             dc.Pop();
             dc.DrawEllipse(WheelHubBrush, null, hub, radius * 0.14, radius * 0.14);
+        }
+
+        // --- Second rider / ghost (POC #1) -------------------------------------------------
+        // Additive: two call sites in DrawFrame plus these methods. Nothing above is re-ordered.
+
+        /// <summary>
+        /// Draws the ghost sprite on its own terrain height, tilted with the slope at its own distance and
+        /// animated from its own travelled distance. Must be called outside the player's transform stack.
+        /// </summary>
+        private void DrawSecondRider(DrawingContext dc, double bikeWorldDist, double bikeWorldHeight, double visualCenterY, double bikeScreenX)
+        {
+            double ghostDistance = GhostDistanceMeters;
+            Point ground = WorldToScreen(ghostDistance, bikeWorldDist, bikeWorldHeight, visualCenterY, bikeScreenX);
+
+            double ghostGrade = _engine.Terrain.GetGradeAt(ghostDistance);
+            double ghostSlopeDegrees = Math.Atan(ghostGrade / 100.0) * (180.0 / Math.PI);
+
+            dc.PushOpacity(Math.Clamp(GhostOpacity, 0.05, 1.0));
+            dc.PushTransform(new TranslateTransform(ground.X, ground.Y));
+            dc.PushTransform(new RotateTransform(-ghostSlopeDegrees));
+
+            if (_pedalSheet != null && _pedalFrames.Count == PedalAnimation.FrameCount)
+            {
+                // Same frame-indexing path as the player, driven by the ghost's own distance so its legs
+                // turn at its own speed. The temporal-blend and wheel-spin overlays are intentionally
+                // skipped: they are per-rider debug affordances that use the player's frame state.
+                int frame = PedalFrameOverride >= 0
+                    ? Math.Clamp(PedalFrameOverride, 0, PedalAnimation.FrameCount - 1)
+                    : PedalAnimation.GetFrameIndexForDistance(ghostDistance, PedalMetersPerRevolution);
+                DrawSheetFrame(dc, frame, 1.0);
+            }
+            else if (_engine.CyclistSprite != null)
+            {
+                dc.DrawImage(_engine.CyclistSprite, new Rect(-75, -130, 150, 150));
+            }
+            else
+            {
+                dc.DrawRectangle(Brushes.Red, null, new Rect(-25, -40, 50, 40));
+            }
+
+            dc.Pop();
+            dc.Pop();
+            dc.Pop();
+        }
+
+        /// <summary>
+        /// Off-screen gap chip. Mandatory, not decorative: at 50 px/m only ~12.3 m ahead is visible on the
+        /// harness canvas, so a rival 20 m up the road would otherwise vanish (spec §6).
+        /// </summary>
+        private void DrawGhostMarker(DrawingContext dc)
+        {
+            if (ActualWidth <= 0 || ActualHeight <= 0) return;
+
+            bool onScreen = SecondRiderGeometry.TryGetScreenPosition(
+                _engine.TotalDistanceMeters,
+                GhostDistanceMeters,
+                ActualWidth,
+                ActualHeight,
+                SecondRiderGeometry.DefaultBikeScreenRatio,
+                SimulationEngine<BitmapSource, BitmapSource>.PixelsPerMeter,
+                out double ghostScreenX,
+                out _);
+
+            if (onScreen) return;
+
+            double gap = DuelMath.GapMeters(GhostDistanceMeters, _engine.TotalDistanceMeters);
+            double delta = DuelMath.DeltaSeconds(GhostDistanceMeters, _engine.TotalDistanceMeters, _engine.SpeedKph, GhostSpeedKph);
+            string label = DuelMath.FormatGapChip(gap, delta);
+
+            double markerX = SecondRiderGeometry.GetMarkerX(ghostScreenX, ActualWidth);
+            double centerY = ActualHeight * 0.62;
+
+            var text = new FormattedText(
+                label,
+                System.Globalization.CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight,
+                new Typeface("Consolas"),
+                20,
+                GhostChipTextBrush,
+                VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+            double padX = 10;
+            double padY = 5;
+            var chip = new Rect(
+                markerX - (text.Width / 2.0) - padX,
+                centerY - (text.Height / 2.0) - padY,
+                text.Width + (padX * 2.0),
+                text.Height + (padY * 2.0));
+
+            dc.DrawRoundedRectangle(GhostChipBrush, GhostChipPen, chip, 6, 6);
+            dc.DrawText(text, new Point(chip.X + padX, chip.Y + padY));
+        }
+
+        /// <summary>In-canvas GAP / Δ readout — the "legible at a glance" hypothesis, top-left.</summary>
+        private void DrawGhostHud(DrawingContext dc)
+        {
+            if (ActualWidth <= 0 || ActualHeight <= 0) return;
+
+            double gap = DuelMath.GapMeters(GhostDistanceMeters, _engine.TotalDistanceMeters);
+            double delta = DuelMath.DeltaSeconds(GhostDistanceMeters, _engine.TotalDistanceMeters, _engine.SpeedKph, GhostSpeedKph);
+
+            string line1 = $"GAP {DuelMath.FormatGapMeters(gap)}   \u0394 {DuelMath.FormatDelta(delta)}";
+            string line2 = $"ghost {GhostSpeedKph:F1} kph   {DuelMath.FormatGapChip(gap, delta)}";
+
+            double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+            var big = new FormattedText(line1, System.Globalization.CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight, new Typeface("Consolas"), 22, GhostChipTextBrush, pixelsPerDip);
+            var small = new FormattedText(line2, System.Globalization.CultureInfo.InvariantCulture,
+                FlowDirection.LeftToRight, new Typeface("Consolas"), 14, GhostChipTextBrush, pixelsPerDip);
+
+            double x = 16;
+            double y = 14;
+            double pad = 8;
+            double width = Math.Max(big.Width, small.Width) + (pad * 2.0);
+            double height = big.Height + small.Height + (pad * 2.0);
+
+            dc.DrawRoundedRectangle(GhostChipBrush, GhostChipPen, new Rect(x, y, width, height), 6, 6);
+            dc.DrawText(big, new Point(x + pad, y + pad));
+            dc.DrawText(small, new Point(x + pad, y + pad + big.Height));
+        }
+
+        private static Brush CreateGhostChipBrush()
+        {
+            var brush = new SolidColorBrush(Color.FromArgb(205, 12, 14, 18));
+            brush.Freeze();
+            return brush;
+        }
+
+        private static Brush CreateGhostChipTextBrush()
+        {
+            var brush = new SolidColorBrush(Color.FromArgb(245, 245, 250, 255));
+            brush.Freeze();
+            return brush;
+        }
+
+        private static Pen CreateGhostChipPen()
+        {
+            var pen = new Pen(new SolidColorBrush(Color.FromArgb(120, 255, 255, 255)), 1.0);
+            pen.Freeze();
+            return pen;
         }
 
         private void DrawBackground(DrawingContext dc, SimulationEngine<BitmapSource, BitmapSource>.BackgroundSegmentInfo info)
@@ -910,5 +1157,28 @@ namespace BikeFitnessApp
 
         protected override int VisualChildrenCount => _children.Count;
         protected override Visual GetVisualChild(int index) => _children[index];
+    }
+
+    /// <summary>
+    /// Per-frame state handed to <see cref="SimulationCanvas.FrameRendered"/> subscribers: the same
+    /// delta the engine just integrated, plus the rider's resulting distance for gap maths.
+    /// </summary>
+    public sealed class SimulationFrameEventArgs : EventArgs
+    {
+        public SimulationFrameEventArgs(double deltaSeconds, double riderDistanceMeters, double riderSpeedKph)
+        {
+            DeltaSeconds = deltaSeconds;
+            RiderDistanceMeters = riderDistanceMeters;
+            RiderSpeedKph = riderSpeedKph;
+        }
+
+        /// <summary>Seconds since the previous rendered frame (already clamped by the canvas).</summary>
+        public double DeltaSeconds { get; }
+
+        /// <summary>The player's cumulative distance after this frame's update.</summary>
+        public double RiderDistanceMeters { get; }
+
+        /// <summary>The player's speed for this frame.</summary>
+        public double RiderSpeedKph { get; }
     }
 }
