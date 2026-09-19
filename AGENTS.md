@@ -14,7 +14,7 @@ C#/.NET (Avalonia) desktop app that turns a Wahoo KICKR trainer into a mountain 
 
 ## Guardrails
 
-- **Secrets**: Never commit credentials or secrets (`.env`, tokens/keys). Real secrets live in `/etc/verity/*.env`.
+- **Secrets**: Never commit credentials or secrets (`.env`, tokens/keys). 
 - **Approvals**: Ask Jason first before destructive/irreversible actions (deleting data, killing services, rewriting history) or anything leaving the machine.
 - **Roles**: OpenClaw "Verity Researcher" is read-only (no code/push).
 - **Style**: Small diffs > giant ones; ask when in doubt.

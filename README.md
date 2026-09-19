@@ -5,106 +5,30 @@
 ![Connect Screen](Images/readme_image_connect.PNG)
 ![Workout Screen](Images/readme_image.PNG)
 
-## The Mission
-We wanted to ride hills on our smart trainer without paying monthly fees. The hardware didn't natively support "Simulation Mode" physics properly.
+## What is this?
+Most smart trainers (like the Wahoo KICKR SNAP) lock simulated hill climbing behind paid subscription apps or lack native grade physics. **BikeFitnessApp** bypasses that with a custom physics engine that translates road gradient directly into realistic trainer resistance (-10% downhills to +20% mountain ascents).
 
-**The Solution:** We built our own physics engine. This app translates **Grade** directly into raw brake resistance, giving you realistic climbs (-10 to +20 percent) on hardware that thought it couldn't do it.
+## Features at a Glance
+
+* **Realistic Hill Physics ("Fake Sim Mode"):** True grade-based resistance mapping. Downhills let you coast (-10% grade = 0% resistance), while steep climbs make you earn every meter (up to +20%).
+* **Animated Rider & Terrain:** A 12-frame pedaling cyclist that syncs to your cadence/speed, climbing dynamic terrain that tilts with the slope across parallax biomes.
+* **Pacer & Ghost Duels:** Race side-by-side against an adaptive virtual pacer or challenge your own ghost replays from previous rides.
+* **XP & Combo Scoring:** Gamified combo engine with streaks and multipliers that reward holding target power on tough grades.
+* **Live Telemetry & Strava Sync:** Real-time speed, power, and distance telemetry with 1-click **FIT** export to Strava (plus CSV/JSON logs for analysis).
+* **Workout Modes:** Cruise on the **Flat**, ride rolling **Hills**, conquer **Mountain** peaks, or brave **Random** terrain chaos.
 
 ## Platform Support
 
 | Platform | Status | UI Framework | Bluetooth |
 | :--- | :--- | :--- | :--- |
-| **Windows** | ✅ Stable | WPF / Avalonia | WinRT BLE |
 | **Linux** | ✅ Functional | Avalonia UI | BlueZ (DBus) |
+| **Windows** | ✅ Stable | WPF & Avalonia UI | WinRT BLE |
 | **macOS** | 🚧 Planned | Avalonia UI | Pending |
 
-## Features that Matter
+## Quick Start
 
-*   **Fake Sim Mode:** We tricked the trainer. You set the Grade, we calculate the physics.
-*   **Gravity Assist:** Downhill actually feels easier. Our custom calibration maps -10 percent Grade to 0 percent Resistance (Coasting).
-*   **Live Telemetry:** Speed, Distance, and Power calculated in real-time from raw Bluetooth packets.
-*   **Adventure Modes:**
-    *   **Hilly:** Smooth rolling sine waves.
-    *   **Mountain:** Steep, jagged peaks.
-    *   **Random:** Pure chaos for the brave.
-*   **Cross-Platform UI:** High-performance rendering on both Windows (WPF/Avalonia) and Linux (Avalonia).
-*   **Workout Intel:** Automatically captures 1s telemetry. Export to **FIT** (Strava), **JSON**, or **CSV**.
-
-## Data & Analysis
-Every ride generates a high-fidelity data log. When you hit **Stop**, the app offers to save a timestamped report.
-*   **FIT:** Upload directly to Strava. Includes power, speed, distance, and grade.
-*   **JSON:** Structured for the nerds. Perfect for feeding into LLMs or custom analysis tools.
-*   **CSV:** Ready for Excel. Track your Power, Speed, and Grade over time.
-
-## Under the Hood
-*   **Framework:** .NET 10
-*   **UI:** WPF (Legacy Windows) & Avalonia UI (Cross-platform)
-*   **Protocol:** Reverse-engineered Bluetooth Low Energy (BLE) protocols for Wahoo KICKR and FTMS.
-*   **Engineering:** We use a Piecewise Linear Mapping function to translate human-readable Grade into machine-readable Brake Force, bypassing the device's faulty internal physics engine.
-
-## Project Layout
-| Project | Purpose |
-| :--- | :--- |
-| `BikeFitnessApp` | Original Windows WPF app (the full experience). |
-| `BikeFitness.Avalonia` | Cross-platform UI (Windows + Linux, macOS planned). |
-| `BikeFitness.Shared` | Physics engine, telemetry, and shared services. |
-| `BikeFitness.Harness` | Lightweight WPF harness for testing the shared core. |
-| `BikeFitnessConsole` | Headless console app for BLE scanning/debugging. |
-| `BikeFitnessApp.UnitTests` | Automated tests. |
-
-## How to Play
-
-### Windows (Original WPF)
-1.  **Launch** `BikeFitnessApp.exe`.
-2.  **Scan and Connect** to your trainer.
-3.  **Set Your Limits**: Pick your **Max Grade**.
-4.  **Hit Start**: The app takes over.
-
-### Linux (Avalonia)
-1.  Ensure `bluez` and `dbus` are installed and running.
-2.  Run the Avalonia build:
-    ```bash
-    dotnet run --project BikeFitness.Avalonia
-    ```
-
-## Prerequisites
-*   **.NET 10 SDK** — required to build all projects.
-*   **Windows** — the WPF app targets `net10.0-windows` and must be built on Windows.
-*   **Linux** — `bluez` and `dbus` for Bluetooth (see [Linux (Avalonia)](#linux-avalonia)).
-
-## Build It Yourself
-Clone the repo and build the solution:
-```bash
-# To build everything
-dotnet build BikeFitnessApp.sln
-
-# To build only the cross-platform Avalonia app
-dotnet build BikeFitness.Avalonia/BikeFitness.Avalonia.csproj
-```
-
-## Running Tests and Code Coverage
-
-* **Cross-platform logic tests** (Windows and Linux):
-  ```bash
-  dotnet test BikeFitness.Shared.Tests/BikeFitness.Shared.Tests.csproj
-  ```
-* **Windows/WPF tests** (Windows only):
-  ```powershell
-  dotnet test ./BikeFitnessApp.UnitTests
-  ```
-
-CI (GitHub Actions) runs both suites on every PR and push to `main`, runs the shared
-logic tests on both Windows and Linux runners, and publishes self-contained
-`win-x64` and `linux-x64` builds as workflow artifacts.
-
-## Nightly builds & update-and-ride
-
-Every push to `main` publishes a rolling "nightly" release with self-contained builds:
-
-* `bikefitness-win-x64.zip` — WPF app (Windows)
-* `bikefitness-linux-x64.zip` — Avalonia app (Linux)
-
-Update and ride on a laptop with the matching script from `scripts/`:
+### One-Line Install (Nightly Builds)
+Grab the latest build directly on your training laptop:
 
 **Linux:**
 ```bash
@@ -116,7 +40,37 @@ curl -fsSL https://raw.githubusercontent.com/JasonRowe/Wahoo-KICKR-Randomizer/ma
 irm https://raw.githubusercontent.com/JasonRowe/Wahoo-KICKR-Randomizer/main/scripts/update-and-ride.ps1 | iex
 ```
 
-Override the install folder with the `BIKEFITNESS_INSTALL_DIR` environment variable.
+### Run From Source
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
+
+```bash
+# Linux / Cross-Platform
+dotnet run --project BikeFitness.Avalonia
+
+# Windows (WPF)
+dotnet run --project BikeFitnessApp
+```
+
+## Testing & Verification
+
+```bash
+# Cross-platform logic, physics, and gamification tests (runs on Linux & Windows)
+dotnet test BikeFitness.Shared.Tests/BikeFitness.Shared.Tests.csproj
+
+# Windows WPF tests (Windows only)
+dotnet test BikeFitnessApp.UnitTests
+```
+
+## Repository Structure
+
+| Project | Purpose |
+| :--- | :--- |
+| `BikeFitness.Avalonia` | Modern cross-platform UI (Linux & Windows). |
+| `BikeFitnessApp` | Original Windows WPF application. |
+| `BikeFitness.Shared` | Core physics engine, BLE abstractions, telemetry, animations, and scoring. |
+| `BikeFitness.Shared.Tests` | Comprehensive cross-platform unit test suite (240+ tests). |
+| `BikeFitness.Harness` | Lightweight visual harness for tuning animations and physics. |
+| `BikeFitnessConsole` | Diagnostic CLI tool for BLE scanning and telemetry debugging. |
 
 ---
-*Built with C# and a lot of sweat.*
+*Built with .NET 10, C#, and a lot of sweat.*
