@@ -33,7 +33,7 @@ jobs:
         run: Compress-Archive -Path publish\* -DestinationPath bikefitness-win-x64.zip
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: bikefitness-win-x64
           path: bikefitness-win-x64.zip
@@ -57,7 +57,7 @@ jobs:
         run: (cd publish && zip -r ../bikefitness-linux-x64.zip .)
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: bikefitness-linux-x64
           path: bikefitness-linux-x64.zip
@@ -87,7 +87,7 @@ jobs:
           git ls-remote origin refs/tags/nightly
 
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           pattern: 'bikefitness-*'
           merge-multiple: true
