@@ -75,6 +75,17 @@ jobs:
         with:
           fetch-depth: 20
 
+      # action-gh-release only creates the tag when it does not exist and never
+      # moves one, so "nightly" would stay on the commit of the first release
+      # and the release page's generated "Source code" archives would freeze
+      # there. Re-point it at the commit actually being built. The update-and-ride
+      # scripts fetch release assets by tag name, so they are unaffected.
+      - name: Point the nightly tag at this commit
+        run: |
+          git tag -f nightly "$GITHUB_SHA"
+          git push -f origin refs/tags/nightly
+          git ls-remote origin refs/tags/nightly
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
