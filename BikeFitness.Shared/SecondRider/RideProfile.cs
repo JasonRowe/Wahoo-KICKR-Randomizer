@@ -117,8 +117,8 @@ namespace BikeFitness.Shared.SecondRider
 
         /// <summary>
         /// Deterministic synthetic ride: <paramref name="seconds"/> of 1 Hz samples inside the harness
-        /// auto-drive envelope (grade −5…+8 %, speed 5–40 kph). Same seed ⇒ identical trace within a run, so
-        /// the harness can be feel-tested without owning a recording.
+        /// auto-drive envelope (grade −5…+8 %, speed 5–40 kph). Deterministic by construction — sums of
+        /// harmonics, no RNG — so the harness can be feel-tested without owning a recording.
         /// </summary>
         public static RideProfile Synthetic(int seconds = 1200, int seed = 20260918)
         {
@@ -129,23 +129,26 @@ namespace BikeFitness.Shared.SecondRider
                 Source = SourceSynthetic,
             };
 
-            // A seeded System.Random: repeatable for a given runtime, which is all this profile needs. The
-            // seed is an explicit parameter so two harness runs can be compared, and no test asserts on
-            // values produced by a different runtime.
-            var rng = new Random(seed);
+            // No RNG at all: the wobble is a pair of incommensurate harmonics, so the trace is deterministic by
+            // construction on every runtime and platform. The seed only shifts the phase, which is enough for
+            // two seeds to differ (and for two runs of the same seed to be identical).
+            double phase = (Math.Abs(seed) % 1000) / 1000.0 * Math.PI * 2.0;
             double distanceMeters = 0;
 
             for (int t = 0; t <= durationSeconds; t++)
             {
                 double progress = t / (double)durationSeconds;
 
-                // Slow rolling terrain plus a small deterministic wobble.
-                double sweep = Math.Sin(progress * Math.PI * 2.0 * 3.0);
-                double grade = Clamp(2.0 + (6.5 * sweep) + ((rng.NextDouble() - 0.5) * 1.5), -5.0, 8.0);
+                // Slow rolling terrain plus a small deterministic wobble that reads as terrain rather than
+                // white noise (the previous per-sample RNG jitter looked like static on the grade trace).
+                double sweep = Math.Sin((progress * 2.0 * 3.0 * Math.PI) + phase);
+                double wobble = (0.6 * Math.Sin((progress * 2.0 * 11.0 * Math.PI) + phase))
+                              + (0.35 * Math.Sin((progress * 2.0 * 23.0 * Math.PI) + (phase * 1.7)));
+                double grade = Clamp(2.0 + (6.5 * sweep) + (0.75 * wobble), -5.0, 8.0);
 
                 // Speed envelope deliberately matches the harness auto-drive sliders; climbing costs speed.
-                double baseSpeed = 24.0 + (8.0 * Math.Sin(progress * Math.PI * 2.0 * 5.0));
-                double speed = Clamp(baseSpeed - (grade * 1.1) + ((rng.NextDouble() - 0.5) * 2.0), 5.0, 40.0);
+                double baseSpeed = 24.0 + (8.0 * Math.Sin((progress * 2.0 * 5.0 * Math.PI) + (phase * 0.5)));
+                double speed = Clamp(baseSpeed - (grade * 1.1) + (1.0 * wobble), 5.0, 40.0);
 
                 profile.Samples.Add(new RideProfileSample
                 {

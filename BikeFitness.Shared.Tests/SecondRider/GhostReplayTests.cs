@@ -14,6 +14,17 @@ namespace BikeFitnessApp.Tests.SecondRider
     {
         private const double FrameSeconds = 0.016;
 
+        /// <summary>
+        /// Fixed, varied frame deltas for the "many random steps" tests. A literal list rather than an RNG,
+        /// so the sequence is identical everywhere by construction — the tests only need it to be varied and
+        /// repeatable, not random.
+        /// </summary>
+        private static readonly double[] FrameDeltas =
+        {
+            0.001, 0.016, 0.050, 0.008, 0.120, 0.033, 0.250, 0.016,
+            0.500, 0.041, 0.009, 0.200, 0.016, 0.075, 0.310, 0.004,
+        };
+
         [TestMethod]
         public void Advance_DtZero_DoesNotMove()
         {
@@ -67,12 +78,11 @@ namespace BikeFitnessApp.Tests.SecondRider
         public void Advance_DistanceIsMonotonic_Over10kRandomDtSteps()
         {
             var ghost = new GhostReplay(RideProfile.Synthetic(300, seed: 42));
-            var rng = new Random(99);
             double previous = ghost.DistanceMeters;
 
             for (int i = 0; i < 10000; i++)
             {
-                ghost.Advance(0.001 + (rng.NextDouble() * (0.5 - 0.001)));
+                ghost.Advance(FrameDeltas[i % FrameDeltas.Length]);
 
                 Assert.IsTrue(ghost.DistanceMeters >= previous, $"distance went backwards at step {i}");
                 Assert.IsTrue(double.IsFinite(ghost.DistanceMeters), $"distance not finite at step {i}");
@@ -212,8 +222,7 @@ namespace BikeFitnessApp.Tests.SecondRider
             var b = new GhostReplay(profile);
 
             var deltas = new List<double>();
-            var rng = new Random(7);
-            for (int i = 0; i < 500; i++) deltas.Add(0.001 + (rng.NextDouble() * (0.4 - 0.001)));
+            for (int i = 0; i < 500; i++) deltas.Add(FrameDeltas[i % FrameDeltas.Length]);
 
             foreach (double dt in deltas) a.Advance(dt);
             foreach (double dt in deltas) b.Advance(dt);
