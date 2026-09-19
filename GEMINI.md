@@ -9,7 +9,7 @@
 
 ## Hardware: Wahoo KICKR SNAP (BLE)
 - **Control Mode:** "Fake Sim Mode" using Resistance OpCode `0x41` (OpCode `0x42` is NOT supported).
-- **Speed Calculation:** Divisor MUST be **1024.0** (standard CSC). Using 2048.0 causes telemetry to freeze.
+- **Speed Calculation:** Wheel/crank event times come from the `0x2A63` power packet, so the divisor is **2048.0** (1/2048 s units). The old note calling for 1024.0 was wrong: it halved every reported speed — confirmed against a counted hand-spin (20 wheel revs in 34 s = 2.7 mph; the app read 1.5 mph) and against the Wahoo app reading ~3 mph for the same spin. Distance was never affected (revolution-based).
 - **Cadence:** Not supported via standard BLE (Bit 5 of flags is 0). Do not parse CSC cadence.
 
 ## Logic & Calibration
