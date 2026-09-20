@@ -114,7 +114,7 @@
                                 <CheckBox x:Name="ChkPacerRideAlong" Content="Ride along: sit with me, then attack" IsChecked="False"
                                           Checked="PacerCheck_Changed" Unchecked="PacerCheck_Changed"/>
                                 <TextBlock TextWrapping="Wrap" Classes="Caption" Foreground="{DynamicResource MaterialDesignBodyLight}"
-                                           Text="He rides level with you instead of holding a gap up the road, and takes off now and then so you have to chase him back. Ignored while the box above is off."/>
+                                           Text="He rides level with you instead of holding a gap up the road, and takes off now and then so you have to chase him back. Ticking this switches the pacer on."/>
 
                                 <StackPanel x:Name="PanelPacerRideAlong" Spacing="6" Margin="16,4,0,0" IsVisible="False">
                                     <Grid ColumnDefinitions="130, 40, *">
@@ -234,7 +234,7 @@
                         </StackPanel>
                     </material:Card>
 
-                    <Grid VerticalAlignment="Bottom" ColumnDefinitions="*, *, *" Margin="16">
+                    <Grid x:Name="TelemetryBar" VerticalAlignment="Bottom" ColumnDefinitions="*, *, *" Margin="16">
                         <material:Card Grid.Column="0" Margin="8" Padding="16" Background="#CC212121">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock Text="POWER" Classes="Caption" Foreground="Silver" HorizontalAlignment="Center" FontWeight="Bold"/>

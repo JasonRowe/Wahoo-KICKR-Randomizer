@@ -99,10 +99,53 @@ namespace BikeFitnessApp.Tests.SecondRider
         }
 
         /// <summary>
-        /// A hard surge takes a pass off him, it registers, and he drags you back inside the band afterwards.
+        /// The bug that came off the trainer: a standing start. He used to arrive at station with a lag
+        /// smoothed from zero, which cost him 50 m inside the first 100 m — and then tripped the overtake
+        /// line on the way, so he conceded too and was gone for a minute. The lag is spent as road now, so
+        /// off the line he is a couple of metres back at worst, and he is never handed over as "caught".
         /// </summary>
         [TestMethod]
-        public void RideAlong_RiderCanPassAndHoldThePacer()
+        public void RideAlong_StandingStart_HeStaysWithYouAndNeverConcedes()
+        {
+            var config = RideAlongConfig();
+            // 100 s of hold: the first attack is due at 120 s, and this test is about the start, not the attack.
+            var trace = StandingStartTrace(topSpeedKph: 27.0, rampSeconds: 3.0, holdSeconds: 100.0);
+
+            PacerRunResult result = PacerSim.Run(config, trace, Dt);
+
+            double closest = result.GapsMeters.Min();
+            Assert.IsTrue(
+                closest > -config.CatchOvertakeMeters,
+                $"a standing start left him {-closest:F1} m behind (the overtake line is "
+                + $"{config.CatchOvertakeMeters:F0} m past him) — he should never be \"caught\" off the line");
+
+            Assert.AreEqual(0, result.Events.Count(e => e.Event == PacerEvent.Caught), "he conceded off a standing start");
+            Assert.AreEqual(0, result.CountState(PacerState.Conceding), "he never left the alongside station");
+
+            // Back inside a couple of metres of the station inside 45 s of the start, and still there.
+            double recovered = double.NaN;
+            for (int i = 0; i < result.TimesSeconds.Count; i++)
+            {
+                if (result.TimesSeconds[i] < 5.0) continue;
+                if (result.GapsMeters[i] >= config.AlongsideGapMeters - 2.0) { recovered = result.TimesSeconds[i]; break; }
+            }
+
+            Assert.IsTrue(double.IsFinite(recovered), "he never got back to the station after the start");
+            Assert.IsTrue(recovered <= 45.0, $"took {recovered:F1} s to get back to the station off the line");
+            Assert.AreEqual(
+                config.AlongsideGapMeters, result.FinalGapMeters, 2.0,
+                $"he never settled on the station (finished at {result.FinalGapMeters:F2} m)");
+            Assert.AreEqual(0, result.SpeedCapViolations, "the pacer broke a speed cap");
+        }
+
+        /// <summary>
+        /// A surge still bites — he is on your old pace for a moment and you take ground — but it is a
+        /// bounded allowance, not a free pass. Dropping him is a bigger effort than one acceleration
+        /// (see <see cref="RideAlong_RiderWhoOutRidesHimGetsPastAndHeComesBack"/>): the alternative is a
+        /// rival who vanishes for the next minute every time the rider stands on the pedals.
+        /// </summary>
+        [TestMethod]
+        public void RideAlong_HardSurgeTakesGroundButDoesNotHandOverTheRoad()
         {
             var config = RideAlongConfig();
             var trace = StageTrace(
@@ -113,33 +156,62 @@ namespace BikeFitnessApp.Tests.SecondRider
             PacerRunResult result = PacerSim.Run(config, trace, Dt);
 
             double closest = result.GapsMeters.Min();
+            double groundTaken = config.AlongsideGapMeters - closest;
+
+            Assert.IsTrue(
+                groundTaken >= 2.5,
+                $"a 33 kph surge only took {groundTaken:F2} m off him — the surge has to be felt");
+            Assert.IsTrue(
+                closest > -config.CatchOvertakeMeters,
+                $"a 33 kph surge handed the rider the road ({closest:F2} m past him)");
+            Assert.AreEqual(0, result.Events.Count(e => e.Event == PacerEvent.Caught), "a plain surge registered as a pass");
+            Assert.AreEqual(0, result.CountState(PacerState.Conceding), "he conceded to a surge he could answer");
+        }
+
+        /// <summary>
+        /// The pass, properly earned: ride above what he can hold (his <see cref="PacerConfig.PacerWPerKg"/>
+        /// cap) and he concedes — briefly, then he is back on your wheel. The old concession ran 20 s at
+        /// 0.80 x, which at these speeds puts him 50 m back and off the end of the gap strip.
+        /// </summary>
+        [TestMethod]
+        public void RideAlong_RiderWhoOutRidesHimGetsPastAndHeComesBack()
+        {
+            var config = RideAlongConfig();
+            var trace = StageTrace(
+                ("settle", 30.0, 25.0, 0.0),
+                ("out-ride", 40.0, 37.0, 0.0),
+                ("ease", 120.0, 25.0, 0.0));
+
+            PacerRunResult result = PacerSim.Run(config, trace, Dt);
+
+            double closest = result.GapsMeters.Min();
             Assert.IsTrue(
                 closest < -config.CatchOvertakeMeters,
-                $"a 33 kph surge only got {closest:F2} m past him (catch line {-config.CatchOvertakeMeters} m)");
-
-            int caught = result.Events.Count(e => e.Event == PacerEvent.Caught);
-            Console.WriteLine($"pass: closest {closest:F2} m, Caught x{caught}");
-
-            Assert.IsTrue(caught >= 1, "getting past him never registered");
+                $"out-riding him at 37 kph only got {closest:F2} m past him (catch line {-config.CatchOvertakeMeters} m)");
+            Assert.IsTrue(
+                result.Events.Count(e => e.Event == PacerEvent.Caught) >= 1,
+                "getting past him never registered");
             Assert.IsTrue(
                 result.CountState(PacerState.Conceding) > 0,
                 "he never conceded after being passed");
 
-            // Re-close: back inside the band within 30 s of the surge ending.
-            double surgeEnd = 60.0;
+            // And he has to come back: alongside again inside 45 s of the effort ending.
+            const double surgeEnd = 70.0;
             double closedAt = double.NaN;
             for (int i = 0; i < result.TimesSeconds.Count; i++)
             {
                 if (result.TimesSeconds[i] < surgeEnd) continue;
-                if (result.GapsMeters[i] <= config.AlongsideGapMeters + config.AlongsideBandMeters)
+                if (result.GapsMeters[i] >= config.AlongsideGapMeters - 2.0)
                 {
                     closedAt = result.TimesSeconds[i];
                     break;
                 }
             }
 
-            Assert.IsTrue(double.IsFinite(closedAt), "the gap never came back inside the band");
-            Assert.IsTrue(closedAt - surgeEnd <= 30.0, $"took {closedAt - surgeEnd:F1} s to re-close");
+            Assert.IsTrue(double.IsFinite(closedAt), "the gap never came back to the station");
+            Assert.IsTrue(
+                closedAt - surgeEnd <= 45.0,
+                $"took {closedAt - surgeEnd:F1} s to get back alongside — the rider cannot see him behind");
         }
 
         /// <summary>Attacks land on their own clock, inside the jitter band.</summary>
@@ -462,6 +534,39 @@ namespace BikeFitnessApp.Tests.SecondRider
             double t = 0;
             double distance = 0;
             AppendStages(trace, ref t, ref distance, stages);
+
+            return trace;
+        }
+
+        /// <summary>
+        /// A real standing start: stationary at t=0, then a ramp to <paramref name="topSpeedKph"/> over
+        /// <paramref name="rampSeconds"/>, then held. <see cref="StageTrace"/> cannot express this — it
+        /// starts the rider already at the first stage's speed, which is how the standing-start bug hid.
+        /// </summary>
+        private static List<(double T, double DistanceMeters, double SpeedKph, double GradePercent)> StandingStartTrace(
+            double topSpeedKph,
+            double rampSeconds,
+            double holdSeconds)
+        {
+            var trace = new List<(double, double, double, double)> { (0, 0, 0, 0) };
+            double t = 0;
+            double distance = 0;
+
+            while (t < rampSeconds - 1e-9)
+            {
+                t += 1.0;
+                double speed = topSpeedKph * Math.Min(1.0, t / rampSeconds);
+                distance += speed / 3.6;
+                trace.Add((t, distance, speed, 0.0));
+            }
+
+            double end = t + holdSeconds;
+            while (t < end - 1e-9)
+            {
+                t += 1.0;
+                distance += topSpeedKph / 3.6;
+                trace.Add((t, distance, topSpeedKph, 0.0));
+            }
 
             return trace;
         }

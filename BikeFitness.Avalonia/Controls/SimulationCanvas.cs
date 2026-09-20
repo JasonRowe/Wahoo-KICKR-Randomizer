@@ -335,6 +335,26 @@ namespace BikeFitness.Avalonia.Controls
             set => SetAndRaise(SecondRiderGapBandMetersProperty, ref _secondRiderGapBandMeters, value);
         }
 
+        public static readonly DirectProperty<SimulationCanvas, double> GapStripBottomInsetProperty =
+            AvaloniaProperty.RegisterDirect<SimulationCanvas, double>(
+                nameof(GapStripBottomInset),
+                o => o.GapStripBottomInset,
+                (o, v) => o.GapStripBottomInset = v);
+
+        private double _gapStripBottomInset = 30.0;
+
+        /// <summary>
+        /// How far above the bottom of the canvas the gap strip is drawn, in pixels. The strip is the only
+        /// instrument that shows a rival behind the rider, so it must not be drawn where the telemetry row
+        /// is: the view sets this to the telemetry row's height (see <c>WorkoutView</c>). Defaults to the
+        /// old fixed position for anything that has no telemetry row.
+        /// </summary>
+        public double GapStripBottomInset
+        {
+            get => _gapStripBottomInset;
+            set => SetAndRaise(GapStripBottomInsetProperty, ref _gapStripBottomInset, value);
+        }
+
         public SimulationCanvas()
         {
             _timer = new DispatcherTimer(DispatcherPriority.Render);
@@ -691,7 +711,7 @@ namespace BikeFitness.Avalonia.Controls
             double canvasHeight = _engine.ActualHeight;
             if (canvasWidth <= 0 || canvasHeight <= 0) return;
 
-            const double metersBehind = 30.0;
+            const double metersBehind = 60.0;
             const double metersAhead = 70.0;
 
             double left = 40;
@@ -699,7 +719,7 @@ namespace BikeFitness.Avalonia.Controls
             if (right - left < 80) return;
 
             double height = 12;
-            double top = canvasHeight - 30;
+            double top = canvasHeight - Math.Max(12.0, GapStripBottomInset);
             double span = metersBehind + metersAhead;
 
             double Map(double gapMeters) => left + (((gapMeters + metersBehind) / span) * (right - left));
