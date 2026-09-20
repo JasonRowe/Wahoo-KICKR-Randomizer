@@ -67,9 +67,32 @@ namespace BikeFitness.Shared.SecondRider
         public double AlongsideElasticScaleMeters = 50.0;
 
         /// <summary>
+        /// The same ramp for the <b>behind</b> half of the station: how many metres short of the station he
+        /// has to be before the pull-back is at full strength. Deliberately shorter than
+        /// <see cref="AlongsideElasticScaleMeters"/>, because being dropped is the one recovery the rider
+        /// cannot see — the camera shows ~12 m ahead and the gap strip saturates, so he has to get back on
+        /// terms within a few seconds, not over 50 m of road.
+        /// </summary>
+        public double AlongsideCatchUpScaleMeters = 20.0;
+
+        /// <summary>
+        /// The most of the rider's speed the alongside lag may take off him — as road, not as a levy. The
+        /// lag (he is still riding your old pace while you go) is what makes a surge bite, but it must be
+        /// bounded: the smoothed speed starts at whatever the rider was doing when he was switched on, so
+        /// from a standing start an unbounded lag strands him 60 m off the back inside 20 s. Once he is
+        /// this far behind the station the lag is spent and he simply rides your pace again. Keep it inside
+        /// <see cref="AlongsideGapMeters"/> + <see cref="CatchOvertakeMeters"/>, or a standing start starts
+        /// reading as an overtake. Small values (a metre or so) make the lag inert.
+        /// </summary>
+        public double AlongsideLagBudgetMeters = 8.0;
+
+        /// <summary>
         /// Seconds before he reacts to a change in your speed, as a smoothing time constant. This is what
         /// makes a hard surge take ground off him: he is still riding your old pace while you go. It is also
-        /// one-sided — see <c>PacerModel.RideAlongReferenceSpeed</c> — so easing off can never push him ahead.
+        /// one-sided — see <c>PacerModel.RideAlongReferenceSpeed</c> — so easing off can never push him ahead,
+        /// and it is spent as road rather than granted without limit (see
+        /// <see cref="AlongsideLagBudgetMeters"/>), so an acceleration can colour the gap without ever
+        /// stranding him.
         /// </summary>
         public double AlongsideResponseSeconds = 10.0;
 
@@ -97,8 +120,12 @@ namespace BikeFitness.Shared.SecondRider
         /// <summary>Seconds you must hold the pass before he concedes, in seconds.</summary>
         public double CatchHoldSeconds = 3.0;
 
-        /// <summary>Seconds he concedes for once you are past.</summary>
-        public double ConcedeSeconds = 20.0;
+        /// <summary>
+        /// Seconds he concedes for once you are past. Deliberately short: at 25–30 kph a long concession digs a
+        /// 25–30 m hole the rider then has to watch him climb out of, and a rival who is off the back is a
+        /// rival the camera cannot show. Long enough to read as "fair play, go on then".
+        /// </summary>
+        public double ConcedeSeconds = 8.0;
 
         /// <summary>
         /// Seed for the attack-jitter RNG. The model stays clock-free and reproducible: same seed and same
@@ -129,6 +156,8 @@ namespace BikeFitness.Shared.SecondRider
                 AlongsideGapMeters = AlongsideGapMeters,
                 AlongsideBandMeters = AlongsideBandMeters,
                 AlongsideElasticScaleMeters = AlongsideElasticScaleMeters,
+                AlongsideCatchUpScaleMeters = AlongsideCatchUpScaleMeters,
+                AlongsideLagBudgetMeters = AlongsideLagBudgetMeters,
                 AlongsideResponseSeconds = AlongsideResponseSeconds,
                 AttackPushMeters = AttackPushMeters,
                 AttackIntervalSeconds = AttackIntervalSeconds,
@@ -436,7 +465,7 @@ namespace BikeFitness.Shared.SecondRider
             }
             else
             {
-                double reference = _config.RideAlongMode ? RideAlongReferenceSpeed(riderSpeed) : riderSpeed;
+                double reference = _config.RideAlongMode ? RideAlongReferenceSpeed(riderSpeed, gap) : riderSpeed;
                 double relative;
 
                 if (_config.RideAlongMode)
@@ -624,15 +653,34 @@ namespace BikeFitness.Shared.SecondRider
         /// <summary>
         /// The speed he rides at when he is not attacking or conceding: yours, with a graded correction
         /// toward the station he is holding. The lag is the point — it is what lets a hard effort take
-        /// ground off him, while easing off can never push him up the road.
+        /// ground off him, while easing off can never push him up the road. It is spent as road rather than
+        /// granted without limit (see <see cref="PacerConfig.AlongsideLagBudgetMeters"/>), so a hard effort
+        /// takes a few metres off him and a standing start cannot strand him.
         /// </summary>
-        private double RideAlongReferenceSpeed(double riderSpeed)
+        private double RideAlongReferenceSpeed(double riderSpeed, double gap)
         {
             if (!_smoothedSpeedPrimed) return riderSpeed;
 
             // The lower of the two, on purpose: he never rides faster than you are going right now, so
             // slowing down can only ever bring him back to you.
-            return Math.Min(riderSpeed, _smoothedRiderSpeedKph);
+            double lagged = Math.Min(riderSpeed, _smoothedRiderSpeedKph);
+            double allowance = LagAllowance(gap);
+
+            return riderSpeed + ((lagged - riderSpeed) * allowance);
+        }
+
+        /// <summary>
+        /// How much of the alongside lag is still in force at this gap: 1 at or ahead of the station, 0 once
+        /// the budget is spent. <see cref="RideAlongReferenceSpeed"/> blends the lag in with it, which is
+        /// what turns "he is still on your old pace" from a levy on every acceleration into a bounded
+        /// allowance — and keeps the drift from ever reaching the pass line, so a standing start cannot
+        /// register as an overtake.
+        /// </summary>
+        private double LagAllowance(double gap)
+        {
+            double budget = Math.Max(1.0, _config.AlongsideLagBudgetMeters);
+            double behindStation = _config.AlongsideGapMeters - gap;
+            return Math.Clamp(1.0 - (behindStation / budget), 0.0, 1.0);
         }
 
         /// <summary>One-sided lag on your speed: he has to notice an acceleration before he answers it.</summary>
@@ -652,9 +700,10 @@ namespace BikeFitness.Shared.SecondRider
 
         /// <summary>
         /// Ride-along speed as a multiple of the reference speed. Attacks and the alongside hold both pull
-        /// toward <paramref name="target"/>, but only the alongside hold is ramped over
-        /// <see cref="PacerConfig.AlongsideElasticScaleMeters"/>; recovering and conceding are explicit
-        /// multipliers so those sliders do exactly what they say.
+        /// toward <paramref name="target"/>, but the alongside hold is ramped — over
+        /// <see cref="PacerConfig.AlongsideElasticScaleMeters"/> ahead of the station and the shorter
+        /// <see cref="PacerConfig.AlongsideCatchUpScaleMeters"/> behind it; recovering and conceding are
+        /// explicit multipliers so those sliders do exactly what they say.
         /// </summary>
         private double RideAlongRelativeSpeed(double target, double gap)
         {
@@ -669,7 +718,13 @@ namespace BikeFitness.Shared.SecondRider
                 return 1.0 + (_config.Elasticity * ((attackTarget - gap) / attackTarget));
             }
 
-            double scale = Math.Max(1.0, _config.AlongsideElasticScaleMeters);
+            // Two ramps: a long one ahead of the station (he must not rocket past you for a 5 m error) and a
+            // short one behind it (a rider cannot see a rival who is off the back, so that one has to close
+            // in seconds).
+            double scale = gap < target
+                ? Math.Max(1.0, _config.AlongsideCatchUpScaleMeters)
+                : Math.Max(1.0, _config.AlongsideElasticScaleMeters);
+
             return 1.0 + (_config.Elasticity * ((target - gap) / scale));
         }
 

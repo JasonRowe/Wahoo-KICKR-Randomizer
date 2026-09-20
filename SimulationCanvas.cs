@@ -428,6 +428,22 @@ namespace BikeFitnessApp
             set => SetValue(SecondRiderGapBandMetersProperty, value);
         }
 
+        public static readonly DependencyProperty GapStripBottomInsetProperty =
+            DependencyProperty.Register(nameof(GapStripBottomInset), typeof(double), typeof(SimulationCanvas),
+                new PropertyMetadata(30.0));
+
+        /// <summary>
+        /// How far above the bottom of the canvas the gap strip is drawn, in pixels. The strip is the only
+        /// instrument that shows a rival behind the rider, so it must not be drawn where the telemetry row
+        /// is: the view sets this to the telemetry row's height (see <c>WorkoutView</c>). Defaults to the
+        /// old fixed position for the harness, which has no telemetry row.
+        /// </summary>
+        public double GapStripBottomInset
+        {
+            get => (double)GetValue(GapStripBottomInsetProperty);
+            set => SetValue(GapStripBottomInsetProperty, value);
+        }
+
         #endregion
 
         /// <summary>
@@ -932,7 +948,9 @@ namespace BikeFitnessApp
         {
             if (ActualWidth <= 0 || ActualHeight <= 0) return;
 
-            const double metersBehind = 30.0;
+            // Six times as much road behind as in front: the camera shows ~12 m ahead, so anything off the
+            // back is only legible here, and being dropped is the case the rider actually has to diagnose.
+            const double metersBehind = 60.0;
             const double metersAhead = 70.0;
 
             double left = 40;
@@ -940,7 +958,7 @@ namespace BikeFitnessApp
             if (right - left < 80) return;
 
             double height = 12;
-            double top = ActualHeight - 30;
+            double top = ActualHeight - Math.Max(12.0, GapStripBottomInset);
             double span = metersBehind + metersAhead;
 
             double Map(double gapMeters) => left + (((gapMeters + metersBehind) / span) * (right - left));

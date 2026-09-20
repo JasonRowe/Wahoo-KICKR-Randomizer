@@ -47,6 +47,10 @@ namespace BikeFitness.Avalonia.Views
             // The pacer advances on the canvas's own frame clock, exactly as in the app's WPF view.
             SimCanvas.FrameRendered += OnFrameRendered;
 
+            // The gap strip is the only thing that shows a rival behind the rider, so it must sit above the
+            // telemetry row rather than under it. The row's height is only known once it is laid out.
+            TelemetryBar.SizeChanged += (_, _) => SimCanvas.GapStripBottomInset = TelemetryBar.Bounds.Height + 24.0;
+
             // Sliders apply live; wired here rather than in XAML because Avalonia's range-base event args
             // type differs from WPF's and a lambda keeps the handler signature irrelevant.
             SliderPacerStrength.ValueChanged += (_, _) => ApplyPacerSettings();
@@ -158,6 +162,15 @@ namespace BikeFitness.Avalonia.Views
 
         private void PacerCheck_Changed(object? sender, RoutedEventArgs e)
         {
+            // Ride-along is a mode the pacer runs in, not a rival of its own: ticking it with the pacer off
+            // used to do nothing at all, which reads as a broken feature. Switch the pacer on instead — that
+            // raises ChkPacerEnabled_Changed, which resets the duel with the alongside station.
+            if (ChkPacerRideAlong.IsChecked == true && ChkPacerEnabled.IsChecked != true)
+            {
+                ChkPacerEnabled.IsChecked = true;
+                return;
+            }
+
             ApplyPacerSettings();
         }
 
