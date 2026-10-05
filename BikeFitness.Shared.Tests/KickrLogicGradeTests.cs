@@ -7,7 +7,7 @@ namespace BikeFitnessApp.UnitTests
     [TestClass]
     public class KickrLogicGradeTests
     {
-        private KickrLogic _logic;
+        private KickrLogic _logic = null!;   // assigned in Setup
 
         [TestInitialize]
         public void Setup()
