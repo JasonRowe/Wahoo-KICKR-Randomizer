@@ -21,9 +21,15 @@ namespace BikeFitnessApp
         private readonly Stopwatch _pacerReadoutClock = new Stopwatch();
         private double _riderDistanceMeters;
 
+        // The pacer controls carry their initial values in XAML and their change handlers are wired in XAML,
+        // so WPF raises those handlers mid-InitializeComponent, before every named control exists.
+        // ApplyPacerSettings dereferences them, so it must stay dormant until the tree is fully built.
+        private bool _pacerUiReady;
+
         public WorkoutView()
         {
             InitializeComponent();
+            _pacerUiReady = true;
 
             // Rider pedal animation: the 12-frame sheet ships under Images/ (see PedalAnimation).
             // Wheel-spin overlay is deliberately not enabled yet.
@@ -115,6 +121,8 @@ namespace BikeFitnessApp
 
         private void ChkPacerEnabled_Changed(object sender, RoutedEventArgs e)
         {
+            if (!_pacerUiReady) return;   // checkbox initialised by XAML during InitializeComponent
+
             bool on = ChkPacerEnabled.IsChecked == true;
 
             ApplyPacerSettings();   // the reset below needs the current mode to pick the station
@@ -146,6 +154,7 @@ namespace BikeFitnessApp
 
         private void PacerSlider_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
+            if (!_pacerUiReady) return;   // slider initialised by XAML during InitializeComponent
             ApplyPacerSettings();
         }
 
@@ -162,6 +171,8 @@ namespace BikeFitnessApp
 
         private void PacerCheck_Changed(object sender, RoutedEventArgs e)
         {
+            if (!_pacerUiReady) return;   // checkbox initialised by XAML during InitializeComponent
+
             // Ride-along is a mode the pacer runs in, not a rival of its own: ticking it with the pacer off
             // used to do nothing at all, which reads as a broken feature. Switch the pacer on instead — that
             // raises ChkPacerEnabled_Changed, which resets the duel with the alongside station.
@@ -192,7 +203,7 @@ namespace BikeFitnessApp
         /// </summary>
         private void ApplyPacerSettings()
         {
-            if (SliderPacerStrength == null) return;   // XAML not built yet
+            if (!_pacerUiReady || SliderPacerStrength == null) return;   // XAML not built yet
 
             PacerConfig config = _pacer.Config;
             config.PacerWPerKg = SliderPacerStrength.Value;
