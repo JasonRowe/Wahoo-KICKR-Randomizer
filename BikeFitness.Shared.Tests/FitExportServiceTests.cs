@@ -108,6 +108,42 @@ namespace BikeFitnessApp.UnitTests
             Assert.IsTrue(File.Exists(_testFilePath), "FIT file should be created with HR data");
         }
 
+        [TestMethod]
+        public void ExportToFit_ReimportsWithSameRecordsAndSessionTotals()
+        {
+            // Arrange
+            var report = CreateTestReport(10);
+
+            // Act - export, then decode the file back with the same SDK
+            FitExportService.ExportToFit(report, _testFilePath);
+
+            var decode = new Dynastream.Fit.Decode();
+            Assert.IsTrue(IsFit(_testFilePath, decode), "Exported file should be recognised as FIT");
+
+            int recordCount = 0;
+            Dynastream.Fit.SessionMesg? session = null;
+            var broadcaster = new Dynastream.Fit.MesgBroadcaster();
+            decode.MesgEvent += broadcaster.OnMesg;
+            broadcaster.RecordMesgEvent += (object sender, Dynastream.Fit.MesgEventArgs e) => recordCount++;
+            broadcaster.SessionMesgEvent += (object sender, Dynastream.Fit.MesgEventArgs e) => session = new Dynastream.Fit.SessionMesg(e.mesg);
+
+            using (var stream = new FileStream(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                decode.Read(stream);
+            }
+
+            // Assert
+            Assert.AreEqual(report.DataPoints.Count, recordCount, "Every data point should round-trip as a record");
+            Assert.IsNotNull(session, "Exported file should contain a session message");
+            Assert.AreEqual((uint)report.Summary.TotalDistanceMeters, session!.GetTotalDistance(), "Session distance should round-trip");
+        }
+
+        private static bool IsFit(string path, Dynastream.Fit.Decode decode)
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return decode.IsFIT(stream) && decode.CheckIntegrity(stream);
+        }
+
         private WorkoutReport CreateTestReport(int dataPointCount)
         {
             var startTime = DateTime.Now.AddMinutes(-dataPointCount);
