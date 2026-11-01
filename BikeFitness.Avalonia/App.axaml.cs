@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core.Plugins;
 using Avalonia.Markup.Xaml;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,7 +36,6 @@ namespace BikeFitness.Avalonia
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                DisableAvaloniaDataAnnotationValidation();
                 var mainViewModel = Services.GetRequiredService<MainViewModel>();
                 mainViewModel.CurrentView = Services.GetRequiredService<SetupViewModel>();
                 
@@ -79,17 +77,6 @@ namespace BikeFitness.Avalonia
             services.AddTransient<WorkoutViewModel>();
 
             return services.BuildServiceProvider();
-        }
-
-        private void DisableAvaloniaDataAnnotationValidation()
-        {
-            var dataValidationPluginsToRemove =
-                BindingPlugins.DataValidators.OfType<DataAnnotationsValidationPlugin>().ToArray();
-
-            foreach (var plugin in dataValidationPluginsToRemove)
-            {
-                BindingPlugins.DataValidators.Remove(plugin);
-            }
         }
     }
 }

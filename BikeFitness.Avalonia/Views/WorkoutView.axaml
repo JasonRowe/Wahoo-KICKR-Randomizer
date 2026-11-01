@@ -107,12 +107,12 @@
                         <Expander Header="PACER (beta)" IsExpanded="False" Margin="0,8,0,0">
                             <StackPanel Spacing="6" Margin="0,8,0,0">
                                 <CheckBox x:Name="ChkPacerEnabled" Content="Race a virtual pacer" IsChecked="False"
-                                          Checked="ChkPacerEnabled_Changed" Unchecked="ChkPacerEnabled_Changed"/>
+                                          IsCheckedChanged="ChkPacerEnabled_Changed"/>
                                 <TextBlock TextWrapping="Wrap" Classes="Caption" Foreground="{DynamicResource MaterialDesignBodyLight}"
                                            Text="A synthetic rival that holds a gap ahead of you and reacts to how you ride. It only moves itself — your resistance is never touched."/>
 
                                 <CheckBox x:Name="ChkPacerRideAlong" Content="Ride along: sit with me, then attack" IsChecked="False"
-                                          Checked="PacerCheck_Changed" Unchecked="PacerCheck_Changed"/>
+                                          IsCheckedChanged="PacerCheck_Changed"/>
                                 <TextBlock TextWrapping="Wrap" Classes="Caption" Foreground="{DynamicResource MaterialDesignBodyLight}"
                                            Text="He rides level with you instead of holding a gap up the road, and takes off now and then so you have to chase him back. Ticking this switches the pacer on."/>
 
@@ -182,9 +182,9 @@
                                 </Grid>
 
                                 <CheckBox x:Name="ChkPacerMercy" Content="Mercy rule (ease off when I fade)" IsChecked="True"
-                                          Checked="PacerCheck_Changed" Unchecked="PacerCheck_Changed"/>
+                                          IsCheckedChanged="PacerCheck_Changed"/>
                                 <CheckBox x:Name="ChkPacerStrip" Content="Gap strip" IsChecked="True"
-                                          Checked="PacerCheck_Changed" Unchecked="PacerCheck_Changed"/>
+                                          IsCheckedChanged="PacerCheck_Changed"/>
 
                                 <TextBlock x:Name="TxtPacerReadout" TextWrapping="Wrap" Classes="Caption"
                                            Foreground="{DynamicResource MaterialDesignBodyLight}"/>
