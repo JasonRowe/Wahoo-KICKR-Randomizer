@@ -16,6 +16,14 @@ namespace BikeFitnessApp
         private readonly DrawingVisual _drawingVisual;
         private readonly Stopwatch _gameTimer = new Stopwatch();
         private double _lastTickElapsed;
+
+        // Frame pacing diagnostics (logged only while Logger.IsEnabled). The ride's whole sense of
+        // motion comes from the world scrolling, so a judder is a frame-interval problem: these
+        // numbers say whether the frames are slow or just irregular, and on what surface.
+        private long _statFrames;
+        private double _statMsSum;
+        private double _statMsMax;
+        private double _statWindowStart;
         
         private readonly SimulationEngine<BitmapSource, BitmapSource> _engine = new SimulationEngine<BitmapSource, BitmapSource>();
 
@@ -566,6 +574,10 @@ namespace BikeFitnessApp
             _engine.Reset(_engine.TotalDistanceMeters);
             _gameTimer.Restart();
             _lastTickElapsed = 0;
+            _statFrames = 0;
+            _statMsSum = 0;
+            _statMsMax = 0;
+            _statWindowStart = 0;
             CompositionTarget.Rendering += OnRendering;
         }
 
@@ -584,6 +596,8 @@ namespace BikeFitnessApp
             if (deltaTime > 0.1) deltaTime = 0.1; 
             if (deltaTime <= 0) return;
 
+            AccumulateFrameStats(deltaTime, currentElapsed);
+
             _engine.Update(deltaTime);
 
             // Give subscribers (the harness ghost/pacer panels) a chance to advance their own state on
@@ -594,6 +608,35 @@ namespace BikeFitnessApp
         }
 
         private void Log(string message) => Debug.WriteLine($"{DateTime.Now:HH:mm:ss.fff}: {message}");
+
+        /// <summary>
+        /// Writes one [FrameStats] line every ~2s: frame count, mean and worst frame interval, the
+        /// surface size in DIPs, the DPI scale and the WPF render tier (0 = software rendering,
+        /// 1/2 = hardware). Smoothness questions need those four numbers together.
+        /// </summary>
+        private void AccumulateFrameStats(double deltaTime, double currentElapsed)
+        {
+            if (!Logger.IsEnabled) return;
+
+            if (_statWindowStart <= 0) _statWindowStart = currentElapsed;
+
+            double ms = deltaTime * 1000.0;
+            _statFrames++;
+            _statMsSum += ms;
+            if (ms > _statMsMax) _statMsMax = ms;
+
+            double window = currentElapsed - _statWindowStart;
+            if (window < 2.0) return;
+
+            PresentationSource? source = PresentationSource.FromVisual(this);
+            double dpiScale = source?.CompositionTarget?.TransformToDevice.M11 ?? 1.0;
+            Logger.Log($"[FrameStats] {window:F1}s frames={_statFrames} avg={_statMsSum / _statFrames:F1}ms max={_statMsMax:F1}ms canvas={ActualWidth:F0}x{ActualHeight:F0} dpiScale={dpiScale:F2} tier={RenderCapability.Tier >> 16}");
+
+            _statFrames = 0;
+            _statMsSum = 0;
+            _statMsMax = 0;
+            _statWindowStart = currentElapsed;
+        }
 
         private Point WorldToScreen(double worldDist, double bikeDist, double bikeHeight, double centerY, double bikeScreenX)
         {
