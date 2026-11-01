@@ -28,7 +28,9 @@ namespace BikeFitnessApp
             var services = new ServiceCollection();
 
             // Services
-            services.AddSingleton<IBluetoothService, WindowsBluetoothService>();
+            // ReconnectingBluetoothService retries a mid-ride dropout before the ride is torn down.
+            services.AddSingleton<IBluetoothService>(_ =>
+                new ReconnectingBluetoothService(new WindowsBluetoothService()));
             services.AddSingleton<IStravaService, StravaService>();
             services.AddSingleton<IUserInterfaceService, WpfUserInterfaceService>();
             services.AddSingleton<IPowerManagementService, WindowsPowerManagementService>();

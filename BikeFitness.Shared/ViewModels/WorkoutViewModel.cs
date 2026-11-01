@@ -19,6 +19,7 @@ namespace BikeFitness.Shared.ViewModels
         private readonly IStravaService _stravaService;
         private readonly IUserInterfaceService _uiService;
         private readonly IPowerManagementService _powerManagementService;
+        private readonly IConnectionRecovery? _connectionRecovery;
         private readonly KickrLogic _logic = new KickrLogic();
         private readonly System.Timers.Timer _workoutTimer;
         private readonly System.Timers.Timer _dataTimer;
@@ -170,6 +171,15 @@ namespace BikeFitness.Shared.ViewModels
             _bluetoothService.PowerReceived += OnPowerReceived;
             _bluetoothService.SpeedValuesUpdated += OnSpeedValuesUpdated;
 
+            // Services that retry a dropped trainer link report the retries; the ride stays
+            // alive through them and ConnectionLost only arrives when they have all failed.
+            if (bluetoothService is IConnectionRecovery recovery)
+            {
+                _connectionRecovery = recovery;
+                recovery.ReconnectAttempting += OnReconnectAttempting;
+                recovery.Reconnected += OnReconnected;
+            }
+
             _workoutTimer = new System.Timers.Timer();
             _workoutTimer.Interval = _intervalSeconds * 1000;
             _workoutTimer.Elapsed += (s, e) => WorkoutTimer_Tick();
@@ -201,6 +211,12 @@ namespace BikeFitness.Shared.ViewModels
             _bluetoothService.ConnectionLost -= OnConnectionLost;
             _bluetoothService.PowerReceived -= OnPowerReceived;
             _bluetoothService.SpeedValuesUpdated -= OnSpeedValuesUpdated;
+
+            if (_connectionRecovery != null)
+            {
+                _connectionRecovery.ReconnectAttempting -= OnReconnectAttempting;
+                _connectionRecovery.Reconnected -= OnReconnected;
+            }
             _workoutTimer.Stop();
             _workoutTimer.Dispose();
             _dataTimer.Stop();
@@ -285,6 +301,22 @@ namespace BikeFitness.Shared.ViewModels
         private void OnPowerReceived(int watts)
         {
             _uiService.InvokeOnUIThread(() => Power = watts);
+        }
+
+        private void OnReconnectAttempting(int attempt)
+        {
+            _uiService.InvokeOnUIThread(() => {
+                Status = $"RECONNECTING ({attempt})";
+                Log = "Status: Trainer lost — reconnecting...";
+            });
+        }
+
+        private void OnReconnected()
+        {
+            _uiService.InvokeOnUIThread(() => {
+                Status = IsWorkoutActive ? "WORKOUT ACTIVE" : "CONNECTED";
+                Log = "Status: Trainer reconnected.";
+            });
         }
 
         private void OnConnectionLost()

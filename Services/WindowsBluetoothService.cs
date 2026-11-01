@@ -131,7 +131,7 @@ namespace BikeFitnessApp.Services
                 var servicesResult = await _device.GetGattServicesAsync(BluetoothCacheMode.Uncached);
                 if (servicesResult.Status != GattCommunicationStatus.Success)
                 {
-                    UpdateStatus($"Failed to get services ({servicesResult.Status})");
+                    CleanUpFailedLink($"Failed to get services ({servicesResult.Status})");
                     return;
                 }
 
@@ -158,7 +158,10 @@ namespace BikeFitnessApp.Services
 
                 if (_controlPoint == null)
                 {
-                    UpdateStatus("CRITICAL: Control Point NOT found.");
+                    // Connected at the link level but we cannot command the trainer, so
+                    // treat it as a failed connect: a reconnect attempt must be able to
+                    // tell this apart from a usable link via IsConnected.
+                    CleanUpFailedLink("CRITICAL: Control Point NOT found.");
                     return;
                 }
 
@@ -187,6 +190,31 @@ namespace BikeFitnessApp.Services
                 UpdateStatus($"Connection Error: {ex.Message}");
                 Logger.Log($"Connection Exception: {ex}");
             }
+        }
+
+        /// <summary>
+        /// Releases a link that could not be made usable, so
+        /// <see cref="IsConnected"/> reflects reality and the next attempt starts clean.
+        /// </summary>
+        private void CleanUpFailedLink(string message)
+        {
+            _isLoopRunning = false;
+
+            if (_powerChar != null)
+            {
+                try { _powerChar.ValueChanged -= Power_ValueChanged; } catch { }
+                _powerChar = null;
+            }
+            _controlPoint = null;
+
+            if (_device != null)
+            {
+                _device.ConnectionStatusChanged -= Device_ConnectionStatusChanged;
+                try { _device.Dispose(); } catch { }
+                _device = null;
+            }
+
+            UpdateStatus(message);
         }
 
         private async Task SubscribeToPowerAsync()
@@ -258,12 +286,28 @@ namespace BikeFitnessApp.Services
 
         private void Device_ConnectionStatusChanged(BluetoothLEDevice sender, object args)
         {
-            if (sender.ConnectionStatus == BluetoothConnectionStatus.Disconnected)
+            if (sender.ConnectionStatus != BluetoothConnectionStatus.Disconnected) return;
+
+            // Drop the dead link's handles so a reconnect starts clean instead of
+            // layering a new device + subscription over the old one.
+            _isLoopRunning = false;
+
+            if (_powerChar != null)
             {
-                UpdateStatus("Device Disconnected");
-                _isLoopRunning = false;
-                ConnectionLost?.Invoke();
+                try { _powerChar.ValueChanged -= Power_ValueChanged; } catch { }
+                _powerChar = null;
             }
+            _controlPoint = null;
+
+            if (_device != null)
+            {
+                _device.ConnectionStatusChanged -= Device_ConnectionStatusChanged;
+                try { _device.Dispose(); } catch { }
+                _device = null;
+            }
+
+            UpdateStatus("Device Disconnected");
+            ConnectionLost?.Invoke();
         }
 
         public async Task DisconnectAsync()

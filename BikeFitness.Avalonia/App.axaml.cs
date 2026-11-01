@@ -62,7 +62,9 @@ namespace BikeFitness.Avalonia
             }
             else if (OperatingSystem.IsLinux())
             {
-                services.AddSingleton<IBluetoothService, LinuxBluetoothService>();
+                // ReconnectingBluetoothService retries a mid-ride dropout before the ride is torn down.
+                services.AddSingleton<IBluetoothService>(_ =>
+                    new ReconnectingBluetoothService(new LinuxBluetoothService()));
             }
             else
             {
