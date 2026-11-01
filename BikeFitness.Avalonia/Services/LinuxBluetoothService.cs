@@ -175,15 +175,15 @@ namespace BikeFitness.Avalonia.Services
 
                 await _device.ConnectAsync();
                 
-                // Watch for connection loss
+                // Watch for connection loss. Cleanup runs off the D-Bus callback
+                // thread because disposing a watcher from inside its own handler can
+                // deadlock Tmds.DBus.
                 _deviceWatcher = await _device.WatchPropertiesAsync(props => {
                     foreach (var change in props.Changed)
                     {
                         if (change.Key == "Connected" && change.Value is bool connected && !connected)
                         {
-                            UpdateStatus("Device Disconnected");
-                            _isLoopRunning = false;
-                            ConnectionLost?.Invoke();
+                            _ = Task.Run(ClearLinkStateAfterLoss);
                         }
                     }
                 });
@@ -285,6 +285,27 @@ namespace BikeFitness.Avalonia.Services
                 UpdateStatus($"Connection Error: {ex.Message}");
                 Logger.Log($"Connection Exception: {ex}");
             }
+        }
+
+        /// <summary>
+        /// Drops every handle to a link that has already gone down. Without this the
+        /// service kept <c>_device</c> set (so <see cref="IsConnected"/> lied) and a
+        /// reconnect would stack a second property watcher and power subscription on top
+        /// of the dead one, leaking both.
+        /// </summary>
+        private void ClearLinkStateAfterLoss()
+        {
+            _isLoopRunning = false;
+
+            if (_deviceWatcher != null) { _deviceWatcher.Dispose(); _deviceWatcher = null; }
+            if (_powerWatcher != null) { _powerWatcher.Dispose(); _powerWatcher = null; }
+
+            _controlPoint = null;
+            _powerChar = null;
+            _device = null;
+
+            UpdateStatus("Device Disconnected");
+            ConnectionLost?.Invoke();
         }
 
         private async Task SubscribeToPowerAsync()

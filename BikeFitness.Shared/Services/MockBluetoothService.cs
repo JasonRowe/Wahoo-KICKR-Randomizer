@@ -20,6 +20,14 @@ namespace BikeFitness.Shared.Services
         public bool StartScanningCalled { get; private set; }
         public bool StopScanningCalled { get; private set; }
         public bool ConnectAsyncCalled { get; private set; }
+        public int ConnectCalls { get; private set; }
+        public int SendInitCommandCalls { get; private set; }
+
+        /// <summary>How long <see cref="ConnectAsync"/> takes; 0 keeps tests fast.</summary>
+        public int ConnectDelayMs { get; set; } = 1500;
+
+        /// <summary>Number of upcoming connects that should fail, then connect normally.</summary>
+        public int ConnectFailuresRemaining { get; set; }
 
         public void FireDeviceDiscovered(DeviceDisplay device) => DeviceDiscovered?.Invoke(device);
         public void FirePowerReceived(int watts) => PowerReceived?.Invoke(watts);
@@ -52,11 +60,24 @@ namespace BikeFitness.Shared.Services
         public async Task ConnectAsync(ulong address)
         {
             ConnectAsyncCalled = true;
+            ConnectCalls++;
             CurrentStatus = "Connecting...";
             StatusChanged?.Invoke(CurrentStatus);
-            
-            await Task.Delay(1500);
-            
+
+            if (ConnectDelayMs > 0)
+            {
+                await Task.Delay(ConnectDelayMs);
+            }
+
+            if (ConnectFailuresRemaining > 0)
+            {
+                ConnectFailuresRemaining--;
+                IsConnected = false;
+                CurrentStatus = "Connect failed";
+                StatusChanged?.Invoke(CurrentStatus);
+                return;
+            }
+
             IsConnected = true;
             CurrentStatus = "Connected";
             StatusChanged?.Invoke(CurrentStatus);
@@ -84,6 +105,10 @@ namespace BikeFitness.Shared.Services
 
         public void QueueResistance(double resistance) { }
         public void QueueGrade(double gradePercent) { }
-        public Task<bool> SendInitCommand() => Task.FromResult(true);
+        public Task<bool> SendInitCommand()
+        {
+            SendInitCommandCalls++;
+            return Task.FromResult(true);
+        }
     }
 }
