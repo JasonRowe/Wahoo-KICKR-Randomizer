@@ -11,7 +11,7 @@
   <ItemGroup>
     <PackageReference Include="Linux.Bluetooth" Version="5.67.1" />
     <!-- Match the app's explicit Tmds.DBus to avoid the vulnerable 0.20.0 transitive -->
-    <PackageReference Include="Tmds.DBus" Version="0.91.1" />
+    <PackageReference Include="Tmds.DBus" Version="0.92.0" />
   </ItemGroup>
 
 </Project>
